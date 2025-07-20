@@ -1182,7 +1182,9 @@ def open_config_window():
     glicko_checkbox.pack(side="left", padx=5)
 
     # Add info label for Glicko feature
-    glicko_info_label = ttk.Label(glicko_frame, text="(Enables persistent player rankings across raids - Requires v1.1.0 or newer)", font=("Arial", 8), foreground="#888888")
+    style = ttk.Style()
+    style.configure("Info.TLabel", font=("Arial", 8), foreground="SystemGrayText")
+    glicko_info_label = ttk.Label(glicko_frame, text="(Enables persistent player rankings across raids - Requires v1.1.0 or newer)", style="Info.TLabel")
     glicko_info_label.pack(side="left", padx=10)
 
     # Add settings to the right column
