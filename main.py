@@ -738,7 +738,8 @@ def process_with_gw2_ei_log_combiner(temp_dir, update_terminal_output, enable_op
                     edited_gw2_ei_log_combiner_config,
                     config.get("guild_name", ""),
                     config.get("guild_id", ""),
-                    config.get("api_key", "")
+                    config.get("api_key", ""),
+                    config.get("db_update", False)
                 )
                 update_terminal_output("Edited top_stats_config.ini with the provided settings.")
             except Exception as e:
@@ -982,7 +983,7 @@ def edit_conf_file(template_path, output_path, temp_dir):
     except Exception as e:
         print(f"Error editing .conf file: {e}")
 
-def edit_top_stats_config(template_path, output_path, guild_name, guild_id, api_key):
+def edit_top_stats_config(template_path, output_path, guild_name, guild_id, api_key, db_update):
     """Edit the top_stats_config.ini file with the provided settings."""
     try:
         with open(template_path, "r") as template_file:
@@ -996,6 +997,8 @@ def edit_top_stats_config(template_path, output_path, guild_name, guild_id, api_
                     output_file.write(f"guild_id = {guild_id}\n")
                 elif line.startswith("api_key = "):
                     output_file.write(f"api_key = {api_key}\n")
+                elif line.startswith("db_update = "):
+                    output_file.write(f"db_update = {'true' if db_update else 'false'}\n")
                 else:
                     output_file.write(line)
     except Exception as e:
@@ -1018,7 +1021,7 @@ def open_config_window():
     # Create the configuration window
     config_window_instance = Toplevel(root)
     config_window_instance.title("Configuration")
-    config_window_instance.geometry("950x750")  # Adjust width for two columns
+    config_window_instance.geometry("950x800")  # Increased height to accommodate Glicko checkbox
     config_window_instance.resizable(False, False)
     config_window_instance.configure(bg="#333333")  # Match the Forest theme's dark background color
 
@@ -1029,9 +1032,13 @@ def open_config_window():
     elif selected_theme == "light":
         config_window_instance.configure(bg="#FFFFFF")  # Light background
 
+    # Configure the main window grid
+    config_window_instance.grid_rowconfigure(0, weight=1)
+    config_window_instance.grid_columnconfigure(0, weight=1)
+    
     # Create a frame for the two-column layout
     content_frame = ttk.Frame(config_window_instance, padding=10)
-    content_frame.pack(fill="both", expand=True)
+    content_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
     # Create two columns
     left_column = ttk.Frame(content_frame)
@@ -1166,6 +1173,20 @@ def open_config_window():
     api_key_entry.insert(0, config.get("api_key", ""))  # Load saved value or default to empty
     api_key_entry.pack(side="left", padx=10)
 
+    # Enable Glicko Database Features
+    glicko_frame = ttk.Frame(combiner_settings_frame)
+    glicko_frame.pack(fill="x", pady=5)
+
+    glicko_var = tk.BooleanVar(value=config.get("db_update", False))
+    glicko_checkbox = ttk.Checkbutton(glicko_frame, text="Enable Glicko Database Features (db_update)", variable=glicko_var)
+    glicko_checkbox.pack(side="left", padx=5)
+
+    # Add info label for Glicko feature
+    style = ttk.Style()
+    style.configure("Info.TLabel", font=("Arial", 8), foreground="SystemGrayText")
+    glicko_info_label = ttk.Label(glicko_frame, text="(Enables persistent player rankings across raids - Requires v1.1.0 or newer)", style="Info.TLabel")
+    glicko_info_label.pack(side="left", padx=10)
+
     # Add settings to the right column
     # Parser Selection
     parser_selection_frame = ttk.LabelFrame(right_column, text="Parser Selection", padding=10)
@@ -1191,8 +1212,12 @@ def open_config_window():
     light_theme_radio = ttk.Radiobutton(theme_frame, text="Light Theme", variable=theme_selection, value="light")
     light_theme_radio.pack(anchor="w", padx=5)
 
+    # Create a frame for the save button AFTER all content is created
+    save_frame = ttk.Frame(config_window_instance)
+    save_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+    
     # Add the save button at the bottom, spanning both columns
-    save_button = ttk.Button(config_window_instance, text="Save", command=lambda: save_and_close_config(
+    save_button = ttk.Button(save_frame, text="Save", command=lambda: save_and_close_config(
         config_window_instance, 
         elite_entry, 
         top_stats_entry, 
@@ -1204,8 +1229,10 @@ def open_config_window():
         theme_selection,
         guild_id_entry,
         guild_name_entry,
-        api_key_entry))
-    save_button.pack(anchor="e", padx=10, pady=10)
+        api_key_entry,
+        glicko_var))
+    save_button.pack(side="right")
+    
 
 def browse_folder(entry_widget):
     """Open a folder dialog and set the selected path in the entry widget."""
@@ -1220,7 +1247,7 @@ def browse_folder(entry_widget):
     if config_window_instance:
         config_window_instance.lift()
 
-def save_and_close_config(config_window, elite_entry, top_stats_entry, old_top_stats_entry, token_entry, hour_entry, minute_entry, parser_selection, theme_selection, guild_id_entry, guild_name_entry, api_key_entry):
+def save_and_close_config(config_window, elite_entry, top_stats_entry, old_top_stats_entry, token_entry, hour_entry, minute_entry, parser_selection, theme_selection, guild_id_entry, guild_name_entry, api_key_entry, glicko_var):
     """Save the changes and close the configuration popup."""
     elite_path = elite_entry.get()
     top_stats_path = top_stats_entry.get()
@@ -1268,6 +1295,7 @@ def save_and_close_config(config_window, elite_entry, top_stats_entry, old_top_s
     config["guild_name"] = guild_name_entry.get()
     config["guild_id"] = guild_id_entry.get()
     config["api_key"] = api_key_entry.get()
+    config["db_update"] = glicko_var.get()  # Save the Glicko database feature setting
 
     # Save the configuration to the config.json file
     save_config()
