@@ -78,14 +78,19 @@ This generates the `json`/`tid` files necessary to use with TiddlyWiki. To see t
 ### Compile EXE
 To compile the Python script into an executable (`.exe`), follow these steps:
 
-1. **Install PyInstaller**  
+1. **Install PyInstaller**
 Open a terminal or command prompt and install PyInstaller using `pip`:
 ```bash
 pip install pyinstaller
 ```
 2. **Compile the Script**
-Navigate to the directory containing main.py and run the following command:
+Use the included helper script or run the command manually:
+
 ```bash
+# preferred: runs the PyInstaller build
+python build_exe.py
+
+# equivalent manual invocation
 pyinstaller --onefile --noconsole --name TopStatsAIO --distpath . --add-data "config.json;." --add-data "themes;themes" --icon "top-stats-aio.ico" main.py
 ```
 ### Running locally
