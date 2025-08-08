@@ -210,6 +210,7 @@ def process_with_gw2_ei_log_combiner(config, temp_dir, update_terminal_output, e
             edit_top_stats_config(
                 stats_template,
                 stats_output,
+                temp_dir,
                 config.get("guild_name", ""),
                 config.get("guild_id", ""),
                 config.get("api_key", ""),
@@ -297,13 +298,25 @@ def edit_conf_file(template_path, output_path, temp_dir, config):
         print(f"Error editing .conf file: {e}")
 
 
-def edit_top_stats_config(template_path, output_path, guild_name, guild_id, api_key, db_update):
+def edit_top_stats_config(
+    template_path,
+    output_path,
+    input_directory,
+    guild_name,
+    guild_id,
+    api_key,
+    db_update,
+):
     try:
         with open(template_path, "r") as template_file:
             lines = template_file.readlines()
+        # normalize path separators for the Windows parser
+        normalized_input = input_directory.replace("\\", "/")
         with open(output_path, "w") as output_file:
             for line in lines:
-                if line.startswith("guild_name = "):
+                if line.startswith("input_directory = "):
+                    output_file.write(f"input_directory = {normalized_input}\n")
+                elif line.startswith("guild_name = "):
                     output_file.write(f"guild_name = {guild_name}\n")
                 elif line.startswith("guild_id = "):
                     output_file.write(f"guild_id = {guild_id}\n")
