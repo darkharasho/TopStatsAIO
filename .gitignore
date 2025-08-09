@@ -2,3 +2,4 @@ config.json
 GeneratedAgg/
 prerequisites/
 Top_Stats.db
+topstats/__pycache__/
