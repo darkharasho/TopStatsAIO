@@ -11,10 +11,35 @@ import ctypes as ct
 from .config import load_config, save_config, get_default_time, apply_theme
 from .config_ui import open_config_window
 from .aggregator import generate_aggregate
-from .downloaders import get_release_version
+from .downloaders import (
+    get_release_version,
+    fetch_latest_gw2eicli_version,
+    fetch_latest_gw2_ei_log_combiner_version,
+)
 from .window_utils import set_native_title_bar_theme
 
 config = load_config()
+
+prereqs = config.get("prerequisites", {})
+try:
+    latest_ei_version = fetch_latest_gw2eicli_version()
+    ei_update_available = prereqs.get("GW2EICLI_version") != latest_ei_version
+except Exception:
+    ei_update_available = False
+
+try:
+    latest_combiner_version = fetch_latest_gw2_ei_log_combiner_version()
+    combiner_update_available = (
+        prereqs.get("GW2_EI_log_combiner_version") != latest_combiner_version
+    )
+except Exception:
+    combiner_update_available = False
+
+update_status = {
+    "GW2EICLI": ei_update_available,
+    "GW2_EI_log_combiner": combiner_update_available,
+}
+
 checked_items = {}
 root_path = config.get("last_path", "")
 last_selected = None
@@ -445,8 +470,22 @@ generate_button = ttk.Button(root, text="Generate Aggregate", command=lambda: ge
 generate_button.grid(row=3, column=0, sticky="e", padx=10, pady=10)
 
 # Add "Config" button at the bottom-left
-config_button = ttk.Button(root, text="Config", command=lambda: open_config_window(root, config, date_entry))
+config_button = ttk.Button(
+    root,
+    text="Config",
+    command=lambda: open_config_window(root, config, date_entry, update_status),
+)
 config_button.grid(row=3, column=0, sticky="w", padx=10, pady=10)
+
+config_button_dot = tk.Label(
+    root,
+    text="●",
+    fg="red",
+    bg=root.cget("bg"),
+    font=("Arial", 10),
+)
+if ei_update_available or combiner_update_available:
+    config_button_dot.place(in_=config_button, relx=1, x=-5, y=0)
 
 # Fetch the release version
 release_version = get_release_version()
