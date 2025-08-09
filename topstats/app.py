@@ -478,15 +478,12 @@ config_button = ttk.Button(
 config_button.grid(row=3, column=0, sticky="w", padx=10, pady=10)
 
 style = ttk.Style()
-button_bg = style.lookup("TButton", "background")
-config_button_dot = tk.Label(
+style.configure("UpdateDot.TLabel", foreground="red")
+config_button_dot = ttk.Label(
     root,
     text="●",
-    fg="red",
-    bg=button_bg,
-    font=("Arial", 10),
-    bd=0,
-    highlightthickness=0,
+    style="UpdateDot.TLabel",
+    padding=0,
 )
 if ei_update_available or combiner_update_available:
     config_button_dot.place(in_=config_button, relx=1, x=-5, y=0)
