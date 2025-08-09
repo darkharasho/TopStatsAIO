@@ -3,6 +3,9 @@ import os
 import zipfile
 import threading
 from datetime import datetime
+import shutil
+import re
+import subprocess
 
 import requests
 from tkinter import Toplevel, filedialog, messagebox, ttk
@@ -26,6 +29,9 @@ def download_gw2eicli(parent_window, config, update_callback=None):
     else:
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
+
+    from .window_utils import set_native_title_bar_theme
+    set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
     status_label.pack(pady=20)
@@ -156,6 +162,9 @@ def download_gw2_ei_log_combiner(parent_window, config, update_callback=None):
     else:
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
+
+    from .window_utils import set_native_title_bar_theme
+    set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
     status_label.pack(pady=20)
@@ -318,3 +327,129 @@ def fetch_latest_gw2_ei_log_combiner_version():
             if asset.get("name", "").endswith(".zip"):
                 return release.get("tag_name")
     return None
+
+
+def _parse_version(v):
+    """Parse a version string into a comparable tuple of integers."""
+    parts = re.findall(r"\d+", v.lstrip("v"))
+    return tuple(int(part) for part in parts)
+
+
+def check_for_app_update(parent_window, config):
+    """Check GitHub for a newer release and update the app if available."""
+    try:
+        current_version = get_release_version()
+        api_url = "https://api.github.com/repos/darkharasho/TopStatsAIO/releases/latest"
+        response = requests.get(api_url, timeout=10)
+        response.raise_for_status()
+        release_data = response.json()
+        latest_version = release_data.get("tag_name")
+        if not latest_version:
+            return
+
+        if _parse_version(latest_version) <= _parse_version(current_version):
+            return
+
+        if not messagebox.askyesno(
+            "Update Available",
+            f"A new version ({latest_version}) is available.\nDo you want to update now?",
+            parent=parent_window,
+        ):
+            return
+
+        _download_and_install_update(parent_window, config, release_data)
+    except Exception:
+        pass
+
+
+def _download_and_install_update(parent_window, config, release_data):
+    """Download the latest release, install it, and restart the application."""
+    import sys
+    import tempfile
+
+    progress_dialog = Toplevel(parent_window)
+    progress_dialog.title("Updating TopStatsAIO")
+    progress_dialog.geometry("400x200")
+    progress_dialog.resizable(False, False)
+    progress_dialog.transient(parent_window)
+    progress_dialog.grab_set()
+
+    selected_theme = config.get("theme", "dark")
+    if selected_theme == "dark":
+        progress_dialog.configure(bg="#333333")
+        label_fg = "#FFFFFF"
+    else:
+        progress_dialog.configure(bg="#FFFFFF")
+        label_fg = "#000000"
+
+    from .window_utils import set_native_title_bar_theme
+    set_native_title_bar_theme(progress_dialog, selected_theme)
+
+    status_label = ttk.Label(progress_dialog, text="Downloading update...", foreground=label_fg)
+    status_label.pack(pady=20)
+
+    progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
+    progress_bar.pack(pady=10)
+    progress_bar.start()
+
+    try:
+        download_url = None
+        for asset in release_data.get("assets", []):
+            name = asset.get("name", "")
+            if name.endswith(".zip"):
+                download_url = asset["browser_download_url"]
+                break
+
+        if not download_url:
+            download_url = release_data.get("zipball_url")
+
+        if not download_url:
+            raise RuntimeError("No downloadable asset found for the latest release")
+
+        response = requests.get(download_url, timeout=10)
+        response.raise_for_status()
+
+        temp_dir = tempfile.mkdtemp()
+        with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+            z.extractall(temp_dir)
+
+        contents = os.listdir(temp_dir)
+        if len(contents) == 1 and os.path.isdir(os.path.join(temp_dir, contents[0])):
+            extract_root = os.path.join(temp_dir, contents[0])
+        else:
+            extract_root = temp_dir
+
+        for item in os.listdir(extract_root):
+            src_path = os.path.join(extract_root, item)
+            dest_path = os.path.join(os.getcwd(), item)
+            if os.path.isdir(src_path):
+                shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src_path, dest_path)
+
+        # --- GIT CHECKOUT UNSTAGED CHANGES ---
+        try:
+            # Check if git is available
+            subprocess.run(["git", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            # Checkout all unstaged changes in the current directory
+            subprocess.run(["git", "checkout", "--", "."], cwd=os.getcwd(), check=True)
+        except Exception as git_exc:
+            print(f"Git not available or checkout failed: {git_exc}")
+        # --- END GIT CHECKOUT ---
+
+        progress_dialog.destroy()
+        messagebox.showinfo(
+            "Update Complete",
+            "The application has been updated and will now restart.",
+            parent=parent_window,
+        )
+
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+    except Exception as e:
+        progress_dialog.destroy()
+        messagebox.showerror(
+            "Update Error",
+            f"Failed to update application: {e}",
+            parent=parent_window,
+        )
