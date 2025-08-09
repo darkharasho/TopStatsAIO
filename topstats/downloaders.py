@@ -297,3 +297,24 @@ def get_release_version():
         except Exception:
             pass
     return "Unknown Version"
+
+
+def fetch_latest_gw2eicli_version():
+    """Return the tag name of the latest GW2EICLI release."""
+    api_url = "https://api.github.com/repos/baaron4/GW2-Elite-Insights-Parser/releases/latest"
+    response = requests.get(api_url, timeout=10)
+    response.raise_for_status()
+    return response.json().get("tag_name")
+
+
+def fetch_latest_gw2_ei_log_combiner_version():
+    """Return the tag name of the newest GW2 EI Log Combiner release (including prereleases)."""
+    api_url = "https://api.github.com/repos/Drevarr/GW2_EI_log_combiner/releases"
+    response = requests.get(api_url, timeout=10)
+    response.raise_for_status()
+    releases = response.json()
+    for release in releases:
+        for asset in release.get("assets", []):
+            if asset.get("name", "").endswith(".zip"):
+                return release.get("tag_name")
+    return None

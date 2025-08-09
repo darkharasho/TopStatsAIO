@@ -48,7 +48,7 @@ def _update_entry_directly(entry_widget, value):
         pass
 
 
-def open_config_window(root, config, date_entry):
+def open_config_window(root, config, date_entry, update_status=None):
     """Open the configuration popup window."""
     global config_window_instance, elite_entry, top_stats_entry, old_top_stats_entry
 
@@ -93,16 +93,49 @@ def open_config_window(root, config, date_entry):
 
     download_frame = ttk.LabelFrame(left_column, text="Download Prerequisites", padding=10)
     download_frame.pack(fill="x", pady=10)
-    ttk.Button(
+
+    def download_ei():
+        ei_dot.place_forget()
+        download_gw2eicli(config_window_instance, config, update_config_window_entries)
+
+    def download_combiner():
+        combiner_dot.place_forget()
+        download_gw2_ei_log_combiner(
+            config_window_instance, config, update_config_window_entries
+        )
+
+    ei_button = ttk.Button(
         download_frame,
         text="Download Latest GW2EICLI",
-        command=lambda: download_gw2eicli(config_window_instance, config, update_config_window_entries),
-    ).pack(fill="x", pady=5)
-    ttk.Button(
+        command=download_ei,
+    )
+    ei_button.pack(fill="x", pady=5)
+
+    combiner_button = ttk.Button(
         download_frame,
         text="Download Latest GW2 EI Log Combiner",
-        command=lambda: download_gw2_ei_log_combiner(config_window_instance, config, update_config_window_entries),
-    ).pack(fill="x", pady=5)
+        command=download_combiner,
+    )
+    combiner_button.pack(fill="x", pady=5)
+
+    style = ttk.Style()
+    style.configure("UpdateDot.TLabel", foreground="red")
+    ei_dot = ttk.Label(
+        download_frame,
+        text="●",
+        style="UpdateDot.TLabel",
+        padding=0,
+    )
+    combiner_dot = ttk.Label(
+        download_frame,
+        text="●",
+        style="UpdateDot.TLabel",
+        padding=0,
+    )
+    if update_status and update_status.get("GW2EICLI"):
+        ei_dot.place(in_=ei_button, relx=1, x=2, y=0)
+    if update_status and update_status.get("GW2_EI_log_combiner"):
+        combiner_dot.place(in_=combiner_button, relx=1, x=2, y=0)
 
     folder_selector_frame = ttk.LabelFrame(left_column, text="Set Paths", padding=10)
     folder_selector_frame.pack(fill="x", pady=10)
