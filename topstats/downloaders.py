@@ -329,7 +329,7 @@ def _parse_version(v):
 
 
 def check_for_app_update(parent_window, config):
-    """Check GitHub for a newer release and update the app if available."""
+    """Automatically update the app if a newer GitHub release exists."""
     try:
         current_version = get_release_version()
         api_url = "https://api.github.com/repos/darkharasho/TopStatsAIO/releases/latest"
@@ -341,13 +341,6 @@ def check_for_app_update(parent_window, config):
             return
 
         if _parse_version(latest_version) <= _parse_version(current_version):
-            return
-
-        if not messagebox.askyesno(
-            "Update Available",
-            f"A new version ({latest_version}) is available.\nDo you want to update now?",
-            parent=parent_window,
-        ):
             return
 
         if os.path.isdir(os.path.join(os.getcwd(), ".git")):
@@ -466,7 +459,23 @@ def _git_pull_and_restart(parent_window, config):
     progress_bar.start()
 
     try:
+        import shutil
+
+        if not shutil.which("git"):
+            progress_dialog.destroy()
+            return
+
         subprocess.run(["git", "pull"], check=True)
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for line in status.stdout.splitlines():
+            if line and ("M" in line[:2]):
+                path = line[3:]
+                subprocess.run(["git", "checkout", "--", path])
 
         progress_dialog.destroy()
         messagebox.showinfo(
