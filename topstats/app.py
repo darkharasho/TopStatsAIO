@@ -120,7 +120,7 @@ if os.name != 'nt':
 # App window
 root = tk.Tk()
 root.title("GW2 arcdps File Selector")
-root.configure(bg="#333333")  # Match the Forest theme's dark background color
+root.configure(bg="#313131")  # Default dark theme background
 
 # Load the Forest theme from the "themes" directory
 themes_dir = os.path.join(os.getcwd(), "themes")
