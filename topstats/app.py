@@ -230,20 +230,29 @@ selected_frame = ttk.LabelFrame(main_frame, text="Selected Files", padding=10)
 selected_frame.grid(row=0, column=1, sticky="ns", padx=5, pady=5)
 
 # Use ttk.Treeview for the selected files list
-selected_tree = ttk.Treeview(selected_frame, columns=("File"), show="headings", height=20)
+selected_tree = ttk.Treeview(
+    selected_frame,
+    columns=("File", "Remove"),
+    show="headings",
+    height=20,
+    selectmode="extended"
+)
 selected_tree.heading("File", text="File")
-selected_tree.column("File", anchor="w", width=300)
-selected_tree.pack(fill="y", expand=True, pady=5)
+selected_tree.column("File", anchor="w", width=260)
+selected_tree.heading("Remove", text="")
+selected_tree.column("Remove", anchor="center", width=40, stretch=False)
+selected_tree.pack(fill="both", expand=True, pady=5)  # <-- fill both and expand
 
 # Frame for count label and unselect button
 count_frame = ttk.Frame(selected_frame)
-count_frame.pack(fill="x", pady=(5, 0))
+count_frame.pack(fill="x", pady=(5, 0), side="bottom")  # <-- pack at the bottom
 
 count_label = ttk.Label(count_frame, text="0 file(s) selected")
 count_label.pack(side="left", anchor="w")
 
 unselect_button = ttk.Button(count_frame, text="Unselect All", command=unselect_all)
 unselect_button.pack(side="right", anchor="e")
+
 # Track selected files using checkboxes
 tree.tag_configure("selected", background="#ccffcc")
 
@@ -252,12 +261,10 @@ def update_selected_list():
     count = 0
     for path in sorted(checked_items.keys()):
         display_name = os.path.relpath(path, root_path) if root_path else os.path.basename(path)
-        selected_tree.insert("", tk.END, values=(display_name,))
+        selected_tree.insert("", tk.END, iid=path, values=(display_name, "🗙"))
         count += 1
-
     count_label.config(text=f"{count} file(s) selected")
-
-    for item in tree.get_children(""):  # Apply highlights to all items
+    for item in tree.get_children(""):
         apply_tree_highlight(item)
 
 def apply_tree_highlight(item):
@@ -409,11 +416,29 @@ def populate_tree(parent, path):
     except Exception as e:
         print(f"Error reading directory {path}: {e}")
 
+def on_selected_tree_click(event):
+    region = selected_tree.identify("region", event.x, event.y)
+    if region != "cell":
+        return
+    col = selected_tree.identify_column(event.x)
+    if col != "#2":  # "Remove" column is the second column
+        return
+    row_id = selected_tree.identify_row(event.y)
+    if not row_id:
+        return
+    full_path = row_id  # Now the iid is the full path
+    if full_path in checked_items:
+        del checked_items[full_path]
+        for tree_item in tree.get_children(""):
+            reset_tree_checkboxes(tree_item, full_path)
+        update_selected_list()
+
 if os.path.exists(root_path):
     populate_tree('', root_path)
 
 tree.bind("<Button-1>", on_tree_click)
 selected_tree.bind("<Double-Button-1>", on_listbox_double_click)
+selected_tree.bind("<Button-1>", on_selected_tree_click)
 
 # Add "Generate Aggregate" and "Select Recent Logs" buttons at the bottom
 generate_button = ttk.Button(root, text="Generate Aggregate", command=lambda: generate_aggregate(root, config, checked_items), style="Accent.TButton")
