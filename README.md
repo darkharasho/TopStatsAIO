@@ -1,6 +1,6 @@
 ![top-stats-aio-banner](https://github.com/user-attachments/assets/d413569d-ecb1-4618-936e-5f6fa071ba0c)
 
-Your one stop shop for generating top stats. This program uses both Elite Insights Parser as well as the GW2 EI Log combiner to create a joined aggregate of multiple WvW fight logs. This is helpful for being able to see a holistic picture of your squad's performance. **AS WITH ALL ANALYTICS, PLEASE TAKE STATS AS A TOOL AND NOT AN ABSOLUTE AUTHORITY** There are always varying circumstances to a player's performance, you should never take any analytics entirely at face value.
+Your one stop shop for generating top stats. This program uses both Elite Insights Parser as well as the GW2 EI Log combiner to create a joined aggregate of multiple WvW fight logs. This is helpful for being able to see a holistic picture of your squad's performance. Internally the codebase has been refactored into a modular `topstats` package that separates configuration, aggregation, downloads and the UI. **AS WITH ALL ANALYTICS, PLEASE TAKE STATS AS A TOOL AND NOT AN ABSOLUTE AUTHORITY** There are always varying circumstances to a player's performance, you should never take any analytics entirely at face value.
 [An example of a summary can be found here](https://wvwlogs.com/#202503052206-Log-Summary)
 ![image](https://github.com/user-attachments/assets/d5482ea4-7de8-4d78-90f0-88e11e6b2223)
 
@@ -9,6 +9,9 @@ The primary directive of this application is to increase the user friendliness o
 - Ability to set a static raid time and grab logs older than a start time
 - Automatically configures and uses both EliteInsightsParser and GW2EILogCombiner to generate the final `.json` to be used with TiddlyWiki
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
+- Persistent settings saved to `config.json` (paths, tokens, theme, default time)
+- Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
+- Light and dark themes to suit your preference
 
 ## Setup
 ### 1. Download Prerequisites
@@ -47,8 +50,11 @@ https://github.com/Drevarr/GW2_EI_log_combiner/releases
 ![image](https://github.com/user-attachments/assets/9d56eb2d-f04e-4acd-a5f7-4bea5859dd65)
 
 8. **OPTIONALLY**
-   - You can set a `DPSReportUserToken` and `Default Hour` to allow for persistent DPS Report and default hour as your raid start time to allow for quick file selection
-   - You can use this app with the older [Drevarr/arcdps_top_stats_parser](https://github.com/Drevarr/arcdps_top_stats_parser) by going to config and setting the folder path as well as toggling on the `top_stats_parser` option.
+   - Configure a `DPSReportUserToken` for authenticated uploads
+   - Set a `Default Hour` and `Default Minute` to prefill the raid start time
+   - Choose between `GW2_EI_log_combiner` and the legacy `arcdps_top_stats_parser` and supply paths for both
+   - Switch between light and dark themes
+   - Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates
 
     ![image](https://github.com/user-attachments/assets/a84bcfe6-73ce-4ec3-9435-4a261fd1cf5f)
 
@@ -72,20 +78,26 @@ This generates the `json`/`tid` files necessary to use with TiddlyWiki. To see t
 ### Compile EXE
 To compile the Python script into an executable (`.exe`), follow these steps:
 
-1. **Install PyInstaller**  
+1. **Install PyInstaller**
 Open a terminal or command prompt and install PyInstaller using `pip`:
 ```bash
 pip install pyinstaller
 ```
 2. **Compile the Script**
-Navigate to the directory containing main.py and run the following command:
+Use the included helper script or run the command manually:
+
 ```bash
+# preferred: runs the PyInstaller build
+python build_exe.py
+
+# equivalent manual invocation
 pyinstaller --onefile --noconsole --name TopStatsAIO --distpath . --add-data "config.json;." --add-data "themes;themes" --icon "top-stats-aio.ico" main.py
 ```
 ### Running locally
 1. Clone the repository
 2. Navigate to it in a terminal
-3. Run `python main.py`
+3. Run `python main.py` (thin entry script that imports the package)
+   - or run `python -m topstats.app`
 
 ## Recognition
 Thank you to the GW2 Analytics communinty and Drevarr specifically for helping create this. Shout out to my PAN friends for the excitement and eagerness to help test. Thank you Aza for inspiring me to finally write this UI! Huge thanks to Paralda for informing me of the latest and greatest
