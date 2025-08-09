@@ -133,9 +133,9 @@ def open_config_window(root, config, date_entry, update_status=None):
         padding=0,
     )
     if update_status and update_status.get("GW2EICLI"):
-        ei_dot.place(in_=ei_button, relx=1, x=-5, y=0)
+        ei_dot.place(in_=ei_button, relx=1, x=-2, y=0)
     if update_status and update_status.get("GW2_EI_log_combiner"):
-        combiner_dot.place(in_=combiner_button, relx=1, x=-5, y=0)
+        combiner_dot.place(in_=combiner_button, relx=1, x=-2, y=0)
 
     folder_selector_frame = ttk.LabelFrame(left_column, text="Set Paths", padding=10)
     folder_selector_frame.pack(fill="x", pady=10)
