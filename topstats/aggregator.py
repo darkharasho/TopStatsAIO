@@ -22,6 +22,19 @@ def generate_aggregate(root, config, checked_items):
     progress_popup.geometry("600x450")
     progress_popup.resizable(False, False)
 
+    # Set the custom icon for the popup window
+    icon_path = os.path.join(os.getcwd(), "top-stats-aio.ico")
+    if os.path.exists(icon_path):
+        try:
+            progress_popup.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"Could not load icon for popup: {e}")
+
+    # Set the title bar theme to match the config
+    from .window_utils import set_native_title_bar_theme  # Import at the top if not already
+    selected_theme = config.get("theme", "dark")
+    set_native_title_bar_theme(progress_popup, selected_theme)
+
     terminal_frame = ttk.Frame(progress_popup, padding=10)
     terminal_frame.pack(fill="both", expand=True)
     terminal_output = tk.Text(

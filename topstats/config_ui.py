@@ -61,11 +61,21 @@ def open_config_window(root, config, date_entry):
     config_window_instance.geometry("950x800")
     config_window_instance.resizable(False, False)
 
+    # Set the custom icon for the config window
+    icon_path = os.path.join(os.getcwd(), "top-stats-aio.ico")
+    if os.path.exists(icon_path):
+        try:
+            config_window_instance.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"Could not load icon for config window: {e}")
+
     selected_theme = config.get("theme", "dark")
     if selected_theme == "dark":
         config_window_instance.configure(bg="#333333")
     else:
         config_window_instance.configure(bg="#FFFFFF")
+
+    set_native_title_bar_theme(config_window_instance, selected_theme)  # <-- Add this line
 
     config_window_instance.grid_rowconfigure(0, weight=1)
     config_window_instance.grid_columnconfigure(0, weight=1)
