@@ -383,16 +383,19 @@ def _download_and_install_update(parent_window, config, release_data):
     progress_bar.start()
 
     try:
-        zip_asset = None
+        download_url = None
         for asset in release_data.get("assets", []):
-            if asset.get("name", "").endswith(".zip"):
-                zip_asset = asset
+            name = asset.get("name", "")
+            if name.endswith(".zip"):
+                download_url = asset["browser_download_url"]
                 break
 
-        if not zip_asset:
+        if not download_url:
+            download_url = release_data.get("zipball_url")
+
+        if not download_url:
             raise RuntimeError("No downloadable asset found for the latest release")
 
-        download_url = zip_asset["browser_download_url"]
         response = requests.get(download_url, timeout=10)
         response.raise_for_status()
 
@@ -400,8 +403,14 @@ def _download_and_install_update(parent_window, config, release_data):
         with zipfile.ZipFile(io.BytesIO(response.content)) as z:
             z.extractall(temp_dir)
 
-        for item in os.listdir(temp_dir):
-            src_path = os.path.join(temp_dir, item)
+        contents = os.listdir(temp_dir)
+        if len(contents) == 1 and os.path.isdir(os.path.join(temp_dir, contents[0])):
+            extract_root = os.path.join(temp_dir, contents[0])
+        else:
+            extract_root = temp_dir
+
+        for item in os.listdir(extract_root):
+            src_path = os.path.join(extract_root, item)
             dest_path = os.path.join(os.getcwd(), item)
             if os.path.isdir(src_path):
                 shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
