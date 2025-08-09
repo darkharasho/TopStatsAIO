@@ -118,9 +118,26 @@ def open_config_window(root, config, date_entry, update_status=None):
     )
     combiner_button.pack(fill="x", pady=5)
 
-    bg_color = config_window_instance.cget("bg")
-    ei_dot = tk.Label(download_frame, text="●", fg="red", bg=bg_color, font=("Arial", 10))
-    combiner_dot = tk.Label(download_frame, text="●", fg="red", bg=bg_color, font=("Arial", 10))
+    style = ttk.Style()
+    button_bg = style.lookup("TButton", "background")
+    ei_dot = tk.Label(
+        download_frame,
+        text="●",
+        fg="red",
+        bg=button_bg,
+        font=("Arial", 10),
+        bd=0,
+        highlightthickness=0,
+    )
+    combiner_dot = tk.Label(
+        download_frame,
+        text="●",
+        fg="red",
+        bg=button_bg,
+        font=("Arial", 10),
+        bd=0,
+        highlightthickness=0,
+    )
     if update_status and update_status.get("GW2EICLI"):
         ei_dot.place(in_=ei_button, relx=1, x=-5, y=0)
     if update_status and update_status.get("GW2_EI_log_combiner"):
