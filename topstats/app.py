@@ -6,7 +6,6 @@ from datetime import datetime
 import shutil
 import subprocess
 import threading
-from PIL import Image, ImageTk
 
 from .config import load_config, save_config, get_default_time, apply_theme
 from .config_ui import open_config_window
@@ -17,7 +16,6 @@ config = load_config()
 checked_items = {}
 root_path = config.get("last_path", "")
 last_selected = None
-icon_photo = None
 
 # Choose root folder
 def choose_root_folder():
@@ -141,37 +139,23 @@ apply_theme(root, config)
 icon_path = os.path.join(os.getcwd(), "top-stats-aio.ico")
 if os.path.exists(icon_path):
     try:
-        icon_image = Image.open(icon_path)
-        icon_photo = ImageTk.PhotoImage(icon_image)
-        root.iconphoto(False, icon_photo)
+        root.iconbitmap(icon_path)
     except Exception as e:
-        try:
-            root.iconbitmap(icon_path)
-        except Exception:
-            print(f"Could not load icon: {e}")
-            # This error is non-critical, so we'll continue running the app
+        print(f"Could not load icon: {e}")
+        # This error is non-critical, so we'll continue running the app
 
 # Make the window resizable
 root.rowconfigure(1, weight=1)  # Allow the main content area to expand
 root.columnconfigure(0, weight=1)  # Allow horizontal expansion
 
 # Add "Select Folder" button at the top of the main window
-bg_color = root.cget("bg")
-
-select_folder_frame = tk.Frame(root, bg=bg_color)
+select_folder_frame = ttk.Frame(root, padding=10)
 select_folder_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
 
-select_folder_button = ttk.Button(
-    select_folder_frame, text="Select Folder", command=choose_root_folder
-)
+select_folder_button = ttk.Button(select_folder_frame, text="Select Folder", command=choose_root_folder)
 select_folder_button.pack(side="left", padx=5)
 
-selected_path_label = tk.Label(
-    select_folder_frame,
-    text=f"Current Folder: {config.get('last_path', '')}",
-    bg=bg_color,
-    fg="#ffffff" if bg_color != "#ffffff" else "#000000",
-)
+selected_path_label = ttk.Label(select_folder_frame, text=f"Current Folder: {config.get('last_path', '')}")
 selected_path_label.pack(side="left", padx=10)
 
 # Main layout section

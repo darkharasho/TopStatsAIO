@@ -47,9 +47,37 @@ def apply_theme(root, config):
     if selected_theme == "dark":
         ttk.Style().theme_use("forest-dark")
         root.configure(bg="#313131")
+        _set_title_bar_color(root, "#313131", dark_mode=True)
     elif selected_theme == "light":
         ttk.Style().theme_use("forest-light")
         root.configure(bg="#ffffff")
+        _set_title_bar_color(root, "#ffffff", dark_mode=False)
+
+
+def _set_title_bar_color(root, color, dark_mode=False):
+    """Set the native title bar color on Windows."""
+    if os.name != "nt":
+        return
+    try:
+        from ctypes import byref, c_int, sizeof, windll
+
+        root.update_idletasks()
+        hwnd = root.winfo_id()
+        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+        DWMWA_CAPTION_COLOR = 35
+
+        use_dark = c_int(1 if dark_mode else 0)
+        windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, byref(use_dark), sizeof(use_dark)
+        )
+
+        color_value = int(color.lstrip("#"), 16)
+        color_ref = c_int(color_value)
+        windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, DWMWA_CAPTION_COLOR, byref(color_ref), sizeof(color_ref)
+        )
+    except Exception:
+        pass
 
 
 def validate_config(config):
