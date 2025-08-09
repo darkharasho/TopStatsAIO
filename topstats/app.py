@@ -122,7 +122,7 @@ if os.name != 'nt':
 # App window
 root = tk.Tk()
 root.title("GW2 arcdps File Selector")
-root.configure(bg="#333333")  # Match the Forest theme's dark background color
+root.configure(bg="#313131")  # Default dark theme background
 
 # Load the Forest theme from the "themes" directory
 themes_dir = os.path.join(os.getcwd(), "themes")
@@ -161,10 +161,6 @@ bg_color = root.cget("bg")
 select_folder_frame = tk.Frame(root, bg=bg_color)
 select_folder_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
 
-if icon_photo:
-    icon_label = tk.Label(select_folder_frame, image=icon_photo, bg=bg_color)
-    icon_label.pack(side="left", padx=(0, 10))
-
 select_folder_button = ttk.Button(
     select_folder_frame, text="Select Folder", command=choose_root_folder
 )
@@ -174,7 +170,7 @@ selected_path_label = tk.Label(
     select_folder_frame,
     text=f"Current Folder: {config.get('last_path', '')}",
     bg=bg_color,
-    fg="#FFFFFF" if bg_color != "#FFFFFF" else "#000000",
+    fg="#ffffff" if bg_color != "#ffffff" else "#000000",
 )
 selected_path_label.pack(side="left", padx=10)
 

@@ -46,10 +46,10 @@ def apply_theme(root, config):
     selected_theme = config.get("theme", "dark")
     if selected_theme == "dark":
         ttk.Style().theme_use("forest-dark")
-        root.configure(bg="#333333")
+        root.configure(bg="#313131")
     elif selected_theme == "light":
         ttk.Style().theme_use("forest-light")
-        root.configure(bg="#FFFFFF")
+        root.configure(bg="#ffffff")
 
 
 def validate_config(config):
