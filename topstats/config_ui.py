@@ -4,6 +4,7 @@ from tkinter import ttk, filedialog, Toplevel, messagebox
 
 from .downloaders import download_gw2eicli, download_gw2_ei_log_combiner
 from .config import save_config, get_default_time, apply_theme
+from .window_utils import set_native_title_bar_theme
 
 config_window_instance = None
 elite_entry = None
@@ -206,6 +207,7 @@ def open_config_window(root, config, date_entry):
         date_entry.delete(0, tk.END)
         date_entry.insert(0, new_default_time)
         apply_theme(root, config)
+        set_native_title_bar_theme(root, config["theme"])
         config_window_instance.destroy()
 
     ttk.Button(

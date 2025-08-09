@@ -6,11 +6,13 @@ from datetime import datetime
 import shutil
 import subprocess
 import threading
+import ctypes as ct
 
 from .config import load_config, save_config, get_default_time, apply_theme
 from .config_ui import open_config_window
 from .aggregator import generate_aggregate
 from .downloaders import get_release_version
+from .window_utils import set_native_title_bar_theme
 
 config = load_config()
 checked_items = {}
@@ -425,5 +427,7 @@ config_button.grid(row=3, column=0, sticky="w", padx=10, pady=10)
 release_version = get_release_version()
 release_label = ttk.Label(root, text=f"Release: {release_version}", font=("Arial", 8), foreground="#888888")
 release_label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
+
+set_native_title_bar_theme(root, config.get("theme", "dark"))
 
 root.mainloop()
