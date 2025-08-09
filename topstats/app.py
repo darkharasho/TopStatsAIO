@@ -15,6 +15,7 @@ from .downloaders import (
     get_release_version,
     fetch_latest_gw2eicli_version,
     fetch_latest_gw2_ei_log_combiner_version,
+    check_for_app_update,
 )
 from .window_utils import set_native_title_bar_theme
 
@@ -492,6 +493,8 @@ if ei_update_available or combiner_update_available:
 release_version = get_release_version()
 release_label = ttk.Label(root, text=f"Release: {release_version}", font=("Arial", 8), foreground="#888888")
 release_label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
+
+threading.Thread(target=lambda: check_for_app_update(root, config), daemon=True).start()
 
 set_native_title_bar_theme(root, config.get("theme", "dark"))
 
