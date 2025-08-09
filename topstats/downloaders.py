@@ -5,6 +5,7 @@ import threading
 from datetime import datetime
 import shutil
 import re
+import subprocess
 
 import requests
 from tkinter import Toplevel, filedialog, messagebox, ttk
@@ -425,6 +426,16 @@ def _download_and_install_update(parent_window, config, release_data):
                 shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
             else:
                 shutil.copy2(src_path, dest_path)
+
+        # --- GIT CHECKOUT UNSTAGED CHANGES ---
+        try:
+            # Check if git is available
+            subprocess.run(["git", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            # Checkout all unstaged changes in the current directory
+            subprocess.run(["git", "checkout", "--", "."], cwd=os.getcwd(), check=True)
+        except Exception as git_exc:
+            print(f"Git not available or checkout failed: {git_exc}")
+        # --- END GIT CHECKOUT ---
 
         progress_dialog.destroy()
         messagebox.showinfo(
