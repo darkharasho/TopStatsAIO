@@ -261,7 +261,7 @@ def update_selected_list():
     count = 0
     for path in sorted(checked_items.keys()):
         display_name = os.path.relpath(path, root_path) if root_path else os.path.basename(path)
-        selected_tree.insert("", tk.END, iid=path, values=(display_name, "🗙"))
+        selected_tree.insert("", tk.END, iid=path, values=(display_name, "❌"))
         count += 1
     count_label.config(text=f"{count} file(s) selected")
     for item in tree.get_children(""):
