@@ -75,10 +75,10 @@ def open_config_window(root, config, date_entry):
     notebook = ttk.Notebook(content_frame)
     notebook.pack(fill="both", expand=True)
 
-    prereq_tab = ttk.Frame(notebook)
     settings_tab = ttk.Frame(notebook)
-    notebook.add(prereq_tab, text="Prerequisites")
+    prereq_tab = ttk.Frame(notebook)
     notebook.add(settings_tab, text="Settings")
+    notebook.add(prereq_tab, text="Prerequisites")
 
     # --- Prerequisites Tab ---
     download_frame = ttk.LabelFrame(prereq_tab, text="Download Prerequisites", padding=10)

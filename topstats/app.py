@@ -198,11 +198,16 @@ root.geometry("1200x900")  # Width x Height
 
 # Allow the window to be resizable
 root.resizable(True, True)
-main_frame.grid_propagate(False)
+
+# Paned window to allow dynamic resizing between tree and selected list
+paned = ttk.PanedWindow(main_frame, orient=tk.HORIZONTAL)
+paned.pack(fill="both", expand=True)
 
 # Treeview container frame
-tree_frame = ttk.Frame(main_frame)
-tree_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+tree_frame = ttk.LabelFrame(paned, text="Available Logs", padding=10)
+paned.add(tree_frame, weight=3)
+tree_frame.rowconfigure(0, weight=1)
+tree_frame.columnconfigure(0, weight=1)
 
 # Treeview with checkboxes for file selection
 tree = ttk.Treeview(tree_frame, columns=("modified",), selectmode="extended")
@@ -212,13 +217,51 @@ tree.column("#0", width=400)  # Adjust width for file/folder names
 tree.column("modified", width=150, anchor="center")  # Adjust width and alignment for last modified date
 tree.grid(row=0, column=0, sticky="nsew")
 
-tree_frame.rowconfigure(0, weight=1)
-tree_frame.columnconfigure(0, weight=1)
-
 # Scrollbar for tree
 tree_scroll = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
 tree.configure(yscrollcommand=tree_scroll.set)
 tree_scroll.grid(row=0, column=1, sticky="ns")
+
+# Selected files section on the right
+selected_frame = ttk.LabelFrame(paned, text="Selected Files", padding=10)
+paned.add(selected_frame, weight=2)
+
+# Container for the selected files list and its scrollbar
+selected_list_container = ttk.Frame(selected_frame)
+selected_list_container.pack(fill="both", expand=True)
+
+# Use ttk.Treeview for the selected files list
+selected_tree = ttk.Treeview(selected_list_container, columns=("File"), show="headings")
+selected_tree.heading("File", text="File")
+selected_tree.column("File", anchor="w", width=300)
+selected_tree.pack(side="left", fill="both", expand=True, pady=5)
+
+selected_scroll = ttk.Scrollbar(selected_list_container, orient="vertical", command=selected_tree.yview)
+selected_tree.configure(yscrollcommand=selected_scroll.set)
+selected_scroll.pack(side="right", fill="y")
+
+# Frame for count label
+count_frame = ttk.Frame(selected_frame)
+count_frame.pack(fill="x", pady=(5, 0))
+
+count_label = ttk.Label(count_frame, text="0 file(s) selected")
+count_label.pack(side="left", anchor="w")
+
+# Frame for selection control buttons
+selection_buttons = ttk.Frame(selected_frame)
+selection_buttons.pack(fill="x", pady=(5, 0))
+
+select_all_button = ttk.Button(selection_buttons, text="Select All", command=lambda: select_all_files())
+select_all_button.pack(side="left", padx=2)
+
+remove_button = ttk.Button(selection_buttons, text="Remove Selected", command=lambda: remove_selected_items())
+remove_button.pack(side="left", padx=2)
+
+unselect_button = ttk.Button(selection_buttons, text="Unselect All", command=unselect_all)
+unselect_button.pack(side="right")
+
+# Track selected files using checkboxes
+tree.tag_configure("selected", background="#ccffcc")
 
 # Create a frame for filter and description
 filter_section_frame = ttk.Frame(root)
@@ -252,38 +295,6 @@ description_entry.grid(row=0, column=0, padx=5, sticky="ew")
 # Add a small note about version requirement
 version_note = ttk.Label(description_frame, text="(Requires v0.9.9.26a+)", font=("Arial", 7), foreground="#888888")
 version_note.grid(row=0, column=1, padx=2, sticky="e")
-
-# Selected files section
-selected_frame = ttk.LabelFrame(main_frame, text="Selected Files", padding=10)
-selected_frame.grid(row=0, column=1, sticky="ns", padx=5, pady=5)
-
-# Use ttk.Treeview for the selected files list
-selected_tree = ttk.Treeview(selected_frame, columns=("File"), show="headings", height=20)
-selected_tree.heading("File", text="File")
-selected_tree.column("File", anchor="w", width=300)
-selected_tree.pack(fill="y", expand=True, pady=5)
-
-# Frame for count label
-count_frame = ttk.Frame(selected_frame)
-count_frame.pack(fill="x", pady=(5, 0))
-
-count_label = ttk.Label(count_frame, text="0 file(s) selected")
-count_label.pack(side="left", anchor="w")
-
-# Frame for selection control buttons
-selection_buttons = ttk.Frame(selected_frame)
-selection_buttons.pack(fill="x", pady=(5, 0))
-
-select_all_button = ttk.Button(selection_buttons, text="Select All", command=lambda: select_all_files())
-select_all_button.pack(side="left", padx=2)
-
-remove_button = ttk.Button(selection_buttons, text="Remove Selected", command=lambda: remove_selected_items())
-remove_button.pack(side="left", padx=2)
-
-unselect_button = ttk.Button(selection_buttons, text="Unselect All", command=unselect_all)
-unselect_button.pack(side="right")
-# Track selected files using checkboxes
-tree.tag_configure("selected", background="#ccffcc")
 
 def update_selected_list():
     selected_tree.delete(*selected_tree.get_children())
@@ -391,16 +402,19 @@ def on_tree_click(event):
     # Update the selected listbox and count
     update_selected_list()
 
-def on_listbox_double_click(event):
-    selection = selected_tree.selection()
-    if selection:
-        selected_name = selected_tree.item(selection[0], "values")[0]
-        full_path = os.path.join(root_path, selected_name)
-        if full_path in checked_items:
-            del checked_items[full_path]
-            for item in tree.get_children(""):
-                reset_tree_checkboxes(item, full_path)
-            update_selected_list()
+
+def on_selected_click(event):
+    """Unselect a file when it is clicked in the selected list."""
+    item = selected_tree.identify_row(event.y)
+    if not item:
+        return
+    selected_name = selected_tree.item(item, "values")[0]
+    full_path = os.path.join(root_path, selected_name)
+    if full_path in checked_items:
+        del checked_items[full_path]
+        for tree_item in tree.get_children(""):
+            reset_tree_checkboxes(tree_item, full_path)
+        update_selected_list()
 
 def reset_tree_checkboxes(item, full_path):
     values = tree.item(item, "values")
@@ -451,7 +465,7 @@ if os.path.exists(root_path):
     populate_tree('', root_path)
 
 tree.bind("<Button-1>", on_tree_click)
-selected_tree.bind("<Double-Button-1>", on_listbox_double_click)
+selected_tree.bind("<Button-1>", on_selected_click)
 selected_tree.bind("<Delete>", lambda e: remove_selected_items())
 
 # Add "Generate Aggregate" button at the bottom
