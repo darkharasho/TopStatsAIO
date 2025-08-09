@@ -29,6 +29,9 @@ def download_gw2eicli(parent_window, config, update_callback=None):
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
 
+    from .window_utils import set_native_title_bar_theme
+    set_native_title_bar_theme(progress_dialog, selected_theme)
+
     status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
     status_label.pack(pady=20)
 
@@ -158,6 +161,9 @@ def download_gw2_ei_log_combiner(parent_window, config, update_callback=None):
     else:
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
+
+    from .window_utils import set_native_title_bar_theme
+    set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
     status_label.pack(pady=20)
@@ -374,6 +380,9 @@ def _download_and_install_update(parent_window, config, release_data):
     else:
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
+
+    from .window_utils import set_native_title_bar_theme
+    set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Downloading update...", foreground=label_fg)
     status_label.pack(pady=20)
