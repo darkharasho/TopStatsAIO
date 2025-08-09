@@ -486,7 +486,7 @@ config_button_dot = ttk.Label(
     padding=0,
 )
 if ei_update_available or combiner_update_available:
-    config_button_dot.place(in_=config_button, relx=1, x=-2, y=0)
+    config_button_dot.place(in_=config_button, relx=1, x=-12, y=0)
 
 # Fetch the release version
 release_version = get_release_version()
