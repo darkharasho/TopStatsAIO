@@ -331,12 +331,6 @@ def _parse_version(v):
 def check_for_app_update(parent_window, config):
     """Check GitHub for a newer release and update the app if available."""
     try:
-        # Skip automatic updating when running from a Git checkout.
-        # Replacing files inside a repository without updating the Git index
-        # leaves the working tree in a modified state.
-        if os.path.isdir(os.path.join(os.getcwd(), ".git")):
-            return
-
         current_version = get_release_version()
         api_url = "https://api.github.com/repos/darkharasho/TopStatsAIO/releases/latest"
         response = requests.get(api_url, timeout=10)
@@ -356,7 +350,10 @@ def check_for_app_update(parent_window, config):
         ):
             return
 
-        _download_and_install_update(parent_window, config, release_data)
+        if os.path.isdir(os.path.join(os.getcwd(), ".git")):
+            _git_pull_and_restart(parent_window, config)
+        else:
+            _download_and_install_update(parent_window, config, release_data)
     except Exception:
         pass
 
@@ -422,6 +419,54 @@ def _download_and_install_update(parent_window, config, release_data):
                 shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
             else:
                 shutil.copy2(src_path, dest_path)
+
+        progress_dialog.destroy()
+        messagebox.showinfo(
+            "Update Complete",
+            "The application has been updated and will now restart.",
+            parent=parent_window,
+        )
+
+        python = sys.executable
+        os.execl(python, python, *sys.argv)
+    except Exception as e:
+        progress_dialog.destroy()
+        messagebox.showerror(
+            "Update Error",
+            f"Failed to update application: {e}",
+            parent=parent_window,
+        )
+
+
+def _git_pull_and_restart(parent_window, config):
+    """Update the repository via git pull and restart the application."""
+    import subprocess
+    import sys
+
+    progress_dialog = Toplevel(parent_window)
+    progress_dialog.title("Updating TopStatsAIO")
+    progress_dialog.geometry("400x200")
+    progress_dialog.resizable(False, False)
+    progress_dialog.transient(parent_window)
+    progress_dialog.grab_set()
+
+    selected_theme = config.get("theme", "dark")
+    if selected_theme == "dark":
+        progress_dialog.configure(bg="#333333")
+        label_fg = "#FFFFFF"
+    else:
+        progress_dialog.configure(bg="#FFFFFF")
+        label_fg = "#000000"
+
+    status_label = ttk.Label(progress_dialog, text="Updating repository...", foreground=label_fg)
+    status_label.pack(pady=20)
+
+    progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
+    progress_bar.pack(pady=10)
+    progress_bar.start()
+
+    try:
+        subprocess.run(["git", "pull"], check=True)
 
         progress_dialog.destroy()
         messagebox.showinfo(
