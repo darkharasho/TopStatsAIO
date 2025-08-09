@@ -159,23 +159,32 @@ def process_with_arcdps_top_stats_parser(config, temp_dir, update_terminal_outpu
             update_terminal_output(f"Batch command failed with return code {result.returncode}")
             return
 
-        # --- Move output files to GeneratedAgg ---
+        # Ensure the GeneratedAgg folder exists and is cleared
         generated_agg_folder = os.path.join(os.getcwd(), "GeneratedAgg")
         os.makedirs(generated_agg_folder, exist_ok=True)
-        # Move .tid and .json files (add more extensions if needed)
-        for file in os.listdir(temp_dir):
-            if file.lower().endswith((".tid", ".json", ".csv")) or file.startswith("Drag_and_Drop"):
-                source_path = os.path.join(temp_dir, file)
-                dest_path = os.path.join(generated_agg_folder, file)
-                try:
-                    shutil.move(source_path, dest_path)
-                    update_terminal_output(f"Moved output: {file} -> {dest_path}")
-                except Exception as e:
-                    update_terminal_output(f"Error moving output file {file}: {e}")
 
-        # Enable the Open Folder button
-        enable_open_folder_button()
+        # Clear the GeneratedAgg folder
+        for file in os.listdir(generated_agg_folder):
+            file_path = os.path.join(generated_agg_folder, file)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)  # Remove the file or symlink
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)  # Remove the directory
+            except Exception as e:
+                update_terminal_output(f"Error clearing file {file_path}: {e}")
+
+        # Move all .tid files to the GeneratedAgg folder
+        for file in os.listdir(temp_dir):
+            if file.lower().endswith(".tid"):
+                source_path = os.path.join(temp_dir, file)
+                destination_path = os.path.join(generated_agg_folder, file)
+                shutil.move(source_path, destination_path)
+                update_terminal_output(f"Moved .tid file: {file} -> {destination_path}")
+
+        # Notify the user and enable the "Open Folder" button
         update_terminal_output("\n**Process completed successfully!**")
+        enable_open_folder_button()
     except Exception as e:
         update_terminal_output(f"Error processing with arcdps_top_stats_parser: {e}")
 
@@ -351,23 +360,58 @@ def process_with_gw2_ei_log_combiner(config, temp_dir, update_terminal_output, e
             else:
                 update_terminal_output("GW2_EI_log_combiner.exe not found, skipping log combining.")
 
-            # --- Move output files to GeneratedAgg ---
-            generated_agg_folder = os.path.join(os.getcwd(), "GeneratedAgg")
-            os.makedirs(generated_agg_folder, exist_ok=True)
-            # Move .tid and .json files (add more extensions if needed)
-            for file in os.listdir(temp_dir):
-                if file.lower().endswith((".tid", ".json", ".csv")) or file.startswith("Drag_and_Drop"):
-                    source_path = os.path.join(temp_dir, file)
-                    dest_path = os.path.join(generated_agg_folder, file)
-                    try:
-                        shutil.move(source_path, dest_path)
-                        update_terminal_output(f"Moved output: {file} -> {dest_path}")
-                    except Exception as e:
-                        update_terminal_output(f"Error moving output file {file}: {e}")
+            # Move the output .json file to the GeneratedAgg folder
+            try:
+                generated_agg_folder = os.path.join(os.getcwd(), "GeneratedAgg")
+                os.makedirs(generated_agg_folder, exist_ok=True)  # Create the folder if it doesn't exist
 
-            # Enable the Open Folder button
-            enable_open_folder_button()
-            update_terminal_output("\n**Process completed successfully!**")
+                # Clear the GeneratedAgg folder
+                if os.path.exists(generated_agg_folder):
+                    for file in os.listdir(generated_agg_folder):
+                        file_path = os.path.join(generated_agg_folder, file)
+                        try:
+                            if os.path.isfile(file_path) or os.path.islink(file_path):
+                                os.unlink(file_path)  # Remove the file or symlink
+                            elif os.path.isdir(file_path):
+                                shutil.rmtree(file_path)  # Remove the directory
+                        except Exception as e:
+                            update_terminal_output(f"Error clearing file {file_path}: {e}")
+
+                # Find the .json file in the processed folder
+                for file in os.listdir(processed_folder):
+                    if file.lower().endswith(".json"):
+                        source_path = os.path.join(processed_folder, file)
+                        destination_path = os.path.join(generated_agg_folder, file)
+                        shutil.move(source_path, destination_path)
+                        update_terminal_output(f"Moved output file to: {destination_path}")
+                        break
+                else:
+                    update_terminal_output("No .json output file found in the processed folder.")
+                    return  # Exit early if no .json file is found
+
+                # Add a separator after moving .json.gz files
+                update_terminal_output("\n" + "-" * 50 + "\n")
+
+                # Move the output .json file to the GeneratedAgg folder
+                generated_agg_folder = os.path.join(os.getcwd(), "GeneratedAgg")
+                os.makedirs(generated_agg_folder, exist_ok=True)  # Create the folder if it doesn't exist
+
+                # Delete the temporary folder
+                try:
+                    if os.path.exists(temp_dir):
+                        shutil.rmtree(temp_dir)  # Remove the temporary folder
+                        update_terminal_output(f"Temporary folder deleted: {temp_dir}")
+                    else:
+                        update_terminal_output(f"Temporary folder not found: {temp_dir}")
+                except Exception as e:
+                    update_terminal_output(f"Error deleting temporary folder: {e}")
+
+                # Notify the user and enable the "Open Folder" button after the process is complete
+                update_terminal_output("\n**Process completed successfully!**")
+                enable_open_folder_button()  # Enable the button
+
+            except Exception as e:
+                update_terminal_output(f"Error running TopStats.exe or moving output file: {e}")
 
             # Signal that processing is complete
             processing_complete.set()
