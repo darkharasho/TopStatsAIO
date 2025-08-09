@@ -46,35 +46,58 @@ def apply_theme(root, config):
     selected_theme = config.get("theme", "dark")
     if selected_theme == "dark":
         ttk.Style().theme_use("forest-dark")
-        root.configure(bg="#313131")
-        _set_title_bar_color(root, "#313131", dark_mode=True)
-    elif selected_theme == "light":
+        bg = "#313131"
+        dark_mode = True
+    else:
         ttk.Style().theme_use("forest-light")
-        root.configure(bg="#ffffff")
-        _set_title_bar_color(root, "#ffffff", dark_mode=False)
+        bg = "#ffffff"
+        dark_mode = False
+
+    root.configure(bg=bg)
+
+    # Delay applying the title bar color until the window is initialized
+    root.after(0, lambda: _set_title_bar_color(root, bg, dark_mode=dark_mode))
 
 
 def _set_title_bar_color(root, color, dark_mode=False):
     """Set the native title bar color on Windows."""
     if os.name != "nt":
         return
+
     try:
-        from ctypes import byref, c_int, sizeof, windll
+        from ctypes import byref, c_int, c_uint, sizeof, windll
 
         root.update_idletasks()
         hwnd = root.winfo_id()
+
         DWMWA_USE_IMMERSIVE_DARK_MODE = 20
         DWMWA_CAPTION_COLOR = 35
+        DWMWA_BORDER_COLOR = 34
 
         use_dark = c_int(1 if dark_mode else 0)
-        windll.dwmapi.DwmSetWindowAttribute(
-            hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, byref(use_dark), sizeof(use_dark)
-        )
+        try:
+            windll.dwmapi.DwmSetWindowAttribute(
+                hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, byref(use_dark), sizeof(use_dark)
+            )
+        except Exception:
+            # Windows 10 uses a different attribute value
+            windll.dwmapi.DwmSetWindowAttribute(
+                hwnd, 19, byref(use_dark), sizeof(use_dark)
+            )
 
         color_value = int(color.lstrip("#"), 16)
-        color_ref = c_int(color_value)
+        bgr = c_uint(
+            (color_value & 0xFF) << 16
+            | (color_value & 0xFF00)
+            | (color_value >> 16)
+        )
+
+        # Set caption and border colors to match the theme
         windll.dwmapi.DwmSetWindowAttribute(
-            hwnd, DWMWA_CAPTION_COLOR, byref(color_ref), sizeof(color_ref)
+            hwnd, DWMWA_CAPTION_COLOR, byref(bgr), sizeof(bgr)
+        )
+        windll.dwmapi.DwmSetWindowAttribute(
+            hwnd, DWMWA_BORDER_COLOR, byref(bgr), sizeof(bgr)
         )
     except Exception:
         pass
