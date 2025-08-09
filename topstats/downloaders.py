@@ -328,67 +328,32 @@ def _parse_version(v):
     return tuple(int(part) for part in parts)
 
 
-def check_for_app_update(parent_window, config):
+def check_for_app_update():
     """Automatically update the app if a newer GitHub release exists."""
+    import sys
+    import tempfile
+
     try:
+        if os.path.isdir(os.path.join(os.getcwd(), ".git")):
+            return
+
         current_version = get_release_version()
         api_url = "https://api.github.com/repos/darkharasho/TopStatsAIO/releases/latest"
         response = requests.get(api_url, timeout=10)
         response.raise_for_status()
         release_data = response.json()
         latest_version = release_data.get("tag_name")
-        if not latest_version:
+        if not latest_version or _parse_version(latest_version) <= _parse_version(current_version):
             return
 
-        if _parse_version(latest_version) <= _parse_version(current_version):
-            return
-
-        if os.path.isdir(os.path.join(os.getcwd(), ".git")):
-            _git_pull_and_restart(parent_window, config)
-        else:
-            _download_and_install_update(parent_window, config, release_data)
-    except Exception:
-        pass
-
-
-def _download_and_install_update(parent_window, config, release_data):
-    """Download the latest release, install it, and restart the application."""
-    import sys
-    import tempfile
-
-    progress_dialog = Toplevel(parent_window)
-    progress_dialog.title("Updating TopStatsAIO")
-    progress_dialog.geometry("400x200")
-    progress_dialog.resizable(False, False)
-    progress_dialog.transient(parent_window)
-    progress_dialog.grab_set()
-
-    selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        progress_dialog.configure(bg="#333333")
-        label_fg = "#FFFFFF"
-    else:
-        progress_dialog.configure(bg="#FFFFFF")
-        label_fg = "#000000"
-
-    status_label = ttk.Label(progress_dialog, text="Downloading update...", foreground=label_fg)
-    status_label.pack(pady=20)
-
-    progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
-    progress_bar.pack(pady=10)
-    progress_bar.start()
-
-    try:
         download_url = None
         for asset in release_data.get("assets", []):
             name = asset.get("name", "")
             if name.endswith(".zip"):
                 download_url = asset["browser_download_url"]
                 break
-
         if not download_url:
             download_url = release_data.get("zipball_url")
-
         if not download_url:
             raise RuntimeError("No downloadable asset found for the latest release")
 
@@ -413,83 +378,7 @@ def _download_and_install_update(parent_window, config, release_data):
             else:
                 shutil.copy2(src_path, dest_path)
 
-        progress_dialog.destroy()
-        messagebox.showinfo(
-            "Update Complete",
-            "The application has been updated and will now restart.",
-            parent=parent_window,
-        )
-
         python = sys.executable
         os.execl(python, python, *sys.argv)
-    except Exception as e:
-        progress_dialog.destroy()
-        messagebox.showerror(
-            "Update Error",
-            f"Failed to update application: {e}",
-            parent=parent_window,
-        )
-
-
-def _git_pull_and_restart(parent_window, config):
-    """Update the repository via git pull and restart the application."""
-    import subprocess
-    import sys
-
-    progress_dialog = Toplevel(parent_window)
-    progress_dialog.title("Updating TopStatsAIO")
-    progress_dialog.geometry("400x200")
-    progress_dialog.resizable(False, False)
-    progress_dialog.transient(parent_window)
-    progress_dialog.grab_set()
-
-    selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        progress_dialog.configure(bg="#333333")
-        label_fg = "#FFFFFF"
-    else:
-        progress_dialog.configure(bg="#FFFFFF")
-        label_fg = "#000000"
-
-    status_label = ttk.Label(progress_dialog, text="Updating repository...", foreground=label_fg)
-    status_label.pack(pady=20)
-
-    progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
-    progress_bar.pack(pady=10)
-    progress_bar.start()
-
-    try:
-        import shutil
-
-        if not shutil.which("git"):
-            progress_dialog.destroy()
-            return
-
-        subprocess.run(["git", "pull"], check=True)
-        status = subprocess.run(
-            ["git", "status", "--porcelain"],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        for line in status.stdout.splitlines():
-            if line and ("M" in line[:2]):
-                path = line[3:]
-                subprocess.run(["git", "checkout", "--", path])
-
-        progress_dialog.destroy()
-        messagebox.showinfo(
-            "Update Complete",
-            "The application has been updated and will now restart.",
-            parent=parent_window,
-        )
-
-        python = sys.executable
-        os.execl(python, python, *sys.argv)
-    except Exception as e:
-        progress_dialog.destroy()
-        messagebox.showerror(
-            "Update Error",
-            f"Failed to update application: {e}",
-            parent=parent_window,
-        )
+    except Exception:
+        pass

@@ -5,7 +5,6 @@ from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
 import shutil
 import subprocess
-import threading
 import ctypes as ct
 
 from .config import load_config, save_config, get_default_time, apply_theme
@@ -20,6 +19,8 @@ from .downloaders import (
 from .window_utils import set_native_title_bar_theme
 
 config = load_config()
+
+check_for_app_update()
 
 prereqs = config.get("prerequisites", {})
 try:
@@ -493,8 +494,6 @@ if ei_update_available or combiner_update_available:
 release_version = get_release_version()
 release_label = ttk.Label(root, text=f"Release: {release_version}", font=("Arial", 8), foreground="#888888")
 release_label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
-
-threading.Thread(target=lambda: check_for_app_update(root, config), daemon=True).start()
 
 set_native_title_bar_theme(root, config.get("theme", "dark"))
 
