@@ -95,6 +95,36 @@ def unselect_all():
         clear_tree_checkboxes(item)
     update_selected_list()
 
+
+def select_all_files():
+    """Select all .zevtc files in the tree."""
+    def select_recursive(item):
+        tags = tree.item(item, "tags")
+        if tags and tags[0] != "folder":
+            full_path = tags[0]
+            if full_path.lower().endswith(".zevtc"):
+                checked_items[full_path] = True
+                tree.item(item, text="✅ " + os.path.basename(full_path), tags=(full_path,))
+        for child in tree.get_children(item):
+            select_recursive(child)
+
+    for top in tree.get_children(""):
+        select_recursive(top)
+    update_selected_list()
+
+
+def remove_selected_items():
+    """Remove highlighted items from the selected list."""
+    selections = selected_tree.selection()
+    for sel in selections:
+        name = selected_tree.item(sel, "values")[0]
+        full_path = os.path.join(root_path, name)
+        if full_path in checked_items:
+            del checked_items[full_path]
+            for item in tree.get_children(""):
+                reset_tree_checkboxes(item, full_path)
+    update_selected_list()
+
 def clear_tree_checkboxes(item):
     values = tree.item(item, "values")
     if values and values[0].lower().endswith(".zevtc"):
@@ -233,15 +263,25 @@ selected_tree.heading("File", text="File")
 selected_tree.column("File", anchor="w", width=300)
 selected_tree.pack(fill="y", expand=True, pady=5)
 
-# Frame for count label and unselect button
+# Frame for count label
 count_frame = ttk.Frame(selected_frame)
 count_frame.pack(fill="x", pady=(5, 0))
 
 count_label = ttk.Label(count_frame, text="0 file(s) selected")
 count_label.pack(side="left", anchor="w")
 
-unselect_button = ttk.Button(count_frame, text="Unselect All", command=unselect_all)
-unselect_button.pack(side="right", anchor="e")
+# Frame for selection control buttons
+selection_buttons = ttk.Frame(selected_frame)
+selection_buttons.pack(fill="x", pady=(5, 0))
+
+select_all_button = ttk.Button(selection_buttons, text="Select All", command=lambda: select_all_files())
+select_all_button.pack(side="left", padx=2)
+
+remove_button = ttk.Button(selection_buttons, text="Remove Selected", command=lambda: remove_selected_items())
+remove_button.pack(side="left", padx=2)
+
+unselect_button = ttk.Button(selection_buttons, text="Unselect All", command=unselect_all)
+unselect_button.pack(side="right")
 # Track selected files using checkboxes
 tree.tag_configure("selected", background="#ccffcc")
 
@@ -412,9 +452,15 @@ if os.path.exists(root_path):
 
 tree.bind("<Button-1>", on_tree_click)
 selected_tree.bind("<Double-Button-1>", on_listbox_double_click)
+selected_tree.bind("<Delete>", lambda e: remove_selected_items())
 
-# Add "Generate Aggregate" and "Select Recent Logs" buttons at the bottom
-generate_button = ttk.Button(root, text="Generate Aggregate", command=lambda: generate_aggregate(root, config, checked_items), style="Accent.TButton")
+# Add "Generate Aggregate" button at the bottom
+generate_button = ttk.Button(
+    root,
+    text="Generate Aggregate",
+    command=lambda: generate_aggregate(root, config, checked_items),
+    style="Accent.TButton",
+)
 generate_button.grid(row=3, column=0, sticky="e", padx=10, pady=10)
 
 # Add "Config" button at the bottom-left
