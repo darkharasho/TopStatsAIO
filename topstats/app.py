@@ -156,20 +156,13 @@ root.rowconfigure(1, weight=1)  # Allow the main content area to expand
 root.columnconfigure(0, weight=1)  # Allow horizontal expansion
 
 # Add "Select Folder" button at the top of the main window
-style = ttk.Style()
 bg_color = root.cget("bg")
-style.configure("TopBar.TFrame", background=bg_color)
-style.configure(
-    "TopBar.TLabel",
-    background=bg_color,
-    foreground="#FFFFFF" if bg_color != "#FFFFFF" else "#000000",
-)
 
-select_folder_frame = ttk.Frame(root, padding=10, style="TopBar.TFrame")
+select_folder_frame = tk.Frame(root, bg=bg_color)
 select_folder_frame.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
 
 if icon_photo:
-    icon_label = ttk.Label(select_folder_frame, image=icon_photo, style="TopBar.TLabel")
+    icon_label = tk.Label(select_folder_frame, image=icon_photo, bg=bg_color)
     icon_label.pack(side="left", padx=(0, 10))
 
 select_folder_button = ttk.Button(
@@ -177,10 +170,11 @@ select_folder_button = ttk.Button(
 )
 select_folder_button.pack(side="left", padx=5)
 
-selected_path_label = ttk.Label(
+selected_path_label = tk.Label(
     select_folder_frame,
     text=f"Current Folder: {config.get('last_path', '')}",
-    style="TopBar.TLabel",
+    bg=bg_color,
+    fg="#FFFFFF" if bg_color != "#FFFFFF" else "#000000",
 )
 selected_path_label.pack(side="left", padx=10)
 
