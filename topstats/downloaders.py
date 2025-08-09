@@ -331,6 +331,12 @@ def _parse_version(v):
 def check_for_app_update(parent_window, config):
     """Check GitHub for a newer release and update the app if available."""
     try:
+        # Skip automatic updating when running from a Git checkout.
+        # Replacing files inside a repository without updating the Git index
+        # leaves the working tree in a modified state.
+        if os.path.isdir(os.path.join(os.getcwd(), ".git")):
+            return
+
         current_version = get_release_version()
         api_url = "https://api.github.com/repos/darkharasho/TopStatsAIO/releases/latest"
         response = requests.get(api_url, timeout=10)
