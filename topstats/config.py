@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import datetime
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from .window_utils import set_native_title_bar_theme
 
@@ -43,12 +43,42 @@ def get_default_time(config):
     ).strftime("%Y-%m-%d %H:%M")
 
 
-def apply_theme(root, config):
-    """Apply the selected theme to the given root window."""
+def apply_theme(window, config):
+    """Apply the selected theme to the given window and ttk widgets."""
+
     selected_theme = config.get("theme", "dark")
-    bg = "#333333" if selected_theme == "dark" else "#FFFFFF"
-    root.configure(bg=bg)
-    root.after(0, lambda: set_native_title_bar_theme(root, selected_theme))
+
+    if selected_theme == "dark":
+        bg = "#333333"
+        fg = "#FFFFFF"
+        entry_bg = "#454545"
+    else:
+        bg = "#FFFFFF"
+        fg = "#000000"
+        entry_bg = "#FFFFFF"
+
+    # Configure the window background
+    try:
+        window.configure(bg=bg)
+    except Exception:
+        pass
+
+    # Apply a simple ttk style so widgets follow the theme
+    style = ttk.Style(window)
+    try:
+        style.theme_use("clam")
+    except Exception:
+        pass
+
+    style.configure(".", background=bg, foreground=fg)
+    style.configure("TFrame", background=bg)
+    style.configure("TLabelframe", background=bg, foreground=fg)
+    style.configure("TLabelframe.Label", background=bg, foreground=fg)
+    style.configure("TLabel", background=bg, foreground=fg)
+    style.configure("TButton", background=bg, foreground=fg)
+    style.configure("TEntry", fieldbackground=entry_bg, foreground=fg)
+
+    window.after(0, lambda: set_native_title_bar_theme(window, selected_theme))
 
 
 def validate_config(config):

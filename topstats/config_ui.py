@@ -9,7 +9,6 @@ from .downloaders import (
     fetch_latest_gw2_ei_log_combiner_version,
 )
 from .config import save_config, get_default_time, apply_theme
-from .window_utils import set_native_title_bar_theme
 
 config_window_instance = None
 elite_entry = None
@@ -74,8 +73,8 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
         except Exception as e:
             print(f"Could not load icon for config window: {e}")
 
-    selected_theme = config.get("theme", "dark")
-    set_native_title_bar_theme(config_window_instance, selected_theme)
+    # Apply theme using the global configuration
+    apply_theme(config_window_instance, config)
 
     config_window_instance.grid_rowconfigure(0, weight=1)
     config_window_instance.grid_columnconfigure(0, weight=1)
