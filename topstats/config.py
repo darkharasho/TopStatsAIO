@@ -46,7 +46,8 @@ def get_default_time(config):
 def apply_theme(root, config):
     """Apply the selected theme to the given root window."""
     selected_theme = config.get("theme", "dark")
-    sv_ttk.set_theme(selected_theme)
+    # Explicitly bind the theme to the provided window to avoid default-root issues
+    sv_ttk.set_theme(selected_theme, root)
 
     # Ensure the theme background is applied to the window
     root.update_idletasks()

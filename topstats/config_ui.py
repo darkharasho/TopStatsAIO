@@ -151,7 +151,8 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
     )
     combiner_button.pack(fill="x", pady=5)
 
-    style = ttk.Style()
+    # Scope style to the config window so theme settings remain active
+    style = ttk.Style(config_window_instance)
     style.configure("UpdateDot.TLabel", foreground="red")
     ei_dot = ttk.Label(
         download_frame,

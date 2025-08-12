@@ -468,7 +468,8 @@ config_button = ttk.Button(
 )
 config_button.grid(row=3, column=0, sticky="w", padx=10, pady=10)
 
-style = ttk.Style()
+# Scope styles to the main window so they don't reset the active theme
+style = ttk.Style(root)
 style.configure("UpdateDot.TLabel", foreground="red")
 config_button_dot = ttk.Label(
     root,
@@ -485,6 +486,9 @@ release_label = ttk.Label(root, text=f"Release: {release_version}", font=("Arial
 release_label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
 
 threading.Thread(target=lambda: check_for_app_update(root, config), daemon=True).start()
+
+# Reapply theme in case later style operations reset it
+apply_theme(root, config)
 root.update()
 set_native_title_bar_theme(root, config.get("theme", "dark"))
 
