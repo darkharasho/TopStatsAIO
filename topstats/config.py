@@ -44,34 +44,34 @@ def get_default_time(config):
 
 
 def apply_theme(window, config):
-    """Apply the selected theme to the given window and ttk widgets."""
+    """Apply the selected title bar theme using win32mica.
+
+    Only minimal widget styling is performed so the Mica backdrop
+    remains visible through the window background.
+    """
 
     selected_theme = config.get("theme", "dark")
 
-    if selected_theme == "dark":
-        bg = "#333333"
-        fg = "#FFFFFF"
-        entry_bg = "#454545"
-    else:
-        bg = "#FFFFFF"
-        fg = "#000000"
-        entry_bg = "#FFFFFF"
-
-    # Apply a simple ttk style so widgets follow the theme
     style = ttk.Style(window)
     try:
-        style.theme_use("clam")
+        style.theme_use("vista")
     except Exception:
         pass
 
-    style.configure("TFrame", background=bg)
-    style.configure("TLabelframe", background=bg, foreground=fg)
-    style.configure("TLabelframe.Label", background=bg, foreground=fg)
-    style.configure("TLabel", background=bg, foreground=fg)
-    style.configure("TButton", background=bg, foreground=fg)
-    style.configure("TEntry", fieldbackground=entry_bg, foreground=fg)
-    style.configure("Treeview", background=bg, fieldbackground=bg, foreground=fg)
-    style.configure("Treeview.Heading", background=bg, foreground=fg)
+    if selected_theme == "dark":
+        tree_bg = "#202020"
+        tree_fg = "#FFFFFF"
+    else:
+        tree_bg = "#FFFFFF"
+        tree_fg = "#000000"
+
+    style.configure(
+        "Treeview",
+        background=tree_bg,
+        fieldbackground=tree_bg,
+        foreground=tree_fg,
+    )
+    style.configure("Treeview.Heading", background=tree_bg, foreground=tree_fg)
 
     set_native_title_bar_theme(window, selected_theme)
 

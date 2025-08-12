@@ -27,15 +27,24 @@ def set_native_title_bar_theme(window, theme: str = "dark") -> None:
     if ApplyMica is None:
         return  # win32mica not available or not on Windows
 
-    def _apply_mica():
+    try:
+        window.configure(bg="systemTransparent")
+        window.wm_attributes("-transparentcolor", "systemTransparent")
+    except Exception:
+        # Some Tk builds do not support transparent backgrounds
+        pass
+
+    def _apply_mica(attempt: int = 0) -> None:
         try:
             window.update_idletasks()
             hwnd = window.winfo_id()
             mica_theme = MicaTheme.DARK if theme == "dark" else MicaTheme.LIGHT
-            ApplyMica(HWND=hwnd, Theme=mica_theme, Style=MicaStyle.DEFAULT)
+            result = ApplyMica(HWND=hwnd, Theme=mica_theme, Style=MicaStyle.DEFAULT)
+            if result != 0 and attempt < 5:
+                window.after(200, lambda: _apply_mica(attempt + 1))
         except Exception:
-            # If the window isn't ready yet, try again shortly
-            window.after(100, _apply_mica)
+            if attempt < 5:
+                window.after(200, lambda: _apply_mica(attempt + 1))
 
-    window.after(0, _apply_mica)
+    window.after(100, _apply_mica)
 
