@@ -148,18 +148,6 @@ if os.name != 'nt':
 # App window
 root = tk.Tk()
 root.title("GW2 arcdps File Selector")
-root.configure(bg="#313131")  # Default dark theme background
-
-# Load the Forest theme from the "themes" directory
-themes_dir = os.path.join(os.getcwd(), "themes")
-forest_dark_path = os.path.join(themes_dir, "forest-dark.tcl")
-forest_light_path = os.path.join(themes_dir, "forest-light.tcl")
-
-# Check if the theme files exist
-if (os.path.exists(forest_dark_path)):
-    root.tk.call("source", forest_dark_path)
-if (os.path.exists(forest_light_path)):
-    root.tk.call("source", forest_light_path)
 
 apply_theme(root, config)
 
@@ -480,7 +468,8 @@ config_button = ttk.Button(
 )
 config_button.grid(row=3, column=0, sticky="w", padx=10, pady=10)
 
-style = ttk.Style()
+# Scope styles to the main window so they don't reset the active theme
+style = ttk.Style(root)
 style.configure("UpdateDot.TLabel", foreground="red")
 config_button_dot = ttk.Label(
     root,
@@ -498,6 +487,9 @@ release_label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
 
 threading.Thread(target=lambda: check_for_app_update(root, config), daemon=True).start()
 
+# Reapply theme in case later style operations reset it
+apply_theme(root, config)
+root.update()
 set_native_title_bar_theme(root, config.get("theme", "dark"))
 
 root.mainloop()

@@ -74,13 +74,7 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
         except Exception as e:
             print(f"Could not load icon for config window: {e}")
 
-    selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        config_window_instance.configure(bg="#333333")
-    else:
-        config_window_instance.configure(bg="#FFFFFF")
-
-    set_native_title_bar_theme(config_window_instance, selected_theme)  # <-- Add this line
+    apply_theme(config_window_instance, config)
 
     config_window_instance.grid_rowconfigure(0, weight=1)
     config_window_instance.grid_columnconfigure(0, weight=1)
@@ -157,7 +151,8 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
     )
     combiner_button.pack(fill="x", pady=5)
 
-    style = ttk.Style()
+    # Scope style to the config window so theme settings remain active
+    style = ttk.Style(config_window_instance)
     style.configure("UpdateDot.TLabel", foreground="red")
     ei_dot = ttk.Label(
         download_frame,
@@ -297,3 +292,9 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
         text="Save",
         command=save_and_close_config,
     ).pack(side="right")
+
+    config_window_instance.update_idletasks()
+    config_window_instance.update()
+    set_native_title_bar_theme(
+        config_window_instance, config.get("theme", "dark")
+    )

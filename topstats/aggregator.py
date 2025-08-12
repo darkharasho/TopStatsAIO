@@ -55,11 +55,17 @@ def generate_aggregate(root, config, checked_items):
         terminal_output.see(tk.END)
         terminal_output.config(state="disabled")
 
-    style = ttk.Style()
-    style.configure("Accent.TButton", background="#28a745", foreground="white", font=("Arial", 10, "bold"))
-    style.configure("TButton", font=("Arial", 10))
+    # Bind styles to the progress popup so global themes remain untouched
+    style = ttk.Style(progress_popup)
+    style.configure(
+        "AggAccent.TButton",
+        background="#28a745",
+        foreground="white",
+        font=("Arial", 10, "bold"),
+    )
+    style.configure("Agg.TButton", font=("Arial", 10))
     style.map(
-        "TButton",
+        "Agg.TButton",
         background=[("disabled", "#6c757d")],
         foreground=[("disabled", "#ffffff")],
     )
@@ -82,16 +88,16 @@ def generate_aggregate(root, config, checked_items):
         button_frame,
         text="Open Folder",
         state="disabled",
-        style="TButton",
+        style="Agg.TButton",
         command=lambda: open_folder(generated_agg_folder),
     )
     open_folder_button.pack(pady=5)
 
     def enable_open_folder_button():
-        open_folder_button.config(state="normal", text="Open Folder", style="Accent.TButton")
+        open_folder_button.config(state="normal", text="Open Folder", style="AggAccent.TButton")
 
     def disable_open_folder_button():
-        open_folder_button.config(state="disabled", text="Processing...", style="TButton")
+        open_folder_button.config(state="disabled", text="Processing...", style="Agg.TButton")
 
     def process_files():
         try:
