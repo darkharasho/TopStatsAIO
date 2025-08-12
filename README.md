@@ -99,6 +99,13 @@ pyinstaller --onefile --noconsole --name TopStatsAIO --distpath . --add-data "co
 3. Run `python main.py` (thin entry script that imports the package)
    - or run `python -m topstats.app`
 
+### Experimental WinUI frontend
+An early WinUI 3 prototype with Mica effects is available for Windows 11 users.
+It requires the [`win32more`](https://github.com/ynkdir/py-win32more) package
+and will automatically launch when running `python main.py` on Windows.  If the
+WinUI dependencies are missing, the application falls back to the existing
+Tkinter interface.
+
 ## Recognition
 Thank you to the GW2 Analytics communinty and Drevarr specifically for helping create this. Shout out to my PAN friends for the excitement and eagerness to help test. Thank you Aza for inspiring me to finally write this UI! Huge thanks to Paralda for informing me of the latest and greatest
 
