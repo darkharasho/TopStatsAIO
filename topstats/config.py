@@ -77,8 +77,10 @@ def apply_theme(window, config):
     style.configure("TLabel", background=bg, foreground=fg)
     style.configure("TButton", background=bg, foreground=fg)
     style.configure("TEntry", fieldbackground=entry_bg, foreground=fg)
+    style.configure("Treeview", background=bg, fieldbackground=bg, foreground=fg)
+    style.configure("Treeview.Heading", background=bg, foreground=fg)
 
-    window.after(0, lambda: set_native_title_bar_theme(window, selected_theme))
+    window.after_idle(lambda: set_native_title_bar_theme(window, selected_theme))
 
 
 def validate_config(config):

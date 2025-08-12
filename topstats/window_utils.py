@@ -2,13 +2,15 @@ import os
 
 if os.name == "nt":
     try:
-        from win32mica import ApplyMica, MicaTheme
+        from win32mica import ApplyMica, MicaTheme, MicaStyle
     except Exception:  # pragma: no cover - win32mica may not be available
         ApplyMica = None
         MicaTheme = None
+        MicaStyle = None
 else:  # Non-Windows platforms do not support win32mica
     ApplyMica = None
     MicaTheme = None
+    MicaStyle = None
 
 
 def set_native_title_bar_theme(window, theme: str = "dark") -> None:
@@ -27,16 +29,10 @@ def set_native_title_bar_theme(window, theme: str = "dark") -> None:
 
     window.update_idletasks()
 
-    bg = "#333333" if theme == "dark" else "#FFFFFF"
-    try:
-        window.configure(bg=bg)
-    except Exception:
-        pass
-
     try:
         hwnd = window.winfo_id()
         mica_theme = MicaTheme.DARK if theme == "dark" else MicaTheme.LIGHT
-        ApplyMica(HWND=hwnd, Theme=mica_theme)
+        ApplyMica(HWND=hwnd, Theme=mica_theme, Style=MicaStyle.DEFAULT)
     except Exception:
         pass
 

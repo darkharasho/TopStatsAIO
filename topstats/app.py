@@ -6,7 +6,6 @@ from datetime import datetime
 import shutil
 import subprocess
 import threading
-import ctypes as ct
 
 from .config import load_config, save_config, get_default_time, apply_theme
 from .config_ui import open_config_window
