@@ -26,11 +26,11 @@ def set_native_title_bar_theme(window, theme="dark"):
         style = "mica" if theme == "dark" else "acrylic"
         try:
             window._pywinstyle = pywinstyles.apply_style(window, style)
-            # Key out the theme background so the blurred Mica/Acrylic
-            # effect shows through without making the entire window
-            # invisible.
-            bg = window.tk.call("ttk::style", "lookup", ".", "-background")
-            window.configure(bg=bg)
-            window.attributes("-transparentcolor", bg)
+            # Use a unique transparent key color so only the window's
+            # base background becomes see-through. Keying out the theme
+            # color caused the entire UI to disappear without any blur.
+            transparent_key = "#010101"
+            window.configure(bg=transparent_key)
+            window.attributes("-transparentcolor", transparent_key)
         except Exception:
             pass
