@@ -6,7 +6,7 @@ import threading
 import tkinter as tk
 from tkinter import Toplevel, ttk, messagebox
 
-from .config import validate_config
+from .config import validate_config, apply_theme
 
 
 def generate_aggregate(root, config, checked_items):
@@ -30,20 +30,25 @@ def generate_aggregate(root, config, checked_items):
         except Exception as e:
             print(f"Could not load icon for popup: {e}")
 
-    # Set the title bar theme to match the config
-    from .window_utils import set_native_title_bar_theme  # Import at the top if not already
+    apply_theme(progress_popup, config)
+
     selected_theme = config.get("theme", "dark")
-    set_native_title_bar_theme(progress_popup, selected_theme)
 
     terminal_frame = ttk.Frame(progress_popup, padding=10)
     terminal_frame.pack(fill="both", expand=True)
+    if selected_theme == "dark":
+        term_bg = "#3a3a3a"
+        term_fg = "#ffffff"
+    else:
+        term_bg = "#ffffff"
+        term_fg = "#000000"
     terminal_output = tk.Text(
         terminal_frame,
         height=20,
         width=80,
         state="disabled",
-        bg="#3a3a3a",
-        fg="#ffffff",
+        bg=term_bg,
+        fg=term_fg,
         font=("Courier", 10),
         borderwidth=0,
     )

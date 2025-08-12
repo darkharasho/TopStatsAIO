@@ -54,16 +54,44 @@ def apply_theme(window, config):
 
     style = ttk.Style(window)
     try:
-        style.theme_use("vista")
+        style.theme_use("clam")
     except Exception:
         pass
 
     if selected_theme == "dark":
+        fg = "#FFFFFF"
+        button_bg = "#2D2D2D"
+        button_active = "#3A3A3A"
+        entry_bg = "#1E1E1E"
         tree_bg = "#202020"
-        tree_fg = "#FFFFFF"
+        tree_fg = fg
     else:
+        fg = "#000000"
+        button_bg = "#E0E0E0"
+        button_active = "#F5F5F5"
+        entry_bg = "#FFFFFF"
         tree_bg = "#FFFFFF"
-        tree_fg = "#000000"
+        tree_fg = fg
+
+    transparent = "systemTransparent"
+
+    style.configure("TFrame", background=transparent)
+    style.configure("TLabel", background=transparent, foreground=fg)
+    style.configure(
+        "TButton",
+        background=button_bg,
+        foreground=fg,
+        borderwidth=1,
+    )
+    style.map("TButton", background=[("active", button_active)])
+    style.configure(
+        "TEntry",
+        fieldbackground=entry_bg,
+        foreground=fg,
+        insertcolor=fg,
+    )
+    style.configure("TCheckbutton", background=transparent, foreground=fg)
+    style.configure("TRadiobutton", background=transparent, foreground=fg)
 
     style.configure(
         "Treeview",

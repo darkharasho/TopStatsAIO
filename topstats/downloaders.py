@@ -10,7 +10,7 @@ import subprocess
 import requests
 from tkinter import Toplevel, filedialog, messagebox, ttk
 
-from .config import save_config
+from .config import save_config, apply_theme
 
 
 def download_gw2eicli(parent_window, config, update_callback=None, post_download=None):
@@ -22,18 +22,9 @@ def download_gw2eicli(parent_window, config, update_callback=None, post_download
     progress_dialog.transient(parent_window)
     progress_dialog.grab_set()
 
-    selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        progress_dialog.configure(bg="#333333")
-        label_fg = "#FFFFFF"
-    else:
-        progress_dialog.configure(bg="#FFFFFF")
-        label_fg = "#000000"
+    apply_theme(progress_dialog, config)
 
-    from .window_utils import set_native_title_bar_theme
-    set_native_title_bar_theme(progress_dialog, selected_theme)
-
-    status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
+    status_label = ttk.Label(progress_dialog, text="Fetching latest release information...")
     status_label.pack(pady=20)
 
     progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
@@ -158,18 +149,9 @@ def download_gw2_ei_log_combiner(parent_window, config, update_callback=None, po
     progress_dialog.transient(parent_window)
     progress_dialog.grab_set()
 
-    selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        progress_dialog.configure(bg="#333333")
-        label_fg = "#FFFFFF"
-    else:
-        progress_dialog.configure(bg="#FFFFFF")
-        label_fg = "#000000"
+    apply_theme(progress_dialog, config)
 
-    from .window_utils import set_native_title_bar_theme
-    set_native_title_bar_theme(progress_dialog, selected_theme)
-
-    status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
+    status_label = ttk.Label(progress_dialog, text="Fetching latest release information...")
     status_label.pack(pady=20)
 
     progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
@@ -380,18 +362,9 @@ def _download_and_install_update(parent_window, config, release_data):
     progress_dialog.transient(parent_window)
     progress_dialog.grab_set()
 
-    selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        progress_dialog.configure(bg="#333333")
-        label_fg = "#FFFFFF"
-    else:
-        progress_dialog.configure(bg="#FFFFFF")
-        label_fg = "#000000"
+    apply_theme(progress_dialog, config)
 
-    from .window_utils import set_native_title_bar_theme
-    set_native_title_bar_theme(progress_dialog, selected_theme)
-
-    status_label = ttk.Label(progress_dialog, text="Downloading update...", foreground=label_fg)
+    status_label = ttk.Label(progress_dialog, text="Downloading update...")
     status_label.pack(pady=20)
 
     progress_bar = ttk.Progressbar(progress_dialog, orient="horizontal", length=350, mode="indeterminate")
