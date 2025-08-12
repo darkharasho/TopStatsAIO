@@ -1,6 +1,17 @@
+import os
 import ctypes as ct
 
+try:
+    import pywinstyles  # type: ignore
+except Exception:  # pragma: no cover - library only on Windows
+    pywinstyles = None
+
+
 def set_native_title_bar_theme(window, theme="dark"):
+    """Set the native title bar theme and apply modern window styles."""
+    if os.name != "nt":
+        return
+
     window.update_idletasks()
     DWMWA_USE_IMMERSIVE_DARK_MODE = 20
     set_window_attribute = ct.windll.dwmapi.DwmSetWindowAttribute
@@ -10,3 +21,10 @@ def set_native_title_bar_theme(window, theme="dark"):
     value = 2 if theme == "dark" else 0  # 2 = dark, 0 = light
     value = ct.c_int(value)
     set_window_attribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ct.byref(value), ct.sizeof(value))
+
+    if pywinstyles:
+        style = "mica" if theme == "dark" else "acrylic"
+        try:
+            pywinstyles.apply_style(window, style)
+        except Exception:
+            pass

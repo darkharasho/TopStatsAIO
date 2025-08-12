@@ -11,7 +11,7 @@ The primary directive of this application is to increase the user friendliness o
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
 - Persistent settings saved to `config.json` (paths, tokens, theme, default time)
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
-- Light and dark themes to suit your preference
+- Sleek Sun Valley theme with optional Windows 11 Mica/Acrylic effects
 
 ## Setup
 ### 1. Download Prerequisites
@@ -96,7 +96,9 @@ pyinstaller --onefile --noconsole --name TopStatsAIO --distpath . --add-data "co
 ### Running locally
 1. Clone the repository
 2. Navigate to it in a terminal
-3. Run `python main.py` (thin entry script that imports the package)
+3. Install dependencies
+   - `pip install sv-ttk pywinstyles` (pywinstyles requires Windows)
+4. Run `python main.py` (thin entry script that imports the package)
    - or run `python -m topstats.app`
 
 ## Recognition
