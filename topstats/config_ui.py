@@ -2,7 +2,12 @@ import os
 import tkinter as tk
 from tkinter import ttk, filedialog, Toplevel, messagebox
 
-from .downloaders import download_gw2eicli, download_gw2_ei_log_combiner
+from .downloaders import (
+    download_gw2eicli,
+    download_gw2_ei_log_combiner,
+    fetch_latest_gw2eicli_version,
+    fetch_latest_gw2_ei_log_combiner_version,
+)
 from .config import save_config, get_default_time, apply_theme
 from .window_utils import set_native_title_bar_theme
 
@@ -48,7 +53,7 @@ def _update_entry_directly(entry_widget, value):
         pass
 
 
-def open_config_window(root, config, date_entry, update_status=None):
+def open_config_window(root, config, date_entry, update_status=None, config_button_dot=None):
     """Open the configuration popup window."""
     global config_window_instance, elite_entry, top_stats_entry, old_top_stats_entry
 
@@ -94,14 +99,48 @@ def open_config_window(root, config, date_entry, update_status=None):
     download_frame = ttk.LabelFrame(left_column, text="Download Prerequisites", padding=10)
     download_frame.pack(fill="x", pady=10)
 
+    def _refresh_main_dot():
+        if config_button_dot and update_status and not (
+            update_status.get("GW2EICLI") or update_status.get("GW2_EI_log_combiner")
+        ):
+            config_button_dot.place_forget()
+
     def download_ei():
-        ei_dot.place_forget()
-        download_gw2eicli(config_window_instance, config, update_config_window_entries)
+        def post_download():
+            ei_dot.place_forget()
+            try:
+                latest = fetch_latest_gw2eicli_version()
+                prereq_ver = config.get("prerequisites", {}).get("GW2EICLI_version")
+                update_status["GW2EICLI"] = prereq_ver != latest
+            except Exception:
+                update_status["GW2EICLI"] = False
+            _refresh_main_dot()
+
+        download_gw2eicli(
+            config_window_instance,
+            config,
+            update_config_window_entries,
+            post_download=post_download,
+        )
 
     def download_combiner():
-        combiner_dot.place_forget()
+        def post_download():
+            combiner_dot.place_forget()
+            try:
+                latest = fetch_latest_gw2_ei_log_combiner_version()
+                prereq_ver = config.get("prerequisites", {}).get(
+                    "GW2_EI_log_combiner_version"
+                )
+                update_status["GW2_EI_log_combiner"] = prereq_ver != latest
+            except Exception:
+                update_status["GW2_EI_log_combiner"] = False
+            _refresh_main_dot()
+
         download_gw2_ei_log_combiner(
-            config_window_instance, config, update_config_window_entries
+            config_window_instance,
+            config,
+            update_config_window_entries,
+            post_download=post_download,
         )
 
     ei_button = ttk.Button(

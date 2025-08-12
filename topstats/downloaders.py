@@ -13,7 +13,7 @@ from tkinter import Toplevel, filedialog, messagebox, ttk
 from .config import save_config
 
 
-def download_gw2eicli(parent_window, config, update_callback=None):
+def download_gw2eicli(parent_window, config, update_callback=None, post_download=None):
     """Download the latest GW2EICLI release from GitHub."""
     progress_dialog = Toplevel(parent_window)
     progress_dialog.title("Downloading GW2EICLI")
@@ -118,6 +118,9 @@ def download_gw2eicli(parent_window, config, update_callback=None):
                     if update_callback:
                         update_callback("elite_insights_path", install_dir)
 
+                    if post_download:
+                        progress_dialog.after(0, post_download)
+
                     status_label.config(text="Installation complete!")
                     progress_dialog.after(1000, progress_dialog.destroy)
 
@@ -146,7 +149,7 @@ def download_gw2eicli(parent_window, config, update_callback=None):
     threading.Thread(target=download_thread, daemon=True).start()
 
 
-def download_gw2_ei_log_combiner(parent_window, config, update_callback=None):
+def download_gw2_ei_log_combiner(parent_window, config, update_callback=None, post_download=None):
     """Download the latest GW2 EI Log Combiner release from GitHub."""
     progress_dialog = Toplevel(parent_window)
     progress_dialog.title("Downloading GW2 EI Log Combiner")
@@ -266,6 +269,9 @@ def download_gw2_ei_log_combiner(parent_window, config, update_callback=None):
 
                     if update_callback:
                         update_callback("top_stats_path", install_dir)
+
+                    if post_download:
+                        progress_dialog.after(0, post_download)
 
                     status_label.config(text="Installation complete!")
                     progress_dialog.after(1000, progress_dialog.destroy)

@@ -474,7 +474,9 @@ generate_button.grid(row=3, column=0, sticky="e", padx=10, pady=10)
 config_button = ttk.Button(
     root,
     text="Config",
-    command=lambda: open_config_window(root, config, date_entry, update_status),
+    command=lambda: open_config_window(
+        root, config, date_entry, update_status, config_button_dot
+    ),
 )
 config_button.grid(row=3, column=0, sticky="w", padx=10, pady=10)
 
