@@ -7,6 +7,7 @@ import tkinter as tk
 from tkinter import Toplevel, ttk, messagebox
 
 from .config import validate_config
+from .window_utils import set_native_title_bar_theme
 
 
 def generate_aggregate(root, config, checked_items):
@@ -31,7 +32,6 @@ def generate_aggregate(root, config, checked_items):
             print(f"Could not load icon for popup: {e}")
 
     # Set the title bar theme to match the config
-    from .window_utils import set_native_title_bar_theme  # Import at the top if not already
     selected_theme = config.get("theme", "dark")
     set_native_title_bar_theme(progress_popup, selected_theme)
 

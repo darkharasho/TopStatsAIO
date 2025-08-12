@@ -28,5 +28,7 @@ def set_native_title_bar_theme(window, theme="dark"):
             # Apply the backdrop style while leaving widgets fully opaque so
             # panes and controls render normally over the blurred background.
             window._pywinstyle = pywinstyles.apply_style(window, style)
+            # Slightly reduce backdrop opacity for a more authentic effect
+            pywinstyles.set_opacity(window, value=0.9)
         except Exception:
             pass

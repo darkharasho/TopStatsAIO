@@ -11,6 +11,7 @@ import requests
 from tkinter import Toplevel, filedialog, messagebox, ttk
 
 from .config import save_config
+from .window_utils import set_native_title_bar_theme
 
 
 def download_gw2eicli(parent_window, config, update_callback=None, post_download=None):
@@ -30,7 +31,6 @@ def download_gw2eicli(parent_window, config, update_callback=None, post_download
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
 
-    from .window_utils import set_native_title_bar_theme
     set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
@@ -166,7 +166,6 @@ def download_gw2_ei_log_combiner(parent_window, config, update_callback=None, po
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
 
-    from .window_utils import set_native_title_bar_theme
     set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Fetching latest release information...", foreground=label_fg)
@@ -388,7 +387,6 @@ def _download_and_install_update(parent_window, config, release_data):
         progress_dialog.configure(bg="#FFFFFF")
         label_fg = "#000000"
 
-    from .window_utils import set_native_title_bar_theme
     set_native_title_bar_theme(progress_dialog, selected_theme)
 
     status_label = ttk.Label(progress_dialog, text="Downloading update...", foreground=label_fg)
