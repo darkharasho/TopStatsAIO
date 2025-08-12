@@ -43,21 +43,33 @@ def _browse_for_folder() -> str | None:
             ("iImage", ctypes.c_int),
         ]
 
+    shell32 = ctypes.windll.shell32
+    ole32 = ctypes.windll.ole32
+
+    # Ensure 64-bit pointers are preserved when calling the shell APIs by
+    # explicitly specifying ``restype``.  The default ``c_int`` would truncate
+    # the PIDL on 64-bit Python, leading to access violations when used.
+    SHBrowseForFolderW = shell32.SHBrowseForFolderW
+    SHBrowseForFolderW.argtypes = [ctypes.POINTER(BROWSEINFO)]
+    SHBrowseForFolderW.restype = ctypes.c_void_p
+
+    SHGetPathFromIDListW = shell32.SHGetPathFromIDListW
+    SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wintypes.LPWSTR]
+    SHGetPathFromIDListW.restype = wintypes.BOOL
+
     buffer = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
     bi = BROWSEINFO()
     # ``pszDisplayName`` expects a ``LPWSTR`` pointer, not a character array.
-    # ``ctypes.cast`` safely provides the correct pointer type and avoids the
-    # "incompatible types" runtime error that occurs if the array is assigned
-    # directly.
     bi.pszDisplayName = ctypes.cast(buffer, wintypes.LPWSTR)
     bi.lpszTitle = "Select Log Folder"
     bi.ulFlags = 0x0001 | 0x0040  # BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
-    pidl = ctypes.windll.shell32.SHBrowseForFolderW(ctypes.byref(bi))
+    pidl = SHBrowseForFolderW(ctypes.byref(bi))
     if pidl:
         path_buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
-        ctypes.windll.shell32.SHGetPathFromIDListW(pidl, path_buf)
-        ctypes.windll.ole32.CoTaskMemFree(pidl)
-        return path_buf.value
+        if SHGetPathFromIDListW(pidl, path_buf):
+            ole32.CoTaskMemFree(pidl)
+            return path_buf.value
+        ole32.CoTaskMemFree(pidl)
     return None
 
 
