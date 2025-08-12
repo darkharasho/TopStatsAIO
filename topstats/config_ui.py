@@ -75,12 +75,7 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
             print(f"Could not load icon for config window: {e}")
 
     selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        config_window_instance.configure(bg="#333333")
-    else:
-        config_window_instance.configure(bg="#FFFFFF")
-
-    set_native_title_bar_theme(config_window_instance, selected_theme)  # <-- Add this line
+    set_native_title_bar_theme(config_window_instance, selected_theme)
 
     config_window_instance.grid_rowconfigure(0, weight=1)
     config_window_instance.grid_columnconfigure(0, weight=1)

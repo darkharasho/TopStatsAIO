@@ -1,7 +1,9 @@
 import os
 import json
 from datetime import datetime
-from tkinter import messagebox, ttk
+from tkinter import messagebox
+
+from .window_utils import set_native_title_bar_theme
 
 CONFIG_FILE = "config.json"
 
@@ -44,63 +46,9 @@ def get_default_time(config):
 def apply_theme(root, config):
     """Apply the selected theme to the given root window."""
     selected_theme = config.get("theme", "dark")
-    if selected_theme == "dark":
-        ttk.Style().theme_use("forest-dark")
-        bg = "#313131"
-        dark_mode = True
-    else:
-        ttk.Style().theme_use("forest-light")
-        bg = "#ffffff"
-        dark_mode = False
-
+    bg = "#333333" if selected_theme == "dark" else "#FFFFFF"
     root.configure(bg=bg)
-
-    # Delay applying the title bar color until the window is initialized
-    root.after(0, lambda: _set_title_bar_color(root, bg, dark_mode=dark_mode))
-
-
-def _set_title_bar_color(root, color, dark_mode=False):
-    """Set the native title bar color on Windows."""
-    if os.name != "nt":
-        return
-
-    try:
-        from ctypes import byref, c_int, c_uint, sizeof, windll
-
-        root.update_idletasks()
-        hwnd = root.winfo_id()
-
-        DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-        DWMWA_CAPTION_COLOR = 35
-        DWMWA_BORDER_COLOR = 34
-
-        use_dark = c_int(1 if dark_mode else 0)
-        try:
-            windll.dwmapi.DwmSetWindowAttribute(
-                hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, byref(use_dark), sizeof(use_dark)
-            )
-        except Exception:
-            # Windows 10 uses a different attribute value
-            windll.dwmapi.DwmSetWindowAttribute(
-                hwnd, 19, byref(use_dark), sizeof(use_dark)
-            )
-
-        color_value = int(color.lstrip("#"), 16)
-        bgr = c_uint(
-            (color_value & 0xFF) << 16
-            | (color_value & 0xFF00)
-            | (color_value >> 16)
-        )
-
-        # Set caption and border colors to match the theme
-        windll.dwmapi.DwmSetWindowAttribute(
-            hwnd, DWMWA_CAPTION_COLOR, byref(bgr), sizeof(bgr)
-        )
-        windll.dwmapi.DwmSetWindowAttribute(
-            hwnd, DWMWA_BORDER_COLOR, byref(bgr), sizeof(bgr)
-        )
-    except Exception:
-        pass
+    root.after(0, lambda: set_native_title_bar_theme(root, selected_theme))
 
 
 def validate_config(config):
