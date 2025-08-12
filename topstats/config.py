@@ -57,12 +57,6 @@ def apply_theme(window, config):
         fg = "#000000"
         entry_bg = "#FFFFFF"
 
-    # Configure the window background
-    try:
-        window.configure(bg=bg)
-    except Exception:
-        pass
-
     # Apply a simple ttk style so widgets follow the theme
     style = ttk.Style(window)
     try:
@@ -70,7 +64,6 @@ def apply_theme(window, config):
     except Exception:
         pass
 
-    style.configure(".", background=bg, foreground=fg)
     style.configure("TFrame", background=bg)
     style.configure("TLabelframe", background=bg, foreground=fg)
     style.configure("TLabelframe.Label", background=bg, foreground=fg)
@@ -80,7 +73,7 @@ def apply_theme(window, config):
     style.configure("Treeview", background=bg, fieldbackground=bg, foreground=fg)
     style.configure("Treeview.Heading", background=bg, foreground=fg)
 
-    window.after_idle(lambda: set_native_title_bar_theme(window, selected_theme))
+    set_native_title_bar_theme(window, selected_theme)
 
 
 def validate_config(config):

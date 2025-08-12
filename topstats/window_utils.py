@@ -27,12 +27,15 @@ def set_native_title_bar_theme(window, theme: str = "dark") -> None:
     if ApplyMica is None:
         return  # win32mica not available or not on Windows
 
-    window.update_idletasks()
+    def _apply_mica():
+        try:
+            window.update_idletasks()
+            hwnd = window.winfo_id()
+            mica_theme = MicaTheme.DARK if theme == "dark" else MicaTheme.LIGHT
+            ApplyMica(HWND=hwnd, Theme=mica_theme, Style=MicaStyle.DEFAULT)
+        except Exception:
+            # If the window isn't ready yet, try again shortly
+            window.after(100, _apply_mica)
 
-    try:
-        hwnd = window.winfo_id()
-        mica_theme = MicaTheme.DARK if theme == "dark" else MicaTheme.LIGHT
-        ApplyMica(HWND=hwnd, Theme=mica_theme, Style=MicaStyle.DEFAULT)
-    except Exception:
-        pass
+    window.after(0, _apply_mica)
 
