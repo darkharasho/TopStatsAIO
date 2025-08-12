@@ -45,7 +45,11 @@ def _browse_for_folder() -> str | None:
 
     buffer = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
     bi = BROWSEINFO()
-    bi.pszDisplayName = buffer
+    # ``pszDisplayName`` expects a ``LPWSTR`` pointer, not a character array.
+    # ``ctypes.cast`` safely provides the correct pointer type and avoids the
+    # "incompatible types" runtime error that occurs if the array is assigned
+    # directly.
+    bi.pszDisplayName = ctypes.cast(buffer, wintypes.LPWSTR)
     bi.lpszTitle = "Select Log Folder"
     bi.ulFlags = 0x0001 | 0x0040  # BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE
     pidl = ctypes.windll.shell32.SHBrowseForFolderW(ctypes.byref(bi))
