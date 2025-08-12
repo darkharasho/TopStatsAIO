@@ -26,10 +26,11 @@ def set_native_title_bar_theme(window, theme="dark"):
         style = "mica" if theme == "dark" else "acrylic"
         try:
             window._pywinstyle = pywinstyles.apply_style(window, style)
-            # Match the title bar by keying out the themed background color
+            # Key out the theme background so the blurred Mica/Acrylic
+            # effect shows through without making the entire window
+            # invisible.
             bg = window.tk.call("ttk::style", "lookup", ".", "-background")
             window.configure(bg=bg)
             window.attributes("-transparentcolor", bg)
-            pywinstyles.set_opacity(window, value=0.85, color=bg)
         except Exception:
             pass

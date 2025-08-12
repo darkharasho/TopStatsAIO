@@ -11,7 +11,7 @@ The primary directive of this application is to increase the user friendliness o
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
 - Persistent settings saved to `config.json` (paths, tokens, theme, default time)
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
-- Sleek Sun Valley theme with Windows 11 Mica/Acrylic window backgrounds tuned to ~85% opacity for a cohesive translucent look
+- Sleek Sun Valley theme with Windows 11 Mica/Acrylic window backgrounds providing a subtle translucent blur for a cohesive look
 
 ## Setup
 ### 1. Download Prerequisites
