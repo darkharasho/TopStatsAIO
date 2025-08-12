@@ -1,11 +1,19 @@
-import os
+"""Application entry point.
 
-if os.name == "nt":
+This project now targets Windows and launches the WinUI interface directly.
+"""
+
+from topstats.winui_app import run
+
+
+def main() -> None:
+    """Start the WinUI application."""
     try:
-        from topstats.winui_app import run as run_winui
-        run_winui()
-    except Exception as exc:
+        run()
+    except Exception as exc:  # pragma: no cover - surface any startup error
         print(f"Failed to start WinUI frontend: {exc}")
-        from topstats import app  # noqa: F401 - fallback to Tkinter
-else:
-    from topstats import app  # noqa: F401 - non-Windows fallback
+
+
+if __name__ == "__main__":  # pragma: no cover - script entry point
+    main()
+

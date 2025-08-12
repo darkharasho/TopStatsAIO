@@ -1,6 +1,7 @@
 ![top-stats-aio-banner](https://github.com/user-attachments/assets/d413569d-ecb1-4618-936e-5f6fa071ba0c)
 
 Your one stop shop for generating top stats. This program uses both Elite Insights Parser as well as the GW2 EI Log combiner to create a joined aggregate of multiple WvW fight logs. This is helpful for being able to see a holistic picture of your squad's performance. Internally the codebase has been refactored into a modular `topstats` package that separates configuration, aggregation, downloads and the UI. **AS WITH ALL ANALYTICS, PLEASE TAKE STATS AS A TOOL AND NOT AN ABSOLUTE AUTHORITY** There are always varying circumstances to a player's performance, you should never take any analytics entirely at face value.
+> **Note**: TopStatsAIO now targets Windows 11 and ships a native WinUI 3 interface. Linux support and the previous Tkinter UI have been dropped.
 [An example of a summary can be found here](https://wvwlogs.com/#202503052206-Log-Summary)
 ![image](https://github.com/user-attachments/assets/d5482ea4-7de8-4d78-90f0-88e11e6b2223)
 
@@ -99,12 +100,10 @@ pyinstaller --onefile --noconsole --name TopStatsAIO --distpath . --add-data "co
 3. Run `python main.py` (thin entry script that imports the package)
    - or run `python -m topstats.app`
 
-### Experimental WinUI frontend
-An early WinUI 3 prototype with Mica effects is available for Windows 11 users.
+### WinUI frontend
+TopStatsAIO uses a WinUI 3 interface with Mica effects and targets Windows 11.
 It requires the [`win32more`](https://github.com/ynkdir/py-win32more) package
-and will automatically launch when running `python main.py` on Windows.  If the
-WinUI dependencies are missing, the application falls back to the existing
-Tkinter interface.
+and launches automatically when running `python main.py`.
 
 ## Recognition
 Thank you to the GW2 Analytics communinty and Drevarr specifically for helping create this. Shout out to my PAN friends for the excitement and eagerness to help test. Thank you Aza for inspiring me to finally write this UI! Huge thanks to Paralda for informing me of the latest and greatest
