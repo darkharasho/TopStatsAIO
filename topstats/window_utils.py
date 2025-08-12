@@ -29,6 +29,7 @@ def set_native_title_bar_theme(window, theme="dark"):
             # Match the title bar by keying out the themed background color
             bg = window.tk.call("ttk::style", "lookup", ".", "-background")
             window.configure(bg=bg)
-            pywinstyles.set_opacity(window, color=bg)
+            window.attributes("-transparentcolor", bg)
+            pywinstyles.set_opacity(window, value=0.85, color=bg)
         except Exception:
             pass
