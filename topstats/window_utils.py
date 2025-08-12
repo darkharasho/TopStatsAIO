@@ -25,6 +25,6 @@ def set_native_title_bar_theme(window, theme="dark"):
     if pywinstyles:
         style = "mica" if theme == "dark" else "acrylic"
         try:
-            pywinstyles.apply_style(window, style)
+            window._pywinstyle = pywinstyles.apply_style(window, style)
         except Exception:
             pass

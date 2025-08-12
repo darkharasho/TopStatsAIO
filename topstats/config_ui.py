@@ -291,3 +291,9 @@ def open_config_window(root, config, date_entry, update_status=None, config_butt
         text="Save",
         command=save_and_close_config,
     ).pack(side="right")
+
+    config_window_instance.update_idletasks()
+    config_window_instance.update()
+    set_native_title_bar_theme(
+        config_window_instance, config.get("theme", "dark")
+    )

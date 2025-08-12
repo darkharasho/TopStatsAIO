@@ -4,7 +4,6 @@ from datetime import datetime
 from tkinter import messagebox, ttk
 
 import sv_ttk
-from .window_utils import set_native_title_bar_theme
 
 CONFIG_FILE = "config.json"
 
@@ -49,12 +48,10 @@ def apply_theme(root, config):
     selected_theme = config.get("theme", "dark")
     sv_ttk.set_theme(selected_theme)
 
-    # Set the window background to match the current ttk theme
+    # Ensure the theme background is applied to the window
+    root.update_idletasks()
     bg = root.tk.call("ttk::style", "lookup", ".", "-background")
     root.configure(bg=bg)
-
-    # Delay applying the native title bar styling until the window is initialized
-    root.after(0, lambda: set_native_title_bar_theme(root, selected_theme))
 
 
 def validate_config(config):

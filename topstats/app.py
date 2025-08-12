@@ -485,7 +485,7 @@ release_label = ttk.Label(root, text=f"Release: {release_version}", font=("Arial
 release_label.grid(row=4, column=0, sticky="e", padx=10, pady=5)
 
 threading.Thread(target=lambda: check_for_app_update(root, config), daemon=True).start()
-
+root.update()
 set_native_title_bar_theme(root, config.get("theme", "dark"))
 
 root.mainloop()
