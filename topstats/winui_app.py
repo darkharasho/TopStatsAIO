@@ -57,6 +57,12 @@ def _browse_for_folder() -> str | None:
     SHGetPathFromIDListW.argtypes = [ctypes.c_void_p, wintypes.LPWSTR]
     SHGetPathFromIDListW.restype = wintypes.BOOL
 
+    # ``CoTaskMemFree`` also needs an explicit pointer type so that freeing the
+    # 64-bit PIDL does not overflow the default ``c_int`` conversion.
+    CoTaskMemFree = ole32.CoTaskMemFree
+    CoTaskMemFree.argtypes = [ctypes.c_void_p]
+    CoTaskMemFree.restype = None
+
     buffer = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
     bi = BROWSEINFO()
     # ``pszDisplayName`` expects a ``LPWSTR`` pointer, not a character array.
@@ -67,9 +73,9 @@ def _browse_for_folder() -> str | None:
     if pidl:
         path_buf = ctypes.create_unicode_buffer(wintypes.MAX_PATH)
         if SHGetPathFromIDListW(pidl, path_buf):
-            ole32.CoTaskMemFree(pidl)
+            CoTaskMemFree(ctypes.c_void_p(pidl))
             return path_buf.value
-        ole32.CoTaskMemFree(pidl)
+        CoTaskMemFree(ctypes.c_void_p(pidl))
     return None
 
 
