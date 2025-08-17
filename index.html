@@ -3,31 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <title>Top Stats AIO</title>
-    <style>
-      :root {
-        --skeleton-bg:#1e1e1e;
-        --skeleton-base:#2a2a2a;
-        --skeleton-highlight:#3a3a3a;
-      }
-      body.light {
-        --skeleton-bg:#f0f0f0;
-        --skeleton-base:#e0e0e0;
-        --skeleton-highlight:#f5f5f5;
-      }
-      body { margin:0; }
-      #skeleton-screen { position:fixed; inset:0; background:var(--skeleton-bg); z-index:10000; display:flex; flex-direction:column; gap:16px; padding:16px; transition:opacity 0.3s ease; }
-      #skeleton-screen.hidden { opacity:0; pointer-events:none; }
-      .skeleton { background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 37%,var(--skeleton-base) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
-      .skeleton-row { display:flex; align-items:center; gap:12px; }
-      .skeleton-avatar { width:40px; height:40px; border-radius:50%; }
-      .skeleton-line { height:12px; border-radius:4px; margin-bottom:8px; width:100%; }
-      .skeleton-line.short { width:60%; }
-      .skeleton-block { height:120px; border-radius:8px; width:100%; }
-      @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
-    </style>
-    <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="styles.css"></noscript>
-  </head>
+  <script>
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.add('light');
+    }
+  </script>
+  <style>
+    :root {
+      --skeleton-bg:#1e1e1e;
+      --skeleton-base:#2a2a2a;
+      --skeleton-highlight:#3a3a3a;
+    }
+    html.light {
+      --skeleton-bg:#f0f0f0;
+      --skeleton-base:#e0e0e0;
+      --skeleton-highlight:#f5f5f5;
+    }
+    body { margin:0; }
+    #skeleton-screen { position:fixed; inset:0; background:var(--skeleton-bg); z-index:10000; display:flex; flex-direction:column; gap:16px; padding:16px; transition:opacity 0.3s ease; }
+    #skeleton-screen.hidden { opacity:0; pointer-events:none; }
+    .skeleton { background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 37%,var(--skeleton-base) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
+    .skeleton-row { display:flex; align-items:center; gap:12px; }
+    .skeleton-avatar { width:40px; height:40px; border-radius:50%; }
+    .skeleton-line { height:12px; border-radius:4px; margin-bottom:8px; width:100%; }
+    .skeleton-line.short { width:60%; }
+    .skeleton-block { height:120px; border-radius:8px; width:100%; }
+    @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
+  </style>
+  <link rel="preload" href="styles.css" as="style" onload="this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="styles.css"></noscript>
+</head>
 <body>
   <div id="skeleton-screen">
     <div class="skeleton-row">
@@ -47,153 +52,15 @@
     </div>
     <div class="skeleton-block skeleton"></div>
   </div>
-  <div id="titlebar">
-    <div id="title-left">
-      <img src="media/TopStatsAIO-Logo.png" id="title-logo" alt="Top Stats AIO Logo" />
-      <div id="title-text">Top Stats AIO</div>
-      <span id="version-text"></span>
-    </div>
-    <div id="window-buttons">
-      <button id="minimize" class="win-button" aria-label="Minimize">&#x2212;</button>
-      <button id="maximize" class="win-button" aria-label="Maximize">&#x25a1;</button>
-      <button id="close" class="win-button" aria-label="Close">&#x2715;</button>
-    </div>
-  </div>
-  <div id="main-window">
-    <div id="folder-actions">
-      <button id="choose-folder">Select Folder</button>
-      <span id="selected-folder" class="folder-label"></span>
-      <div id="action-buttons">
-        <button id="update-notice" aria-label="Update available" class="hidden">&#9888;</button>
-        <button id="settings" aria-label="Settings">&#9881;</button>
-      </div>
-    </div>
-    <div id="container">
-      <div id="file-tree" class="card">
-        <h3 class="card-title">File Picker</h3>
-        <div id="file-tree-list"></div>
-        <div id="progress-container" class="hidden"><div id="progress"></div></div>
-      </div>
-      <div id="selected-files" class="card">
-        <div class="card-header">
-          <h3 class="card-title">Selected Files</h3>
-          <button id="unselect-all" class="small-btn">Unselect All</button>
-        </div>
-        <ul id="selected-list"></ul>
-      </div>
-    </div>
-    <div id="actions" class="card">
-      <div id="date-section">
-        <input type="datetime-local" id="date-filter" />
-        <button id="date-select">Select Since</button>
-      </div>
-      <input type="text" id="description" placeholder="Optional Description" />
-      <button id="parse-btn" class="parse-btn">Parse</button>
-    </div>
-  </div>
-  <div id="parse-window">
-    <h2 class="parse-header">Parsing Logs</h2>
-    <div id="parse-steps"></div>
-    <pre id="parse-output" class="parse-output"></pre>
-    <div class="parse-actions">
-      <button id="parse-cancel">Cancel</button>
-      <button id="parse-open-folder" disabled>Open Folder</button>
-      <button id="parse-close" disabled>Back</button>
-    </div>
-  </div>
-  <div id="settings-window">
-    <button id="close-settings" aria-label="Close">&#x2715;</button>
-    <h2 class="settings-header">Settings</h2>
-    <div id="settings-grid">
-      <div id="settings-left">
-        <div class="card" id="dependency-card">
-          <h3 class="card-title">Download Dependencies</h3>
-          <div class="dep-row">
-            <button id="download-cli">GW2 EI CLI</button>
-            <span id="cli-version" class="dep-version"></span>
-          </div>
-          <div class="dep-row">
-            <button id="download-combiner">GW2 EI Log Combiner</button>
-            <span id="combiner-version" class="dep-version"></span>
-          </div>
-          <div class="dep-row">
-            <button id="download-parser">ArcDPS Top Stats Parser</button>
-            <span id="parser-version" class="dep-version"></span>
-          </div>
-        </div>
-        <div class="card" id="optional-config-card">
-          <h3 class="card-title">Optional Configuration</h3>
-          <div class="config-row">
-            <label for="dps-user-token">DPSReportUserToken</label>
-            <input type="text" id="dps-user-token" class="config-input" />
-          </div>
-        </div>
-        <div class="card" id="combiner-config-card">
-          <h3 class="card-title">GW2 EI Log Combiner</h3>
-          <div class="config-row">
-            <label for="combiner-guild-name">Guild Name</label>
-            <input type="text" id="combiner-guild-name" class="config-input" />
-          </div>
-          <div class="config-row">
-            <label for="combiner-guild-id">Guild ID</label>
-            <input type="text" id="combiner-guild-id" class="config-input" />
-          </div>
-          <div class="config-row">
-            <label for="combiner-api-key">API Key</label>
-            <input type="text" id="combiner-api-key" class="config-input" />
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-glicko" /> Enable Glicko DB Update</label>
-          </div>
-        </div>
-      </div>
-      <div id="settings-right">
-        <div class="card" id="theme-card">
-          <h3 class="card-title">Theme</h3>
-          <div class="dep-row">
-            <button id="theme-dark" class="theme-btn">Dark</button>
-            <button id="theme-light" class="theme-btn">Light</button>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="default" /> <span class="gradient-text gradient-default">Blue/Purple</span></label>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="grey" /> <span class="gradient-text gradient-grey">Grey</span></label>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="sunset" /> <span class="gradient-text gradient-sunset">Sunset</span></label>
-            </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="forest" /> <span class="gradient-text gradient-forest">Forest</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="ocean" /> <span class="gradient-text gradient-ocean">Ocean</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="rose" /> <span class="gradient-text gradient-rose">Rose</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="peach" /> <span class="gradient-text gradient-peach">Peach</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="lavender" /> <span class="gradient-text gradient-lavender">Lavender</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="midnight" /> <span class="gradient-text gradient-midnight">Midnight</span></label>
-          </div>
-        </div>
-        <div class="card" id="parser-selection-card">
-          <h3 class="card-title">Parser Selection</h3>
-          <div class="dep-row">
-            <label><input type="radio" name="parser" id="parser-topstats" value="topstats" /> ArcDPS Top Stats Parser</label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="parser" id="parser-combiner" value="combiner" /> GW2 EI Log Combiner</label>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script defer src="renderer.js"></script>
+  <script>
+    requestAnimationFrame(() => {
+      fetch('app.html').then(r => r.text()).then(html => {
+        document.body.insertAdjacentHTML('beforeend', html);
+        const s = document.createElement('script');
+        s.src = 'renderer.js';
+        document.body.appendChild(s);
+      });
+    });
+  </script>
 </body>
 </html>

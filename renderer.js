@@ -572,6 +572,7 @@ function initParseUI() {
 
 
 function applyTheme(theme) {
+  document.documentElement.classList.toggle('light', theme === 'light');
   document.body.classList.toggle('light', theme === 'light');
   if (theme === 'light') {
     lightBtn.classList.add('selected');
