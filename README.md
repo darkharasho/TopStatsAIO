@@ -22,6 +22,7 @@ The primary directive of this application is to increase the user friendliness o
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
 - Light and dark themes to suit your preference
+- Notifies you of new releases on startup
 
 ## Setup
 
@@ -69,10 +70,8 @@ npm install
 npm start
 ```
 
-To test the auto-update flow in development, copy
-`dev-app-update.yml.example` to `dev-app-update.yml` and update the URL to
-point to your update server. Then pass the `--dev-update` flag to the start
-command:
+To test the update notification in development, launch with the
+`--dev-update` flag:
 
 ```bash
 npm start -- --dev-update

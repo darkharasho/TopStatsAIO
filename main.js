@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
-const { autoUpdater } = require('electron-updater');
+const semver = require('semver');
 
 const depsDir = path.join(__dirname, 'dependencies');
 const versionsFile = path.join(depsDir, 'versions.json');
@@ -145,56 +145,38 @@ function createWindow() {
 }
 
 const allowDevUpdates = process.argv.includes('--dev-update');
-const devUpdateConfigPath = path.join(__dirname, 'dev-app-update.yml');
-const hasDevUpdateConfig = fs.existsSync(devUpdateConfigPath);
+
+async function checkForAppUpdates() {
+  try {
+    const rel = await getLatest('darkharasho/TopStatsAIO');
+    const latest = semver.clean(rel.tag_name || rel.name);
+    const current = app.getVersion();
+    if (latest && semver.gt(latest, current)) {
+      const { response } = await dialog.showMessageBox({
+        type: 'question',
+        buttons: ['Download', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Update available',
+        message: `Version ${latest} is available. Open downloads page?`
+      });
+      if (response === 0) {
+        shell.openExternal(rel.html_url);
+      }
+    }
+  } catch (err) {
+    console.error('Update check failed:', err);
+  }
+}
 
 app.whenReady().then(() => {
   createWindow();
 
-  const shouldCheckUpdates = app.isPackaged || (allowDevUpdates && hasDevUpdateConfig);
+  const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
   if (shouldCheckUpdates) {
-    if (!app.isPackaged && allowDevUpdates && hasDevUpdateConfig) {
-      autoUpdater.forceDevUpdateConfig = true;
-    }
-    autoUpdater.autoDownload = false;
-    autoUpdater.on('update-available', async info => {
-      const { response } = await dialog.showMessageBox({
-        type: 'question',
-        buttons: ['Update', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Update available',
-        message: `Version ${info.version} is available. Update now?`
-      });
-      if (response === 0) {
-        autoUpdater.downloadUpdate();
-      }
-    });
-    autoUpdater.on('update-downloaded', async () => {
-      const { response } = await dialog.showMessageBox({
-        type: 'question',
-        buttons: ['Install and Restart', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Install Updates',
-        message: 'Updates downloaded. Install now?'
-      });
-      if (response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
-    autoUpdater.on('error', err => {
-      console.error('Update error:', err);
-    });
-    autoUpdater.checkForUpdates().catch(err => {
-      console.error('Update check failed:', err);
-    });
+    checkForAppUpdates();
   } else {
-    if (allowDevUpdates && !hasDevUpdateConfig) {
-      console.log('Skipping update check; dev-app-update.yml not found');
-    } else {
-      console.log('Skipping update check; app not packaged');
-    }
+    console.log('Skipping update check; app not packaged');
   }
 
   app.on('activate', () => {
