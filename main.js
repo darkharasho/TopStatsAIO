@@ -165,7 +165,11 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
-  win.once('ready-to-show', () => win.show());
+  console.time('ready-to-show');
+  win.once('ready-to-show', () => {
+    console.timeEnd('ready-to-show');
+    win.show();
+  });
   return win;
 }
 
@@ -219,6 +223,11 @@ app.whenReady().then(() => {
   const win = createWindow();
   console.timeEnd('create-window');
   mainWindow = win;
+
+  console.time('dom-ready');
+  win.webContents.once('dom-ready', () => {
+    console.timeEnd('dom-ready');
+  });
 
   // measure initial renderer load
   console.time('initial-render');

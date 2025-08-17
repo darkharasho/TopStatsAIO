@@ -176,6 +176,7 @@ window.electronAPI.onTreeEnd(parent => {
     fileTreeContainer.classList.remove('hidden');
     const skeleton = document.getElementById('skeleton-screen');
     if (skeleton) {
+      console.timeEnd('skeleton-visible');
       skeleton.classList.add('hidden');
       setTimeout(() => skeleton.remove(), 300);
     }
@@ -229,6 +230,7 @@ window.electronAPI.onLoadProgress(data => {
   } else {
     const skeleton = document.getElementById('skeleton-screen');
     if (skeleton) {
+      console.timeEnd('skeleton-visible');
       skeleton.classList.add('hidden');
       setTimeout(() => skeleton.remove(), 300);
     }
