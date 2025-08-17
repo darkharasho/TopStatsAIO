@@ -11,8 +11,6 @@ Your one stop shop for generating top stats. This program uses both Elite Insigh
 
 <img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/38195b55-af42-419d-8b53-51554faa0006" />
 
-<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/a3bf7bf7-6581-4ac2-956e-0db0dce8e18e" />
-
 ---
 
 The primary directive of this application is to increase the user friendliness of these tools. Key features:
@@ -25,6 +23,9 @@ The primary directive of this application is to increase the user friendliness o
 - Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
 
 ## Setup
+
+![electron_4QQxLwltxX](https://github.com/user-attachments/assets/37f65795-4813-4885-b92f-38b8bccbaa7a)
+
 
 ### 1. Download the TopStatsAIO
 1. Head to the Releases [TopStatsAIO Releases](https://github.com/darkharasho/TopStatsAIO/releases) and download either the installer or the standalone zip
