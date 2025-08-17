@@ -237,7 +237,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (saved) {
     startLoad(saved);
   }
-  await checkDeps();
+  // Defer dependency checks so the UI can render immediately
+  setTimeout(() => {
+    checkDeps().catch(console.error);
+  }, 0);
 });
 
 chooseFolderBtn.addEventListener('click', async () => {
