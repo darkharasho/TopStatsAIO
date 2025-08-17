@@ -144,42 +144,52 @@ function createWindow() {
   win.loadFile('index.html');
 }
 
+const allowDevUpdates = process.argv.includes('--dev-update');
+
 app.whenReady().then(() => {
   createWindow();
 
-  autoUpdater.autoDownload = false;
-  autoUpdater.on('update-available', async info => {
-    const { response } = await dialog.showMessageBox({
-      type: 'question',
-      buttons: ['Update', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Update available',
-      message: `Version ${info.version} is available. Update now?`
-    });
-    if (response === 0) {
-      autoUpdater.downloadUpdate();
+  const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
+  if (shouldCheckUpdates) {
+    if (allowDevUpdates) {
+      autoUpdater.forceDevUpdateConfig = true;
     }
-  });
-  autoUpdater.on('update-downloaded', async () => {
-    const { response } = await dialog.showMessageBox({
-      type: 'question',
-      buttons: ['Install and Restart', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Install Updates',
-      message: 'Updates downloaded. Install now?'
+    autoUpdater.autoDownload = false;
+    autoUpdater.on('update-available', async info => {
+      const { response } = await dialog.showMessageBox({
+        type: 'question',
+        buttons: ['Update', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Update available',
+        message: `Version ${info.version} is available. Update now?`
+      });
+      if (response === 0) {
+        autoUpdater.downloadUpdate();
+      }
     });
-    if (response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
-  autoUpdater.on('error', err => {
-    console.error('Update error:', err);
-  });
-  autoUpdater.checkForUpdates().catch(err => {
-    console.error('Update check failed:', err);
-  });
+    autoUpdater.on('update-downloaded', async () => {
+      const { response } = await dialog.showMessageBox({
+        type: 'question',
+        buttons: ['Install and Restart', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Install Updates',
+        message: 'Updates downloaded. Install now?'
+      });
+      if (response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+    autoUpdater.on('error', err => {
+      console.error('Update error:', err);
+    });
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('Update check failed:', err);
+    });
+  } else {
+    console.log('Skipping update check; app not packaged');
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -69,6 +69,13 @@ npm install
 npm start
 ```
 
+To test the auto-update flow in development, pass the `--dev-update`
+flag to the start command:
+
+```bash
+npm start -- --dev-update
+```
+
 ## Tests
 
 ```bash
