@@ -17,12 +17,16 @@ function ensureDeps() {
   if (!fs.existsSync(depsDir)) {
     fs.mkdirSync(depsDir, { recursive: true });
   }
+  if (!fs.existsSync(versionsFile)) {
+    fs.writeFileSync(versionsFile, '{}');
+  }
 }
 
 function readVersions() {
   try {
     return JSON.parse(fs.readFileSync(versionsFile, 'utf8'));
   } catch {
+    fs.writeFileSync(versionsFile, '{}');
     return {};
   }
 }
