@@ -82,19 +82,19 @@ downloadCliBtn.addEventListener('click', async () => {
   downloadCliBtn.disabled = true;
   await window.electronAPI.downloadDependency('cli');
   downloadCliBtn.disabled = false;
-  checkDeps();
+  setTimeout(() => checkDeps().catch(console.error), 0);
 });
 downloadCombinerBtn.addEventListener('click', async () => {
   downloadCombinerBtn.disabled = true;
   await window.electronAPI.downloadDependency('combiner');
   downloadCombinerBtn.disabled = false;
-  checkDeps();
+  setTimeout(() => checkDeps().catch(console.error), 0);
 });
 downloadParserBtn.addEventListener('click', async () => {
   downloadParserBtn.disabled = true;
   await window.electronAPI.downloadDependency('parser');
   downloadParserBtn.disabled = false;
-  checkDeps();
+  setTimeout(() => checkDeps().catch(console.error), 0);
 });
 parserTopStatsRadio.addEventListener('change', () => {
   if (parserTopStatsRadio.checked) {

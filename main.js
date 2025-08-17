@@ -194,7 +194,10 @@ app.whenReady().then(() => {
   const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
   if (shouldCheckUpdates) {
     win.webContents.once('did-finish-load', () => {
-      checkForAppUpdates(win);
+      // allow the renderer to paint before kicking off network checks
+      setTimeout(() => {
+        checkForAppUpdates(win);
+      }, 0);
     });
   } else {
     console.log('Skipping update check; app not packaged');
@@ -284,13 +287,21 @@ ipcMain.handle('download-dependency', async (event, which) => {
   }
 });
 
-ipcMain.handle('check-dependencies', async () => {
-  try {
-    return await checkDependencies();
-  } catch (e) {
-    console.error(e);
-    return { cli: { needsUpdate: false }, combiner: { needsUpdate: false }, parser: { needsUpdate: false } };
-  }
+ipcMain.handle('check-dependencies', () => {
+  return new Promise(resolve => {
+    setImmediate(async () => {
+      try {
+        resolve(await checkDependencies());
+      } catch (e) {
+        console.error(e);
+        resolve({
+          cli: { needsUpdate: false },
+          combiner: { needsUpdate: false },
+          parser: { needsUpdate: false }
+        });
+      }
+    });
+  });
 });
 
 ipcMain.handle('open-parsed-folder', async () => {
