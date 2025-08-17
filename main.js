@@ -31,9 +31,15 @@ function writeVersions(v) {
   fs.writeFileSync(versionsFile, JSON.stringify(v));
 }
 
+const GITHUB_HEADERS = {
+  'User-Agent': 'TopStatsAIO',
+  'Accept': 'application/vnd.github+json',
+  'X-GitHub-Api-Version': '2022-11-28'
+};
+
 async function fetchJson(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Fetch failed');
+  const res = await fetch(url, { headers: GITHUB_HEADERS });
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
   return await res.json();
 }
 
@@ -43,7 +49,7 @@ async function getLatest(repo) {
 
 async function downloadFile(url, dest) {
   const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Download failed');
+  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
   const buf = Buffer.from(await res.arrayBuffer());
   await fs.promises.writeFile(dest, buf);
 }
@@ -111,21 +117,35 @@ async function downloadDependency(which) {
   }
 }
 
+async function safeGetLatest(repo) {
+  try {
+    return await getLatest(repo);
+  } catch (e) {
+    console.error(`Failed to fetch ${repo} release`, e);
+    return null;
+  }
+}
+
 async function checkDependencies() {
   ensureDeps();
   const versions = readVersions();
   const [cliRel, combRel, parserRel] = await Promise.all([
-    getLatest('baaron4/GW2-Elite-Insights-Parser'),
-    getLatest('Drevarr/GW2_EI_log_combiner'),
-    getLatest('Drevarr/arcdps_top_stats_parser')
+    safeGetLatest('baaron4/GW2-Elite-Insights-Parser'),
+    safeGetLatest('Drevarr/GW2_EI_log_combiner'),
+    safeGetLatest('Drevarr/arcdps_top_stats_parser')
   ]);
-  const cliVer = cliRel.tag_name || cliRel.name;
-  const combVer = combRel.tag_name || combRel.name;
-  const parserVer = parserRel.tag_name || parserRel.name;
+  const cliVer = cliRel?.tag_name || cliRel?.name;
+  const combVer = combRel?.tag_name || combRel?.name;
+  const parserVer = parserRel?.tag_name || parserRel?.name;
+  const depInfo = (current, latest) => ({
+    current,
+    latest,
+    needsUpdate: !current || (latest && current !== latest)
+  });
   return {
-    cli: { current: versions.cli, latest: cliVer, needsUpdate: versions.cli !== cliVer },
-    combiner: { current: versions.combiner, latest: combVer, needsUpdate: versions.combiner !== combVer },
-    parser: { current: versions.parser, latest: parserVer, needsUpdate: versions.parser !== parserVer }
+    cli: depInfo(versions.cli, cliVer),
+    combiner: depInfo(versions.combiner, combVer),
+    parser: depInfo(versions.parser, parserVer)
   };
 }
 
