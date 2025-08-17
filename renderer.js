@@ -1,3 +1,4 @@
+console.time('renderer-init');
 const chooseFolderBtn = document.getElementById('choose-folder');
 const fileTreeContainer = document.getElementById('file-tree-list');
 const selectedList = document.getElementById('selected-list');
@@ -113,6 +114,7 @@ combinerGlickoCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
 });
 async function checkDeps() {
+  console.time('renderer-check-deps');
   const info = await window.electronAPI.checkDependencies();
   const needCli = info.cli.needsUpdate;
   const needComb = info.combiner.needsUpdate;
@@ -133,6 +135,7 @@ async function checkDeps() {
   if (needParser) {
     parserVersionText.textContent += ` (Latest: ${info.parser.latest})`;
   }
+  console.timeEnd('renderer-check-deps');
 }
 window.electronAPI.onThemeChanged(applyTheme);
 window.electronAPI.onShowUpdateNotice(() => {
@@ -165,6 +168,7 @@ window.electronAPI.onTreeNode(data => {
   }
 });
 window.electronAPI.onTreeEnd(parent => {
+  console.timeEnd(`renderer-load:${parent}`);
   if (parent === currentFolder) {
     progressContainer.classList.add('hidden');
     fileTreeContainer.classList.remove('hidden');
@@ -177,6 +181,8 @@ window.electronAPI.onLoadProgress(data => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  console.timeEnd('renderer-init');
+  console.time('dom-content');
   const savedTheme = localStorage.getItem('theme');
   applyTheme(savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark');
   const grad = localStorage.getItem('gradientTheme') || 'default';
@@ -184,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const gradRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
   if (gradRadio) gradRadio.checked = true;
   requestAnimationFrame(async () => {
+    console.time('post-frame');
     if (!savedTheme) {
       const sysTheme = await window.electronAPI.getTheme();
       if (sysTheme === 'light' || sysTheme === 'dark') {
@@ -192,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const ver = await window.electronAPI.getAppVersion();
     versionText.textContent = `v${ver}`;
+    console.timeEnd('post-frame');
   });
   const saved = localStorage.getItem('lastFolder');
   const lastTime = localStorage.getItem('lastTimeFilter');
@@ -229,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     setTimeout(deferParse, 0);
   }
+  console.timeEnd('dom-content');
 });
 
 chooseFolderBtn.addEventListener('click', async () => {
@@ -267,6 +276,8 @@ unselectAllBtn.addEventListener('click', () => {
 });
 
 function startLoad(dir, loadEverything = false) {
+  const label = `renderer-load:${dir}`;
+  console.time(label);
   currentFolder = dir;
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';

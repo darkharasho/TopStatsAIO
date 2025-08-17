@@ -4,6 +4,9 @@ const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
 
+// simple startup profiling
+console.time('app-start');
+
 const depsDir = path.join(__dirname, 'dependencies');
 const versionsFile = path.join(depsDir, 'versions.json');
 let currentParseCancel = null;
@@ -173,6 +176,7 @@ function showUpdatePrompt(parent) {
 }
 
 async function checkForAppUpdates(parent) {
+  console.time('app-update-check');
   try {
     const semver = (await import('semver')).default;
     const rel = await getLatest('darkharasho/TopStatsAIO');
@@ -184,12 +188,23 @@ async function checkForAppUpdates(parent) {
     }
   } catch (err) {
     console.error('Update check failed:', err);
+  } finally {
+    console.timeEnd('app-update-check');
   }
 }
 
 app.whenReady().then(() => {
+  console.timeEnd('app-start');
+  console.time('create-window');
   const win = createWindow();
+  console.timeEnd('create-window');
   mainWindow = win;
+
+  // measure initial renderer load
+  console.time('initial-render');
+  win.webContents.once('did-finish-load', () => {
+    console.timeEnd('initial-render');
+  });
 
   const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
   if (shouldCheckUpdates) {
@@ -225,6 +240,8 @@ ipcMain.handle('select-folder', async () => {
 });
 
 ipcMain.handle('load-folder', async (event, dir, rootDir) => {
+  const label = `load-folder:${dir}`;
+  console.time(label);
   const wc = event.sender;
   wc.send('tree-start', { path: dir });
   try {
@@ -252,6 +269,8 @@ ipcMain.handle('load-folder', async (event, dir, rootDir) => {
   } catch {
     wc.send('tree-end', dir);
     return false;
+  } finally {
+    console.timeEnd(label);
   }
 });
 ipcMain.handle('get-theme', () => appTheme);
@@ -288,12 +307,16 @@ ipcMain.handle('download-dependency', async (event, which) => {
 });
 
 ipcMain.handle('check-dependencies', () => {
+  console.time('dependency-check');
   return new Promise(resolve => {
     setImmediate(async () => {
       try {
-        resolve(await checkDependencies());
+        const res = await checkDependencies();
+        console.timeEnd('dependency-check');
+        resolve(res);
       } catch (e) {
         console.error(e);
+        console.timeEnd('dependency-check');
         resolve({
           cli: { needsUpdate: false },
           combiner: { needsUpdate: false },
