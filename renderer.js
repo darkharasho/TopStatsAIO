@@ -7,6 +7,7 @@ const dateFilterInput = document.getElementById('date-filter');
 const dateSelectBtn = document.getElementById('date-select');
 const unselectAllBtn = document.getElementById('unselect-all');
 const settingsBtn = document.getElementById('settings');
+const updateNoticeBtn = document.getElementById('update-notice');
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress');
 const fileLoading = document.getElementById('file-tree-loading');
@@ -56,6 +57,7 @@ document.getElementById('maximize').addEventListener('click', () => window.elect
 document.getElementById('close').addEventListener('click', () => window.electronAPI.close());
 titlebar.addEventListener('wheel', e => e.preventDefault(), { passive: false });
 settingsBtn.addEventListener('click', openSettings);
+updateNoticeBtn.addEventListener('click', () => window.electronAPI.showUpdatePrompt());
 closeSettingsBtn.addEventListener('click', closeSettings);
 
 function openSettings() {
@@ -161,6 +163,14 @@ async function checkDeps() {
   }
 }
 window.electronAPI.onThemeChanged(applyTheme);
+window.electronAPI.onShowUpdateNotice(() => {
+  updateNoticeBtn.classList.remove('hidden');
+  updateNoticeBtn.classList.add('notify');
+});
+window.electronAPI.onHideUpdateNotice(() => {
+  updateNoticeBtn.classList.add('hidden');
+  updateNoticeBtn.classList.remove('notify');
+});
 window.electronAPI.onTreeStart(data => {
   const container = folderLists.get(data.path);
   if (container) {
