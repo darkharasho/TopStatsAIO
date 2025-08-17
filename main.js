@@ -3,8 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
-const AdmZip = require('adm-zip');
-const semver = require('semver');
 
 const depsDir = path.join(__dirname, 'dependencies');
 const versionsFile = path.join(depsDir, 'versions.json');
@@ -50,6 +48,7 @@ async function downloadFile(url, dest) {
 
 async function downloadDependency(which) {
   ensureDeps();
+  const AdmZip = require('adm-zip');
   if (which === 'cli') {
     const rel = await getLatest('baaron4/GW2-Elite-Insights-Parser');
     const asset = rel.assets.find(a => a.name === 'GW2EICLI.zip');
@@ -174,6 +173,7 @@ function showUpdatePrompt(parent) {
 
 async function checkForAppUpdates(parent) {
   try {
+    const semver = require('semver');
     const rel = await getLatest('darkharasho/TopStatsAIO');
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();

@@ -206,19 +206,23 @@ window.electronAPI.onLoadProgress(data => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('theme');
-  let theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : await window.electronAPI.getTheme();
-  if (theme !== 'light' && theme !== 'dark') {
-    theme = 'dark';
-  }
-  applyTheme(theme);
+  applyTheme(savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark');
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
   const gradRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
   if (gradRadio) gradRadio.checked = true;
-  const ver = await window.electronAPI.getAppVersion();
-  versionText.textContent = `v${ver}`;
+  requestAnimationFrame(async () => {
+    if (!savedTheme) {
+      const sysTheme = await window.electronAPI.getTheme();
+      if (sysTheme === 'light' || sysTheme === 'dark') {
+        applyTheme(sysTheme);
+      }
+    }
+    const ver = await window.electronAPI.getAppVersion();
+    versionText.textContent = `v${ver}`;
+  });
   const saved = localStorage.getItem('lastFolder');
   const lastTime = localStorage.getItem('lastTimeFilter');
   const parserSel = localStorage.getItem('parserSelection') || 'topstats';
@@ -237,7 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateFilterInput.value = `${yyyy}-${mm}-${dd}T00:00`;
   }
   if (saved) {
-    setTimeout(() => startLoad(saved, false), 0);
+    requestAnimationFrame(() => startLoad(saved, false));
   }
   // Defer dependency checks until the browser is idle so startup renders faster
   const deferDeps = () => {
