@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Update Available</title>
+  <style>
+    body { margin:0; padding:20px; font-family:'Segoe UI', sans-serif; color:#fff; background:transparent; }
+    h2 { margin-top:0; font-size:18px; }
+    #buttons { margin-top:20px; text-align:right; }
+    button { padding:6px 12px; margin-left:10px; }
+  </style>
+</head>
+<body>
+  <h2>Update available</h2>
+  <p id="msg"></p>
+  <div id="buttons">
+    <button id="later">Later</button>
+    <button id="download" autofocus>Download</button>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const version = params.get('version');
+    const url = params.get('url');
+    document.getElementById('msg').textContent = `Version ${version} is available.`;
+    document.getElementById('download').addEventListener('click', () => {
+      window.electronAPI.openExternal(url);
+      window.electronAPI.close();
+    });
+    document.getElementById('later').addEventListener('click', () => {
+      window.electronAPI.close();
+    });
+  </script>
+</body>
+</html>

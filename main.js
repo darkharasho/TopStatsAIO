@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -142,27 +142,35 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
+  return win;
 }
 
 const allowDevUpdates = process.argv.includes('--dev-update');
 
-async function checkForAppUpdates() {
+async function checkForAppUpdates(parent) {
   try {
     const rel = await getLatest('darkharasho/TopStatsAIO');
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
-      const { response } = await dialog.showMessageBox({
-        type: 'question',
-        buttons: ['Download', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Update available',
-        message: `Version ${latest} is available. Open downloads page?`
+      const prompt = new BrowserWindow({
+        parent,
+        modal: true,
+        width: 360,
+        height: 180,
+        resizable: false,
+        frame: false,
+        backgroundColor: '#00000000',
+        backgroundMaterial: 'mica',
+        titleBarStyle: 'hidden',
+        visualEffectState: 'active',
+        show: false,
+        webPreferences: {
+          preload: path.join(__dirname, 'preload.js')
+        }
       });
-      if (response === 0) {
-        shell.openExternal(rel.html_url);
-      }
+      prompt.loadFile('update.html', { query: { version: latest, url: rel.html_url } });
+      prompt.once('ready-to-show', () => prompt.show());
     }
   } catch (err) {
     console.error('Update check failed:', err);
@@ -170,11 +178,13 @@ async function checkForAppUpdates() {
 }
 
 app.whenReady().then(() => {
-  createWindow();
+  const win = createWindow();
 
   const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
   if (shouldCheckUpdates) {
-    checkForAppUpdates();
+    win.webContents.once('did-finish-load', () => {
+      checkForAppUpdates(win);
+    });
   } else {
     console.log('Skipping update check; app not packaged');
   }
@@ -280,6 +290,10 @@ ipcMain.handle('open-parsed-folder', async () => {
     console.error('Failed to open parsed folder', e);
     return '';
   }
+});
+
+ipcMain.handle('open-external', async (event, url) => {
+  await shell.openExternal(url);
 });
 
 ipcMain.on('cancel-parse', () => {
