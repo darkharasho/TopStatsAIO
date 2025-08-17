@@ -24,7 +24,7 @@ The primary directive of this application is to increase the user friendliness o
 
 ## Setup
 
-![electron_4QQxLwltxX](https://github.com/user-attachments/assets/37f65795-4813-4885-b92f-38b8bccbaa7a)
+![electron_DwDsPULMCL](https://github.com/user-attachments/assets/95609427-4bf6-46c9-b1ec-6fb51058d9a2)
 
 
 ### 1. Download the TopStatsAIO
