@@ -165,9 +165,11 @@ async function checkDeps() {
 window.electronAPI.onThemeChanged(applyTheme);
 window.electronAPI.onShowUpdateNotice(() => {
   updateNoticeBtn.classList.remove('hidden');
+  updateNoticeBtn.classList.add('notify');
 });
 window.electronAPI.onHideUpdateNotice(() => {
   updateNoticeBtn.classList.add('hidden');
+  updateNoticeBtn.classList.remove('notify');
 });
 window.electronAPI.onTreeStart(data => {
   const container = folderLists.get(data.path);
