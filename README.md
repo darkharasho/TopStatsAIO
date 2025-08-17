@@ -77,6 +77,14 @@ To test the update notification in development, launch with the
 npm start -- --dev-update
 ```
 
+### Clear saved settings
+
+Reset all stored preferences and local data:
+
+```bash
+npm run clear-settings
+```
+
 ## Tests
 
 ```bash
