@@ -145,13 +145,15 @@ function createWindow() {
 }
 
 const allowDevUpdates = process.argv.includes('--dev-update');
+const devUpdateConfigPath = path.join(__dirname, 'dev-app-update.yml');
+const hasDevUpdateConfig = fs.existsSync(devUpdateConfigPath);
 
 app.whenReady().then(() => {
   createWindow();
 
-  const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
+  const shouldCheckUpdates = app.isPackaged || (allowDevUpdates && hasDevUpdateConfig);
   if (shouldCheckUpdates) {
-    if (allowDevUpdates) {
+    if (!app.isPackaged && allowDevUpdates && hasDevUpdateConfig) {
       autoUpdater.forceDevUpdateConfig = true;
     }
     autoUpdater.autoDownload = false;
@@ -188,7 +190,11 @@ app.whenReady().then(() => {
       console.error('Update check failed:', err);
     });
   } else {
-    console.log('Skipping update check; app not packaged');
+    if (allowDevUpdates && !hasDevUpdateConfig) {
+      console.log('Skipping update check; dev-app-update.yml not found');
+    } else {
+      console.log('Skipping update check; app not packaged');
+    }
   }
 
   app.on('activate', () => {

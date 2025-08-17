@@ -1,0 +1,3 @@
+# Rename this file to dev-app-update.yml and replace the URL with your update server.
+provider: generic
+url: https://example.com/updates

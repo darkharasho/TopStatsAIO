@@ -69,8 +69,10 @@ npm install
 npm start
 ```
 
-To test the auto-update flow in development, pass the `--dev-update`
-flag to the start command:
+To test the auto-update flow in development, copy
+`dev-app-update.yml.example` to `dev-app-update.yml` and update the URL to
+point to your update server. Then pass the `--dev-update` flag to the start
+command:
 
 ```bash
 npm start -- --dev-update
