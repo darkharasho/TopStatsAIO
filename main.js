@@ -6,12 +6,25 @@ const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
 
-const depsDir = path.join(__dirname, 'dependencies');
-const versionsFile = path.join(depsDir, 'versions.json');
+let depsDir;
+let versionsFile;
+let logFile;
 let currentParseCancel = null;
 let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
+
+function logError(...args) {
+  console.error(...args);
+  if (!logFile) return;
+  const msg = args.map(a => (a instanceof Error ? a.stack : String(a))).join(' ');
+  try {
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch {}
+}
+
+process.on('uncaughtException', logError);
+process.on('unhandledRejection', logError);
 
 function ensureDeps() {
   if (!fs.existsSync(depsDir)) {
@@ -182,11 +195,16 @@ async function checkForAppUpdates(parent) {
       showUpdatePrompt(parent);
     }
   } catch (err) {
-    console.error('Update check failed:', err);
+    logError('Update check failed:', err);
   }
 }
 
 app.whenReady().then(() => {
+  const userData = app.getPath('userData');
+  depsDir = path.join(userData, 'dependencies');
+  versionsFile = path.join(depsDir, 'versions.json');
+  logFile = path.join(userData, 'debug.log');
+
   const win = createWindow();
   mainWindow = win;
 
@@ -278,7 +296,7 @@ ipcMain.handle('download-dependency', async (event, which) => {
     await downloadDependency(which);
     return true;
   } catch (e) {
-    console.error(e);
+    logError(e);
     return false;
   }
 });
@@ -287,18 +305,18 @@ ipcMain.handle('check-dependencies', async () => {
   try {
     return await checkDependencies();
   } catch (e) {
-    console.error(e);
+    logError(e);
     return { cli: { needsUpdate: false }, combiner: { needsUpdate: false }, parser: { needsUpdate: false } };
   }
 });
 
 ipcMain.handle('open-parsed-folder', async () => {
-  const dir = path.join(__dirname, 'parsed_files');
+  const dir = path.join(app.getPath('userData'), 'parsed_files');
   try {
     await fs.promises.mkdir(dir, { recursive: true });
     return await shell.openPath(dir);
   } catch (e) {
-    console.error('Failed to open parsed folder', e);
+    logError('Failed to open parsed folder', e);
     return '';
   }
 });
@@ -327,7 +345,7 @@ ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;
   const files = data.files || [];
   const opts = data.options || {};
-  const parsedDir = path.join(__dirname, 'parsed_files');
+  const parsedDir = path.join(app.getPath('userData'), 'parsed_files');
   await fs.promises.rm(parsedDir, { recursive: true, force: true });
   await fs.promises.mkdir(parsedDir, { recursive: true });
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsaio-'));
