@@ -237,7 +237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateFilterInput.value = `${yyyy}-${mm}-${dd}T00:00`;
   }
   if (saved) {
-    requestAnimationFrame(() => startLoad(saved));
+    setTimeout(() => startLoad(saved, false), 0);
   }
   // Defer dependency checks until the browser is idle so startup renders faster
   const deferDeps = () => {
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 chooseFolderBtn.addEventListener('click', async () => {
   const dir = await window.electronAPI.selectFolder();
   if (!dir) return;
-  startLoad(dir);
+  startLoad(dir, false);
 });
 
 dateFilterInput.addEventListener('change', () => {
@@ -285,7 +285,7 @@ unselectAllBtn.addEventListener('click', () => {
   renderSelected();
 });
 
-function startLoad(dir, loadEverything = true) {
+function startLoad(dir, loadEverything = false) {
   currentFolder = dir;
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';
