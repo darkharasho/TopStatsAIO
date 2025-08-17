@@ -180,6 +180,7 @@ window.electronAPI.onTreeStart(data => {
     selectedFolderSpan.textContent = currentFolder;
     selected.clear();
     renderSelected();
+    fileTreeContainer.classList.add('hidden');
     progressContainer.classList.remove('hidden');
     progressBar.style.width = '0%';
     fileLoading.classList.remove('hidden');
@@ -196,6 +197,7 @@ window.electronAPI.onTreeEnd(parent => {
   if (parent === currentFolder) {
     progressContainer.classList.add('hidden');
     fileLoading.classList.add('hidden');
+    fileTreeContainer.classList.remove('hidden');
   }
 });
 window.electronAPI.onLoadProgress(data => {
@@ -287,7 +289,10 @@ function startLoad(dir, loadEverything = true) {
   currentFolder = dir;
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';
+  fileTreeContainer.classList.add('hidden');
   fileLoading.classList.remove('hidden');
+  progressContainer.classList.remove('hidden');
+  progressBar.style.width = '0%';
   rootList = document.createElement('ul');
   rootList.classList.add('file-root');
   fileTreeContainer.appendChild(rootList);
