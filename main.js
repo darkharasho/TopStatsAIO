@@ -9,6 +9,7 @@ const semver = require('semver');
 const depsDir = path.join(__dirname, 'dependencies');
 const versionsFile = path.join(depsDir, 'versions.json');
 let currentParseCancel = null;
+let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
 
@@ -249,10 +250,11 @@ ipcMain.handle('load-folder', async (event, dir, rootDir) => {
     return false;
   }
 });
-ipcMain.handle('get-theme', () => nativeTheme.themeSource);
+ipcMain.handle('get-theme', () => appTheme);
 ipcMain.handle('get-version', () => app.getVersion());
 
 ipcMain.on('set-theme', (event, theme) => {
+  appTheme = theme;
   nativeTheme.themeSource = theme;
   BrowserWindow.getAllWindows().forEach(w => {
     w.webContents.send('theme-changed', theme);

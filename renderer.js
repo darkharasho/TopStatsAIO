@@ -205,7 +205,11 @@ window.electronAPI.onLoadProgress(data => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-  const theme = await window.electronAPI.getTheme();
+  const savedTheme = localStorage.getItem('theme');
+  let theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : await window.electronAPI.getTheme();
+  if (theme !== 'light' && theme !== 'dark') {
+    theme = 'dark';
+  }
   applyTheme(theme);
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
@@ -529,6 +533,7 @@ function applyTheme(theme) {
     darkBtn.classList.add('selected');
     lightBtn.classList.remove('selected');
   }
+  localStorage.setItem('theme', theme);
 }
 
 function applyGradient(name) {
@@ -537,6 +542,10 @@ function applyGradient(name) {
     case 'sunset':
       c1 = '#ffeb3b';
       c2 = '#f44336';
+      break;
+    case 'grey':
+      c1 = '#d3d3d3';
+      c2 = '#a6a6a6';
       break;
     case 'forest':
       c1 = '#a8e063';

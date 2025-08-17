@@ -85,8 +85,9 @@
       .file-date { margin-left:auto; font-size:12px; color:var(--muted-color); }
 
       .gradient-text { background-clip:text; -webkit-background-clip:text; color:transparent; }
-      .gradient-default { background-image:linear-gradient(to right, #6ec1e4, #8e44ad); }
-      .gradient-sunset { background-image:linear-gradient(to right, #ffeb3b, #f44336); }
+        .gradient-default { background-image:linear-gradient(to right, #6ec1e4, #8e44ad); }
+        .gradient-grey { background-image:linear-gradient(to right, #d3d3d3, #a6a6a6); }
+        .gradient-sunset { background-image:linear-gradient(to right, #ffeb3b, #f44336); }
       .gradient-forest { background-image:linear-gradient(to right, #a8e063, #05621f); }
       .gradient-ocean { background-image:linear-gradient(to right, #4facfe, #00f2fe); }
       .gradient-rose { background-image:linear-gradient(to right, #ff9a9e, #fad0c4); }
@@ -260,13 +261,16 @@
           <div class="dep-row">
             <button id="theme-dark" class="theme-btn">Dark</button>
             <button id="theme-light" class="theme-btn">Light</button>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="default" /> <span class="gradient-text gradient-default">Blue/Purple</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="sunset" /> <span class="gradient-text gradient-sunset">Sunset</span></label>
-          </div>
+            </div>
+            <div class="dep-row">
+              <label><input type="radio" name="gradient-theme" value="default" /> <span class="gradient-text gradient-default">Blue/Purple</span></label>
+            </div>
+            <div class="dep-row">
+              <label><input type="radio" name="gradient-theme" value="grey" /> <span class="gradient-text gradient-grey">Grey</span></label>
+            </div>
+            <div class="dep-row">
+              <label><input type="radio" name="gradient-theme" value="sunset" /> <span class="gradient-text gradient-sunset">Sunset</span></label>
+            </div>
           <div class="dep-row">
             <label><input type="radio" name="gradient-theme" value="forest" /> <span class="gradient-text gradient-forest">Forest</span></label>
           </div>
