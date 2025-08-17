@@ -29,6 +29,7 @@ const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
+const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
 const descriptionInput = document.getElementById('description');
 const parseBtn = document.getElementById('parse-btn');
 const parseWindow = document.getElementById('parse-window');
@@ -51,6 +52,7 @@ combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
+combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
 
 document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
 document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
@@ -132,6 +134,9 @@ combinerApiKeyInput.addEventListener('input', () => {
 });
 combinerGlickoCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
+});
+combinerFightChartsCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerFightCharts', combinerFightChartsCheckbox.checked ? 'true' : 'false');
 });
 parseBtn.addEventListener('click', startParse);
 parseCloseBtn.addEventListener('click', closeParseWindow);
@@ -531,6 +536,7 @@ async function startParse() {
     guildId: localStorage.getItem('combinerGuildId') || '',
     apiKey: localStorage.getItem('combinerApiKey') || '',
     dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
+    fightCharts: localStorage.getItem('combinerFightCharts') === 'true',
     description: descriptionInput.value.trim()
   };
   await window.electronAPI.startParse({ files, options });

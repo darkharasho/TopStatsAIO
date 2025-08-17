@@ -40,7 +40,7 @@ The primary directive of this application is to increase the user friendliness o
 - Configure a `DPSReportUserToken` for authenticated uploads
 - Choose between `GW2_EI_log_combiner` (default) and the legacy `arcdps_top_stats_parser` and supply paths for both
 - Switch between light and dark themes and pick from several accent colors, including a subtle grey
-- Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates
+- Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates and fight chart generation
 
 ## How to Use
 ### Defaults
