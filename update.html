@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Update Available</title>
+  <style>
+    :root {
+      --text-color:#fff;
+      --bg-btn:#1e1e1e;
+      --bg-btn-hover:#2d2d2d;
+      --btn-border:#6ec1e4;
+      --btn-border-hover:#8e44ad;
+    }
+    body.light {
+      --text-color:#000;
+      --bg-btn:#f3f3f3;
+      --bg-btn-hover:#e5e5e5;
+    }
+    body { margin:0; padding:20px; font-family:'Segoe UI', sans-serif; color:var(--text-color); background:transparent; }
+    h2 { margin-top:0; font-size:18px; }
+    #buttons { margin-top:20px; text-align:right; }
+    button { background:var(--bg-btn); color:var(--text-color); border:1px solid var(--btn-border); padding:6px 12px; margin-left:10px; border-radius:4px; cursor:pointer; }
+    button:hover { background:var(--bg-btn-hover); border-color:var(--btn-border-hover); }
+    button:focus { outline:none; box-shadow:0 0 0 1px var(--btn-border); border-color:var(--btn-border); }
+  </style>
+</head>
+<body>
+  <h2>Update available</h2>
+  <p id="msg"></p>
+  <div id="buttons">
+    <button id="later">Later</button>
+    <button id="download" autofocus>Download</button>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const version = params.get('version');
+    const url = params.get('url');
+    document.getElementById('msg').textContent = `Version ${version} is available.`;
+    function applyTheme(t){ document.body.classList.toggle('light', t === 'light'); }
+    window.electronAPI.getTheme().then(applyTheme);
+    window.electronAPI.onThemeChanged(applyTheme);
+    document.getElementById('download').addEventListener('click', () => {
+      window.electronAPI.openExternal(url);
+      window.electronAPI.updateDownloaded();
+      window.electronAPI.close();
+    });
+    document.getElementById('later').addEventListener('click', () => {
+      window.electronAPI.updateLater();
+      window.electronAPI.close();
+    });
+  </script>
+</body>
+</html>

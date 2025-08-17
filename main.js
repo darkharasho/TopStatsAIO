@@ -1,14 +1,17 @@
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
+const semver = require('semver');
 
 const depsDir = path.join(__dirname, 'dependencies');
 const versionsFile = path.join(depsDir, 'versions.json');
 let currentParseCancel = null;
 let appTheme = nativeTheme.themeSource;
+let mainWindow = null;
+let pendingUpdate = null;
 
 function ensureDeps() {
   if (!fs.existsSync(depsDir)) {
@@ -142,10 +145,59 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
+  return win;
+}
+
+const allowDevUpdates = process.argv.includes('--dev-update');
+
+function showUpdatePrompt(parent) {
+  if (!pendingUpdate) return;
+  const prompt = new BrowserWindow({
+    parent,
+    modal: true,
+    width: 360,
+    height: 180,
+    resizable: false,
+    frame: false,
+    backgroundColor: '#00000000',
+    backgroundMaterial: 'mica',
+    titleBarStyle: 'hidden',
+    visualEffectState: 'active',
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+  prompt.loadFile('update.html', { query: { version: pendingUpdate.version, url: pendingUpdate.url } });
+  prompt.once('ready-to-show', () => prompt.show());
+}
+
+async function checkForAppUpdates(parent) {
+  try {
+    const rel = await getLatest('darkharasho/TopStatsAIO');
+    const latest = semver.clean(rel.tag_name || rel.name);
+    const current = app.getVersion();
+    if (latest && semver.gt(latest, current)) {
+      pendingUpdate = { version: latest, url: rel.html_url };
+      showUpdatePrompt(parent);
+    }
+  } catch (err) {
+    console.error('Update check failed:', err);
+  }
 }
 
 app.whenReady().then(() => {
-  createWindow();
+  const win = createWindow();
+  mainWindow = win;
+
+  const shouldCheckUpdates = app.isPackaged || allowDevUpdates;
+  if (shouldCheckUpdates) {
+    win.webContents.once('did-finish-load', () => {
+      checkForAppUpdates(win);
+    });
+  } else {
+    console.log('Skipping update check; app not packaged');
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -251,8 +303,24 @@ ipcMain.handle('open-parsed-folder', async () => {
   }
 });
 
+ipcMain.handle('open-external', async (event, url) => {
+  await shell.openExternal(url);
+});
+
 ipcMain.on('cancel-parse', () => {
   if (currentParseCancel) currentParseCancel();
+});
+
+ipcMain.on('update-later', () => {
+  if (mainWindow) mainWindow.webContents.send('show-update-notice');
+});
+
+ipcMain.on('update-downloaded', () => {
+  if (mainWindow) mainWindow.webContents.send('hide-update-notice');
+});
+
+ipcMain.handle('show-update-prompt', () => {
+  if (mainWindow) showUpdatePrompt(mainWindow);
 });
 
 ipcMain.handle('start-parse', async (event, data) => {
