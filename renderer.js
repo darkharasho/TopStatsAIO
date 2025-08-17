@@ -46,6 +46,7 @@ let rootList;
 let folderLists = new Map();
 let loadAll = false;
 let currentStepId = null;
+let checkDepsToken = 0;
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
@@ -94,19 +95,19 @@ downloadCliBtn.addEventListener('click', async () => {
   downloadCliBtn.disabled = true;
   await window.electronAPI.downloadDependency('cli');
   downloadCliBtn.disabled = false;
-  checkDeps();
+  await checkDeps();
 });
 downloadCombinerBtn.addEventListener('click', async () => {
   downloadCombinerBtn.disabled = true;
   await window.electronAPI.downloadDependency('combiner');
   downloadCombinerBtn.disabled = false;
-  checkDeps();
+  await checkDeps();
 });
 downloadParserBtn.addEventListener('click', async () => {
   downloadParserBtn.disabled = true;
   await window.electronAPI.downloadDependency('parser');
   downloadParserBtn.disabled = false;
-  checkDeps();
+  await checkDeps();
 });
 parserTopStatsRadio.addEventListener('change', () => {
   if (parserTopStatsRadio.checked) {
@@ -157,7 +158,9 @@ window.electronAPI.onParseComplete(success => {
   updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
 });
 async function checkDeps() {
+  const token = ++checkDepsToken;
   const info = await window.electronAPI.checkDependencies();
+  if (token !== checkDepsToken) return;
   const needCli = info.cli.needsUpdate;
   const needComb = info.combiner.needsUpdate;
   const needParser = info.parser.needsUpdate;
