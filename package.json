@@ -18,12 +18,16 @@
     "electron-packager": "^17.1.2"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16"
+    "adm-zip": "^0.5.16",
+    "electron-updater": "^6.6.2"
   },
   "build": {
     "appId": "com.topstatsaio.app",
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "media/TopStatsAIO-Logo.png"
     },
     "nsis": {

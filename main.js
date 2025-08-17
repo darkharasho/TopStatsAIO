@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
+const { autoUpdater } = require('electron-updater');
 
 const depsDir = path.join(__dirname, 'dependencies');
 const versionsFile = path.join(depsDir, 'versions.json');
@@ -145,6 +146,40 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.on('update-available', async info => {
+    const { response } = await dialog.showMessageBox({
+      type: 'question',
+      buttons: ['Update', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Update available',
+      message: `Version ${info.version} is available. Update now?`
+    });
+    if (response === 0) {
+      autoUpdater.downloadUpdate();
+    }
+  });
+  autoUpdater.on('update-downloaded', async () => {
+    const { response } = await dialog.showMessageBox({
+      type: 'question',
+      buttons: ['Install and Restart', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+      title: 'Install Updates',
+      message: 'Updates downloaded. Install now?'
+    });
+    if (response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
+  autoUpdater.on('error', err => {
+    console.error('Update error:', err);
+  });
+  autoUpdater.checkForUpdates().catch(err => {
+    console.error('Update check failed:', err);
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
