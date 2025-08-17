@@ -31,15 +31,26 @@ function writeVersions(v) {
   fs.writeFileSync(versionsFile, JSON.stringify(v));
 }
 
-const GITHUB_HEADERS = {
-  'User-Agent': 'TopStatsAIO',
-  'Accept': 'application/vnd.github+json',
-  'X-GitHub-Api-Version': '2022-11-28'
-};
+const GITHUB_HEADERS = (() => {
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  return {
+    'User-Agent': 'TopStatsAIO',
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+})();
 
 async function fetchJson(url) {
   const res = await fetch(url, { headers: GITHUB_HEADERS });
-  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  if (!res.ok) {
+    let msg = `Fetch failed: ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data && data.message) msg += ` - ${data.message}`;
+    } catch {}
+    throw new Error(msg);
+  }
   return await res.json();
 }
 
@@ -48,8 +59,17 @@ async function getLatest(repo) {
 }
 
 async function downloadFile(url, dest) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  const headers = { 'User-Agent': 'TopStatsAIO' };
+  if (GITHUB_HEADERS.Authorization) headers.Authorization = GITHUB_HEADERS.Authorization;
+  const res = await fetch(url, { headers });
+  if (!res.ok) {
+    let msg = `Download failed: ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data && data.message) msg += ` - ${data.message}`;
+    } catch {}
+    throw new Error(msg);
+  }
   const buf = Buffer.from(await res.arrayBuffer());
   await fs.promises.writeFile(dest, buf);
 }
