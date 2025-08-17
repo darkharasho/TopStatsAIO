@@ -321,6 +321,25 @@ ipcMain.handle('open-parsed-folder', async () => {
   }
 });
 
+ipcMain.handle('open-parser-folder', async (event, which) => {
+  ensureDeps();
+  const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
+  try {
+    await shell.openPath(dir);
+    const ex1 = path.join(dir, 'example_output');
+    const ex2 = path.join(dir, 'Example_Output');
+    if (fs.existsSync(ex1)) {
+      await shell.openPath(ex1);
+    } else if (fs.existsSync(ex2)) {
+      await shell.openPath(ex2);
+    }
+    return true;
+  } catch (e) {
+    logError('Failed to open parser folder', e);
+    return false;
+  }
+});
+
 ipcMain.handle('open-external', async (event, url) => {
   await shell.openExternal(url);
 });
