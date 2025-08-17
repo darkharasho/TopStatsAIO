@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   applyGradient(grad);
   const gradRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
   if (gradRadio) gradRadio.checked = true;
-  requestAnimationFrame(async () => {
+  setTimeout(async () => {
     console.time('post-frame');
     if (!savedTheme) {
       const sysTheme = await window.electronAPI.getTheme();
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ver = await window.electronAPI.getAppVersion();
     versionText.textContent = `v${ver}`;
     console.timeEnd('post-frame');
-  });
+  }, 0);
   const saved = localStorage.getItem('lastFolder');
   const lastTime = localStorage.getItem('lastTimeFilter');
   const parserSel = localStorage.getItem('parserSelection') || 'topstats';
@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     dateFilterInput.value = `${yyyy}-${mm}-${dd}T00:00`;
   }
   if (saved) {
-    requestAnimationFrame(() => startLoad(saved, false));
+    setTimeout(() => startLoad(saved, false), 0);
   }
   // Defer dependency checks until the browser is idle so startup renders faster
   const deferDeps = () => {
