@@ -20,7 +20,7 @@ The primary directive of this application is to increase the user friendliness o
 - Ability to set a static raid time and grab logs older than a start time
 - Automatically configures and uses both EliteInsightsParser and GW2EILogCombiner to generate the final `.json` to be used with TiddlyWiki
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
-- Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
+- Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner` (default)
 - Light and dark themes with customizable accent colors, including a subtle grey option
 - Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
 
@@ -37,10 +37,10 @@ The primary directive of this application is to increase the user friendliness o
 
 
 ### 3. Optional Settings
-   - Configure a `DPSReportUserToken` for authenticated uploads
-   - Choose between `GW2_EI_log_combiner` and the legacy `arcdps_top_stats_parser` and supply paths for both
-   - Switch between light and dark themes and pick from several accent colors, including a subtle grey
-   - Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates
+- Configure a `DPSReportUserToken` for authenticated uploads
+- Choose between `GW2_EI_log_combiner` (default) and the legacy `arcdps_top_stats_parser` and supply paths for both
+- Switch between light and dark themes and pick from several accent colors, including a subtle grey
+- Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates
 
 ## How to Use
 ### Defaults

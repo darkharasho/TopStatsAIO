@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   versionText.textContent = `v${ver}`;
   const saved = localStorage.getItem('lastFolder');
   const lastTime = localStorage.getItem('lastTimeFilter');
-  const parserSel = localStorage.getItem('parserSelection') || 'topstats';
+  const parserSel = localStorage.getItem('parserSelection') || 'combiner';
   if (parserSel === 'combiner') {
     parserCombinerRadio.checked = true;
   } else {
@@ -513,7 +513,7 @@ async function startParse() {
   openParseWindow();
   const files = Array.from(selected.keys());
   const options = {
-    parser: localStorage.getItem('parserSelection') || 'topstats',
+    parser: localStorage.getItem('parserSelection') || 'combiner',
     dpsUserToken: localStorage.getItem('dpsReportUserToken') || '',
     guildName: localStorage.getItem('combinerGuildName') || '',
     guildId: localStorage.getItem('combinerGuildId') || '',
