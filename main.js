@@ -5,6 +5,7 @@ const os = require('os');
 const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
+const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 
 let depsDir;
 let versionsFile;
@@ -26,24 +27,6 @@ function logError(...args) {
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
-function ensureDeps() {
-  if (!fs.existsSync(depsDir)) {
-    fs.mkdirSync(depsDir, { recursive: true });
-  }
-}
-
-function readVersions() {
-  try {
-    return JSON.parse(fs.readFileSync(versionsFile, 'utf8'));
-  } catch {
-    return {};
-  }
-}
-
-function writeVersions(v) {
-  fs.writeFileSync(versionsFile, JSON.stringify(v));
-}
-
 async function fetchJson(url) {
   const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
   if (!res.ok) throw new Error('Fetch failed');
@@ -62,7 +45,7 @@ async function downloadFile(url, dest) {
 }
 
 async function downloadDependency(which) {
-  ensureDeps();
+  ensureDeps(depsDir);
   if (which === 'cli') {
     const rel = await getLatest('baaron4/GW2-Elite-Insights-Parser');
     const asset = rel.assets.find(a => a.name === 'GW2EICLI.zip');
@@ -76,9 +59,9 @@ async function downloadDependency(which) {
     }
     zip.extractAllTo(dest, true);
     await fs.promises.unlink(zipPath);
-    const versions = readVersions();
+    const versions = readVersions(versionsFile);
     versions.cli = rel.tag_name || rel.name;
-    writeVersions(versions);
+    writeVersions(versionsFile, versions);
   } else if (which === 'combiner') {
     const rel = await getLatest('Drevarr/GW2_EI_log_combiner');
     const asset = rel.assets.find(a => a.name.endsWith('.zip'));
@@ -92,9 +75,9 @@ async function downloadDependency(which) {
     }
     zip.extractAllTo(dest, true);
     await fs.promises.unlink(zipPath);
-    const versions = readVersions();
+    const versions = readVersions(versionsFile);
     versions.combiner = rel.tag_name || rel.name;
-    writeVersions(versions);
+    writeVersions(versionsFile, versions);
   } else if (which === 'parser') {
     const rel = await getLatest('Drevarr/arcdps_top_stats_parser');
     const zipPath = path.join(depsDir, 'arcdps_top_stats_parser.zip');
@@ -118,15 +101,15 @@ async function downloadDependency(which) {
         await fs.promises.rm(inner, { recursive: true, force: true });
       }
     }
-    const versions = readVersions();
+    const versions = readVersions(versionsFile);
     versions.parser = rel.tag_name || rel.name;
-    writeVersions(versions);
+    writeVersions(versionsFile, versions);
   }
 }
 
 async function checkDependencies() {
-  ensureDeps();
-  const versions = readVersions();
+  ensureDeps(depsDir);
+  const versions = readVersions(versionsFile);
   const [cliRel, combRel, parserRel] = await Promise.all([
     getLatest('baaron4/GW2-Elite-Insights-Parser'),
     getLatest('Drevarr/GW2_EI_log_combiner'),
@@ -507,31 +490,6 @@ ipcMain.handle('start-parse', async (event, data) => {
     try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
   }
 });
-
-async function editEIConfig(template, dest, outDir, token) {
-  try {
-    const lines = await fs.promises.readFile(template, 'utf8');
-    const replaced = lines.split(/\r?\n/).map(l => {
-      if (l.startsWith('OutLocation=')) return `OutLocation=${outDir}`;
-      if (l.startsWith('DPSReportUserToken=')) return `DPSReportUserToken=${token || ''}`;
-      return l;
-    }).join('\n');
-    await fs.promises.writeFile(dest, replaced, 'utf8');
-  } catch (e) { throw e; }
-}
-
-async function editTopStatsConfig(template, dest, opts) {
-  const lines = await fs.promises.readFile(template, 'utf8');
-  const replaced = lines.split(/\r?\n/).map(l => {
-    if (l.startsWith('guild_name = ')) return `guild_name = ${opts.guildName || ''}`;
-    if (l.startsWith('guild_id = ')) return `guild_id = ${opts.guildId || ''}`;
-    if (l.startsWith('api_key = ')) return `api_key = ${opts.apiKey || ''}`;
-    if (l.startsWith('db_update = ')) return `db_update = ${opts.dbUpdate ? 'true' : 'false'}`;
-    if (l.startsWith('fight_data_charts = ')) return `fight_data_charts = ${opts.fightCharts ? 'true' : 'false'}`;
-    return l;
-  }).join('\n');
-  await fs.promises.writeFile(dest, replaced, 'utf8');
-}
 
 function runProcess(cmd, args, cwd, wc, useShell = false, registerChild) {
   return new Promise((resolve, reject) => {
