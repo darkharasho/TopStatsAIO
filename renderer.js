@@ -174,6 +174,11 @@ window.electronAPI.onTreeEnd(parent => {
   if (parent === currentFolder) {
     progressContainer.classList.add('hidden');
     fileTreeContainer.classList.remove('hidden');
+    const skeleton = document.getElementById('skeleton-screen');
+    if (skeleton) {
+      skeleton.classList.add('hidden');
+      setTimeout(() => skeleton.remove(), 300);
+    }
   }
 });
 window.electronAPI.onLoadProgress(data => {
@@ -221,6 +226,12 @@ window.electronAPI.onLoadProgress(data => {
   }
   if (saved) {
     setTimeout(() => startLoad(saved, true), 0);
+  } else {
+    const skeleton = document.getElementById('skeleton-screen');
+    if (skeleton) {
+      skeleton.classList.add('hidden');
+      setTimeout(() => skeleton.remove(), 300);
+    }
   }
   // Defer dependency checks until the browser is idle so startup renders faster
   const deferDeps = () => {
