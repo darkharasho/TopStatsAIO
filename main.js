@@ -114,19 +114,39 @@ async function downloadDependency(which) {
 async function checkDependencies() {
   ensureDeps();
   const versions = readVersions();
-  const [cliRel, combRel, parserRel] = await Promise.all([
-    getLatest('baaron4/GW2-Elite-Insights-Parser'),
-    getLatest('Drevarr/GW2_EI_log_combiner'),
-    getLatest('Drevarr/arcdps_top_stats_parser')
-  ]);
-  const cliVer = cliRel.tag_name || cliRel.name;
-  const combVer = combRel.tag_name || combRel.name;
-  const parserVer = parserRel.tag_name || parserRel.name;
-  return {
-    cli: { current: versions.cli, latest: cliVer, needsUpdate: versions.cli !== cliVer },
-    combiner: { current: versions.combiner, latest: combVer, needsUpdate: versions.combiner !== combVer },
-    parser: { current: versions.parser, latest: parserVer, needsUpdate: versions.parser !== parserVer }
+  const result = {
+    cli: { current: versions.cli || null, latest: null, needsUpdate: false },
+    combiner: { current: versions.combiner || null, latest: null, needsUpdate: false },
+    parser: { current: versions.parser || null, latest: null, needsUpdate: false }
   };
+
+  try {
+    const rel = await getLatest('baaron4/GW2-Elite-Insights-Parser');
+    result.cli.latest = rel.tag_name || rel.name;
+    result.cli.needsUpdate = result.cli.current !== result.cli.latest;
+  } catch (e) {
+    console.error('Failed to fetch CLI release', e);
+  }
+
+  try {
+    const rel = await getLatest('Drevarr/GW2_EI_log_combiner');
+    result.combiner.latest = rel.tag_name || rel.name;
+    result.combiner.needsUpdate = result.combiner.current !== result.combiner.latest;
+  } catch (e) {
+    console.error('Failed to fetch combiner release', e);
+  }
+
+  if (versions.parser) {
+    try {
+      const rel = await getLatest('Drevarr/arcdps_top_stats_parser');
+      result.parser.latest = rel.tag_name || rel.name;
+      result.parser.needsUpdate = result.parser.current !== result.parser.latest;
+    } catch (e) {
+      console.error('Failed to fetch parser release', e);
+    }
+  }
+
+  return result;
 }
 
 function createWindow() {

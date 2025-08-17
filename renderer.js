@@ -161,23 +161,24 @@ async function checkDeps() {
   const token = ++checkDepsToken;
   const info = await window.electronAPI.checkDependencies();
   if (token !== checkDepsToken) return;
-  const needCli = info.cli.needsUpdate;
-  const needComb = info.combiner.needsUpdate;
-  const needParser = info.parser.needsUpdate;
+  const needCli = info.cli?.needsUpdate;
+  const needComb = info.combiner?.needsUpdate;
+  const installedParser = !!info.parser?.current;
+  const needParser = installedParser && info.parser.needsUpdate;
   downloadCliBtn.classList.toggle('notify', needCli);
   downloadCombinerBtn.classList.toggle('notify', needComb);
   downloadParserBtn.classList.toggle('notify', needParser);
   settingsBtn.classList.toggle('notify', needCli || needComb || needParser);
-  cliVersionText.textContent = info.cli.current ? `Current: ${info.cli.current}` : 'Not installed';
-  if (needCli) {
+  cliVersionText.textContent = info.cli?.current ? `Current: ${info.cli.current}` : 'Not installed';
+  if (needCli && info.cli?.latest) {
     cliVersionText.textContent += ` (Latest: ${info.cli.latest})`;
   }
-  combinerVersionText.textContent = info.combiner.current ? `Current: ${info.combiner.current}` : 'Not installed';
-  if (needComb) {
+  combinerVersionText.textContent = info.combiner?.current ? `Current: ${info.combiner.current}` : 'Not installed';
+  if (needComb && info.combiner?.latest) {
     combinerVersionText.textContent += ` (Latest: ${info.combiner.latest})`;
   }
-  parserVersionText.textContent = info.parser.current ? `Current: ${info.parser.current}` : 'Not installed';
-  if (needParser) {
+  parserVersionText.textContent = info.parser?.current ? `Current: ${info.parser.current}` : 'Not installed';
+  if (needParser && info.parser?.latest) {
     parserVersionText.textContent += ` (Latest: ${info.parser.latest})`;
   }
 }
