@@ -29,6 +29,7 @@ const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
+const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
 const descriptionInput = document.getElementById('description');
 const parseBtn = document.getElementById('parse-btn');
 const parseWindow = document.getElementById('parse-window');
@@ -51,6 +52,7 @@ combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
+combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
 
 document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
 document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
@@ -68,6 +70,15 @@ function openSettings() {
 function closeSettings() {
   mainWindowEl.classList.remove('fade-out');
   settingsWindow.classList.remove('active');
+}
+
+function updateDescriptionVisibility() {
+  if (localStorage.getItem('parserSelection') === 'topstats') {
+    descriptionInput.classList.add('hidden');
+    descriptionInput.value = '';
+  } else {
+    descriptionInput.classList.remove('hidden');
+  }
 }
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
@@ -100,11 +111,13 @@ downloadParserBtn.addEventListener('click', async () => {
 parserTopStatsRadio.addEventListener('change', () => {
   if (parserTopStatsRadio.checked) {
     localStorage.setItem('parserSelection', 'topstats');
+    updateDescriptionVisibility();
   }
 });
 parserCombinerRadio.addEventListener('change', () => {
   if (parserCombinerRadio.checked) {
     localStorage.setItem('parserSelection', 'combiner');
+    updateDescriptionVisibility();
   }
 });
 dpsUserTokenInput.addEventListener('input', () => {
@@ -121,6 +134,9 @@ combinerApiKeyInput.addEventListener('input', () => {
 });
 combinerGlickoCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
+});
+combinerFightChartsCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerFightCharts', combinerFightChartsCheckbox.checked ? 'true' : 'false');
 });
 parseBtn.addEventListener('click', startParse);
 parseCloseBtn.addEventListener('click', closeParseWindow);
@@ -219,12 +235,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   versionText.textContent = `v${ver}`;
   const saved = localStorage.getItem('lastFolder');
   const lastTime = localStorage.getItem('lastTimeFilter');
-  const parserSel = localStorage.getItem('parserSelection') || 'topstats';
+  const parserSel = localStorage.getItem('parserSelection') || 'combiner';
   if (parserSel === 'combiner') {
     parserCombinerRadio.checked = true;
   } else {
     parserTopStatsRadio.checked = true;
   }
+  updateDescriptionVisibility();
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -513,12 +530,13 @@ async function startParse() {
   openParseWindow();
   const files = Array.from(selected.keys());
   const options = {
-    parser: localStorage.getItem('parserSelection') || 'topstats',
+    parser: localStorage.getItem('parserSelection') || 'combiner',
     dpsUserToken: localStorage.getItem('dpsReportUserToken') || '',
     guildName: localStorage.getItem('combinerGuildName') || '',
     guildId: localStorage.getItem('combinerGuildId') || '',
     apiKey: localStorage.getItem('combinerApiKey') || '',
     dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
+    fightCharts: localStorage.getItem('combinerFightCharts') === 'true',
     description: descriptionInput.value.trim()
   };
   await window.electronAPI.startParse({ files, options });

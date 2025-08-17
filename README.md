@@ -20,7 +20,7 @@ The primary directive of this application is to increase the user friendliness o
 - Ability to set a static raid time and grab logs older than a start time
 - Automatically configures and uses both EliteInsightsParser and GW2EILogCombiner to generate the final `.json` to be used with TiddlyWiki
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
-- Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
+- Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner` (default)
 - Light and dark themes with customizable accent colors, including a subtle grey option
 - Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
 
@@ -37,10 +37,10 @@ The primary directive of this application is to increase the user friendliness o
 
 
 ### 3. Optional Settings
-   - Configure a `DPSReportUserToken` for authenticated uploads
-   - Choose between `GW2_EI_log_combiner` and the legacy `arcdps_top_stats_parser` and supply paths for both
-   - Switch between light and dark themes and pick from several accent colors, including a subtle grey
-   - Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates
+- Configure a `DPSReportUserToken` for authenticated uploads
+- Choose between `GW2_EI_log_combiner` (default) and the legacy `arcdps_top_stats_parser` and supply paths for both
+- Switch between light and dark themes and pick from several accent colors, including a subtle grey
+- Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates and fight chart generation
 
 ## How to Use
 ### Defaults
@@ -50,7 +50,7 @@ The primary directive of this application is to increase the user friendliness o
 4. Let the process run, once complete you will see a button appear to `Open Folder`
 5. Drag & Drop that `.json` file into your TiddlyWiki of choice!
 ### Options
-- You can set a description field at the bottom of the window for that particular parsed log
+- You can set a description field at the bottom of the window for each log when using the `GW2_EI_log_combiner`; it is hidden when using the legacy `arcdps_top_stats_parser`
 - There is a date/time picker in the bottom left. It will remember your last selected time. Select a date/time and press `Select Since` to select all logs from all subfolders that are created after that date & time
 ### IF YOU USE ARCDPS_TOP_STATS_PARSER
 This app does not handle downloading the dependencies needed for [arcdps_top_stat_parser](https://github.com/Drevarr/arcdps_top_stats_parser). You will need to install [python](https://www.python.org/downloads/) and run `pip3 install xlrd xlutils xlwt jsons requests xlsxwriter` in order to use the parser. 
@@ -75,6 +75,14 @@ To test the update notification in development, launch with the
 
 ```bash
 npm start -- --dev-update
+```
+
+### Clear saved settings
+
+Reset all stored preferences and local data:
+
+```bash
+npm run clear-settings
 ```
 
 ## Tests

@@ -509,6 +509,7 @@ async function editTopStatsConfig(template, dest, opts) {
     if (l.startsWith('guild_id = ')) return `guild_id = ${opts.guildId || ''}`;
     if (l.startsWith('api_key = ')) return `api_key = ${opts.apiKey || ''}`;
     if (l.startsWith('db_update = ')) return `db_update = ${opts.dbUpdate ? 'true' : 'false'}`;
+    if (l.startsWith('fight_data_charts = ')) return `fight_data_charts = ${opts.fightCharts ? 'true' : 'false'}`;
     return l;
   }).join('\n');
   await fs.promises.writeFile(dest, replaced, 'utf8');

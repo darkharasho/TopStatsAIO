@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node -e \"console.log('No tests specified')\"",
-    "dist": "node scripts/build-win.js"
+    "dist": "node scripts/build-win.js",
+    "clear-settings": "node scripts/clear-settings.js"
   },
   "keywords": [],
   "author": "",
