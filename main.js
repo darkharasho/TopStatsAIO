@@ -158,13 +158,14 @@ function createWindow() {
     visualEffectState: 'active',
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
-    show: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     }
   });
 
   win.loadFile('index.html');
+  win.once('ready-to-show', () => win.show());
   return win;
 }
 
