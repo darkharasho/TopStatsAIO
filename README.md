@@ -50,7 +50,7 @@ The primary directive of this application is to increase the user friendliness o
 4. Let the process run, once complete you will see a button appear to `Open Folder`
 5. Drag & Drop that `.json` file into your TiddlyWiki of choice!
 ### Options
-- You can set a description field at the bottom of the window for that particular parsed log
+- You can set a description field at the bottom of the window for each log when using the `GW2_EI_log_combiner`; it is hidden when using the legacy `arcdps_top_stats_parser`
 - There is a date/time picker in the bottom left. It will remember your last selected time. Select a date/time and press `Select Since` to select all logs from all subfolders that are created after that date & time
 ### IF YOU USE ARCDPS_TOP_STATS_PARSER
 This app does not handle downloading the dependencies needed for [arcdps_top_stat_parser](https://github.com/Drevarr/arcdps_top_stats_parser). You will need to install [python](https://www.python.org/downloads/) and run `pip3 install xlrd xlutils xlwt jsons requests xlsxwriter` in order to use the parser. 

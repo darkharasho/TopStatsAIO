@@ -70,6 +70,15 @@ function closeSettings() {
   settingsWindow.classList.remove('active');
 }
 
+function updateDescriptionVisibility() {
+  if (localStorage.getItem('parserSelection') === 'topstats') {
+    descriptionInput.classList.add('hidden');
+    descriptionInput.value = '';
+  } else {
+    descriptionInput.classList.remove('hidden');
+  }
+}
+
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
 gradientRadios.forEach(r => {
@@ -100,11 +109,13 @@ downloadParserBtn.addEventListener('click', async () => {
 parserTopStatsRadio.addEventListener('change', () => {
   if (parserTopStatsRadio.checked) {
     localStorage.setItem('parserSelection', 'topstats');
+    updateDescriptionVisibility();
   }
 });
 parserCombinerRadio.addEventListener('change', () => {
   if (parserCombinerRadio.checked) {
     localStorage.setItem('parserSelection', 'combiner');
+    updateDescriptionVisibility();
   }
 });
 dpsUserTokenInput.addEventListener('input', () => {
@@ -225,6 +236,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     parserTopStatsRadio.checked = true;
   }
+  updateDescriptionVisibility();
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
