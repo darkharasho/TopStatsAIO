@@ -228,11 +228,6 @@ app.whenReady().then(() => {
   console.timeEnd('create-window');
   mainWindow = win;
 
-  console.time('dom-ready');
-  win.webContents.once('dom-ready', () => {
-    console.timeEnd('dom-ready');
-  });
-
   // measure initial renderer load
   console.time('initial-render');
   win.webContents.once('did-finish-load', () => {
