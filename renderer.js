@@ -10,7 +10,6 @@ const settingsBtn = document.getElementById('settings');
 const updateNoticeBtn = document.getElementById('update-notice');
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress');
-const fileLoading = document.getElementById('file-tree-loading');
 const mainWindowEl = document.getElementById('main-window');
 const settingsWindow = document.getElementById('settings-window');
 const closeSettingsBtn = document.getElementById('close-settings');
@@ -180,10 +179,9 @@ window.electronAPI.onTreeStart(data => {
     selectedFolderSpan.textContent = currentFolder;
     selected.clear();
     renderSelected();
-    fileTreeContainer.classList.add('hidden');
     progressContainer.classList.remove('hidden');
     progressBar.style.width = '0%';
-    fileLoading.classList.remove('hidden');
+    fileTreeContainer.classList.remove('hidden');
     localStorage.setItem('lastFolder', currentFolder);
   }
 });
@@ -196,7 +194,6 @@ window.electronAPI.onTreeNode(data => {
 window.electronAPI.onTreeEnd(parent => {
   if (parent === currentFolder) {
     progressContainer.classList.add('hidden');
-    fileLoading.classList.add('hidden');
     fileTreeContainer.classList.remove('hidden');
   }
 });
@@ -293,8 +290,6 @@ function startLoad(dir, loadEverything = false) {
   currentFolder = dir;
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';
-  fileTreeContainer.classList.add('hidden');
-  fileLoading.classList.remove('hidden');
   progressContainer.classList.remove('hidden');
   progressBar.style.width = '0%';
   rootList = document.createElement('ul');

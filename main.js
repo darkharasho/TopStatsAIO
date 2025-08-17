@@ -138,13 +138,12 @@ function createWindow() {
     visualEffectState: 'active',
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
-    show: false,
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     }
   });
 
-  win.once('ready-to-show', () => win.show());
   win.loadFile('index.html');
   return win;
 }
@@ -229,7 +228,7 @@ ipcMain.handle('load-folder', async (event, dir, rootDir) => {
     const entries = await fs.promises.readdir(dir, { withFileTypes: true });
     const total = entries.length;
     let count = 0;
-    for (const entry of entries) {
+    await Promise.all(entries.map(async entry => {
       const fullPath = path.join(dir, entry.name);
       try {
         const stat = await fs.promises.stat(fullPath);
@@ -244,7 +243,7 @@ ipcMain.handle('load-folder', async (event, dir, rootDir) => {
       } catch { /* ignore failed stats */ }
       count++;
       wc.send('load-progress', { parent: dir, progress: count / total });
-    }
+    }));
     wc.send('tree-end', dir);
     return true;
   } catch {
