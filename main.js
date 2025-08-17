@@ -32,14 +32,28 @@ function writeVersions(v) {
   fs.writeFileSync(versionsFile, JSON.stringify(v));
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Fetch failed');
-  return await res.json();
+async function fetchJson(url, timeout = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'TopStatsAIO' },
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function getLatest(repo) {
-  return await fetchJson(`https://api.github.com/repos/${repo}/releases/latest`);
+  try {
+    return await fetchJson(`https://api.github.com/repos/${repo}/releases/latest`);
+  } catch (e) {
+    console.error(`Failed to fetch latest for ${repo}:`, e);
+    return null;
+  }
 }
 
 async function downloadFile(url, dest) {
@@ -54,6 +68,7 @@ async function downloadDependency(which) {
   const { default: AdmZip } = await import('adm-zip');
   if (which === 'cli') {
     const rel = await getLatest('baaron4/GW2-Elite-Insights-Parser');
+    if (!rel) throw new Error('Failed to fetch latest release');
     const asset = rel.assets.find(a => a.name === 'GW2EICLI.zip');
     if (!asset) throw new Error('Asset not found');
     const zipPath = path.join(depsDir, asset.name);
@@ -70,6 +85,7 @@ async function downloadDependency(which) {
     writeVersions(versions);
   } else if (which === 'combiner') {
     const rel = await getLatest('Drevarr/GW2_EI_log_combiner');
+    if (!rel) throw new Error('Failed to fetch latest release');
     const asset = rel.assets.find(a => a.name.endsWith('.zip'));
     if (!asset) throw new Error('Asset not found');
     const zipPath = path.join(depsDir, asset.name);
@@ -86,6 +102,7 @@ async function downloadDependency(which) {
     writeVersions(versions);
   } else if (which === 'parser') {
     const rel = await getLatest('Drevarr/arcdps_top_stats_parser');
+    if (!rel) throw new Error('Failed to fetch latest release');
     const zipPath = path.join(depsDir, 'arcdps_top_stats_parser.zip');
     await downloadFile(rel.zipball_url, zipPath);
     const zip = new AdmZip(zipPath);
@@ -121,13 +138,13 @@ async function checkDependencies() {
     getLatest('Drevarr/GW2_EI_log_combiner'),
     getLatest('Drevarr/arcdps_top_stats_parser')
   ]);
-  const cliVer = cliRel.tag_name || cliRel.name;
-  const combVer = combRel.tag_name || combRel.name;
-  const parserVer = parserRel.tag_name || parserRel.name;
+  const cliVer = cliRel && (cliRel.tag_name || cliRel.name);
+  const combVer = combRel && (combRel.tag_name || combRel.name);
+  const parserVer = parserRel && (parserRel.tag_name || parserRel.name);
   return {
-    cli: { current: versions.cli, latest: cliVer, needsUpdate: versions.cli !== cliVer },
-    combiner: { current: versions.combiner, latest: combVer, needsUpdate: versions.combiner !== combVer },
-    parser: { current: versions.parser, latest: parserVer, needsUpdate: versions.parser !== parserVer }
+    cli: { current: versions.cli, latest: cliVer, needsUpdate: cliVer ? versions.cli !== cliVer : false },
+    combiner: { current: versions.combiner, latest: combVer, needsUpdate: combVer ? versions.combiner !== combVer : false },
+    parser: { current: versions.parser, latest: parserVer, needsUpdate: parserVer ? versions.parser !== parserVer : false }
   };
 }
 
@@ -180,11 +197,13 @@ async function checkForAppUpdates(parent) {
   try {
     const semver = (await import('semver')).default;
     const rel = await getLatest('darkharasho/TopStatsAIO');
-    const latest = semver.clean(rel.tag_name || rel.name);
-    const current = app.getVersion();
-    if (latest && semver.gt(latest, current)) {
-      pendingUpdate = { version: latest, url: rel.html_url };
-      showUpdatePrompt(parent);
+    if (rel) {
+      const latest = semver.clean(rel.tag_name || rel.name);
+      const current = app.getVersion();
+      if (latest && semver.gt(latest, current)) {
+        pendingUpdate = { version: latest, url: rel.html_url };
+        showUpdatePrompt(parent);
+      }
     }
   } catch (err) {
     console.error('Update check failed:', err);

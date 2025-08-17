@@ -1,5 +1,7 @@
 console.time('renderer-init');
-requestAnimationFrame(() => {
+requestAnimationFrame(() => requestAnimationFrame(init));
+
+function init() {
   const chooseFolderBtn = document.getElementById('choose-folder');
   const fileTreeContainer = document.getElementById('file-tree-list');
   const selectedList = document.getElementById('selected-list');
@@ -158,7 +160,6 @@ window.electronAPI.onTreeStart(data => {
     renderSelected();
     progressContainer.classList.remove('hidden');
     progressBar.style.width = '0%';
-    fileTreeContainer.classList.remove('hidden');
     localStorage.setItem('lastFolder', currentFolder);
   }
 });
@@ -280,6 +281,7 @@ function startLoad(dir, loadEverything = false) {
   currentFolder = dir;
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';
+  fileTreeContainer.classList.add('hidden');
   progressContainer.classList.remove('hidden');
   progressBar.style.width = '0%';
   rootList = document.createElement('ul');
@@ -615,4 +617,5 @@ function applyGradient(name) {
   document.documentElement.style.setProperty('--btn-border-hover', c2);
   localStorage.setItem('gradientTheme', name);
 }
-});
+
+}
