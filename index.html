@@ -56,24 +56,27 @@
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       console.timeEnd('index-load');
-      console.time('app-html-fetch');
-      fetch('app.html')
-        .then(r => r.text())
-        .then(html => {
-          console.timeEnd('app-html-fetch');
-          document.body.insertAdjacentHTML('beforeend', html);
-          console.time('app-css-load');
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'styles.css';
-          link.onload = () => console.timeEnd('app-css-load');
-          document.head.appendChild(link);
-          console.time('renderer-script-load');
-          const s = document.createElement('script');
-          s.src = 'renderer.js';
-          s.onload = () => console.timeEnd('renderer-script-load');
-          document.body.appendChild(s);
-        });
+      // allow the skeleton to paint before heavy work begins
+      requestAnimationFrame(() => {
+        console.time('app-html-fetch');
+        fetch('app.html')
+          .then(r => r.text())
+          .then(html => {
+            console.timeEnd('app-html-fetch');
+            document.body.insertAdjacentHTML('beforeend', html);
+            console.time('app-css-load');
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'styles.css';
+            link.onload = () => console.timeEnd('app-css-load');
+            document.head.appendChild(link);
+            console.time('renderer-script-load');
+            const s = document.createElement('script');
+            s.src = 'renderer.js';
+            s.onload = () => console.timeEnd('renderer-script-load');
+            document.body.appendChild(s);
+          });
+      });
     });
   </script>
 </body>

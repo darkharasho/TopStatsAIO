@@ -165,10 +165,14 @@ function createWindow() {
   });
 
   win.loadFile('index.html');
+  console.time('dom-ready');
+  win.webContents.once('dom-ready', () => {
+    console.timeEnd('dom-ready');
+    win.show();
+  });
   console.time('ready-to-show');
   win.once('ready-to-show', () => {
     console.timeEnd('ready-to-show');
-    win.show();
   });
   return win;
 }
