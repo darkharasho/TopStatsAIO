@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <title>Top Stats AIO</title>
   <script>
-    console.time('index-load');
-    console.time('skeleton-visible');
     if (localStorage.getItem('theme') === 'light') {
       document.documentElement.classList.add('light');
     }
@@ -55,25 +53,18 @@
   </div>
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      console.timeEnd('index-load');
       // allow the skeleton to paint before heavy work begins
       requestAnimationFrame(() => {
-        console.time('app-html-fetch');
         fetch('app.html')
           .then(r => r.text())
           .then(html => {
-            console.timeEnd('app-html-fetch');
             document.body.insertAdjacentHTML('beforeend', html);
-            console.time('app-css-load');
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = 'styles.css';
-            link.onload = () => console.timeEnd('app-css-load');
             document.head.appendChild(link);
-            console.time('renderer-script-load');
             const s = document.createElement('script');
             s.src = 'renderer.js';
-            s.onload = () => console.timeEnd('renderer-script-load');
             document.body.appendChild(s);
           });
       });

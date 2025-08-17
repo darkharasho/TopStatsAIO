@@ -1,4 +1,3 @@
-console.time('renderer-init');
 requestAnimationFrame(() => requestAnimationFrame(init));
 
 function init() {
@@ -117,7 +116,6 @@ function init() {
     localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
   });
 async function checkDeps() {
-  console.time('renderer-check-deps');
   const info = await window.electronAPI.checkDependencies();
   const needCli = info.cli.needsUpdate;
   const needComb = info.combiner.needsUpdate;
@@ -138,7 +136,6 @@ async function checkDeps() {
   if (needParser) {
     parserVersionText.textContent += ` (Latest: ${info.parser.latest})`;
   }
-  console.timeEnd('renderer-check-deps');
 }
 window.electronAPI.onThemeChanged(applyTheme);
 window.electronAPI.onShowUpdateNotice(() => {
@@ -170,13 +167,11 @@ window.electronAPI.onTreeNode(data => {
   }
 });
 window.electronAPI.onTreeEnd(parent => {
-  console.timeEnd(`renderer-load:${parent}`);
   if (parent === currentFolder) {
     progressContainer.classList.add('hidden');
     fileTreeContainer.classList.remove('hidden');
     const skeleton = document.getElementById('skeleton-screen');
     if (skeleton) {
-      console.timeEnd('skeleton-visible');
       skeleton.classList.add('hidden');
       setTimeout(() => skeleton.remove(), 300);
     }
@@ -188,8 +183,6 @@ window.electronAPI.onLoadProgress(data => {
   }
 });
 
-  console.timeEnd('renderer-init');
-  console.time('dom-content');
   const savedTheme = localStorage.getItem('theme');
   applyTheme(savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark');
   const grad = localStorage.getItem('gradientTheme') || 'default';
@@ -197,7 +190,6 @@ window.electronAPI.onLoadProgress(data => {
   const gradRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
   if (gradRadio) gradRadio.checked = true;
   setTimeout(async () => {
-    console.time('post-frame');
     if (!savedTheme) {
       const sysTheme = await window.electronAPI.getTheme();
       if (sysTheme === 'light' || sysTheme === 'dark') {
@@ -206,7 +198,6 @@ window.electronAPI.onLoadProgress(data => {
     }
     const ver = await window.electronAPI.getAppVersion();
     versionText.textContent = `v${ver}`;
-    console.timeEnd('post-frame');
   }, 0);
   const saved = localStorage.getItem('lastFolder');
   const lastTime = localStorage.getItem('lastTimeFilter');
@@ -230,7 +221,6 @@ window.electronAPI.onLoadProgress(data => {
   } else {
     const skeleton = document.getElementById('skeleton-screen');
     if (skeleton) {
-      console.timeEnd('skeleton-visible');
       skeleton.classList.add('hidden');
       setTimeout(() => skeleton.remove(), 300);
     }
@@ -251,7 +241,6 @@ window.electronAPI.onLoadProgress(data => {
   } else {
     setTimeout(deferParse, 0);
   }
-  console.timeEnd('dom-content');
 
 chooseFolderBtn.addEventListener('click', async () => {
   const dir = await window.electronAPI.selectFolder();
@@ -289,8 +278,6 @@ unselectAllBtn.addEventListener('click', () => {
 });
 
 function startLoad(dir, loadEverything = false) {
-  const label = `renderer-load:${dir}`;
-  console.time(label);
   currentFolder = dir;
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';
