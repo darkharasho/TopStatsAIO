@@ -53,13 +53,19 @@
     <div class="skeleton-block skeleton"></div>
   </div>
   <script>
-    requestAnimationFrame(() => {
-      fetch('app.html').then(r => r.text()).then(html => {
-        document.body.insertAdjacentHTML('beforeend', html);
-        const s = document.createElement('script');
-        s.src = 'renderer.js';
-        document.body.appendChild(s);
-      });
+    window.addEventListener('load', () => {
+      // Defer loading the full app until after the initial page load so the skeleton
+      // can paint immediately and the main process's did-finish-load fires quickly.
+      setTimeout(() => {
+        fetch('app.html')
+          .then(r => r.text())
+          .then(html => {
+            document.body.insertAdjacentHTML('beforeend', html);
+            const s = document.createElement('script');
+            s.src = 'renderer.js';
+            document.body.appendChild(s);
+          });
+      }, 0);
     });
   </script>
 </body>
