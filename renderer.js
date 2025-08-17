@@ -235,12 +235,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     dateFilterInput.value = `${yyyy}-${mm}-${dd}T00:00`;
   }
   if (saved) {
-    startLoad(saved);
+    requestAnimationFrame(() => startLoad(saved));
   }
-  // Defer dependency checks so the UI can render immediately
-  setTimeout(() => {
+  // Defer dependency checks until the browser is idle so startup renders faster
+  const deferDeps = () => {
     checkDeps().catch(console.error);
-  }, 0);
+  };
+  if (window.requestIdleCallback) {
+    requestIdleCallback(deferDeps);
+  } else {
+    setTimeout(deferDeps, 0);
+  }
 });
 
 chooseFolderBtn.addEventListener('click', async () => {
