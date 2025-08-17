@@ -1,5 +1,4 @@
-config.json
-GeneratedAgg/
-prerequisites/
-Top_Stats.db
-topstats/__pycache__/
+node_modules
+dependencies
+parsed_files
+dist/
