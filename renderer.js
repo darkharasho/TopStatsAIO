@@ -28,14 +28,6 @@ const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
-const descriptionInput = document.getElementById('description');
-const parseBtn = document.getElementById('parse-btn');
-const parseWindow = document.getElementById('parse-window');
-const parseOutput = document.getElementById('parse-output');
-const parseSteps = document.getElementById('parse-steps');
-const parseOpenFolderBtn = document.getElementById('parse-open-folder');
-const parseCloseBtn = document.getElementById('parse-close');
-const parseCancelBtn = document.getElementById('parse-cancel');
 const versionText = document.getElementById('version-text');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
@@ -43,7 +35,6 @@ let currentFolder = '';
 let rootList;
 let folderLists = new Map();
 let loadAll = false;
-let currentStepId = null;
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
@@ -120,24 +111,6 @@ combinerApiKeyInput.addEventListener('input', () => {
 });
 combinerGlickoCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
-});
-parseBtn.addEventListener('click', startParse);
-parseCloseBtn.addEventListener('click', closeParseWindow);
-parseOpenFolderBtn.addEventListener('click', () => window.electronAPI.openParsedFolder());
-parseCancelBtn.addEventListener('click', () => {
-  parseCancelBtn.disabled = true;
-  window.electronAPI.cancelParse();
-});
-window.electronAPI.onParseProgress(msg => {
-  parseOutput.textContent += msg + '\n';
-  parseOutput.scrollTop = parseOutput.scrollHeight;
-});
-window.electronAPI.onParseStep(data => updateStep(data));
-window.electronAPI.onParseComplete(success => {
-  parseOpenFolderBtn.disabled = !success;
-  parseCloseBtn.disabled = false;
-  parseCancelBtn.disabled = true;
-  updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
 });
 async function checkDeps() {
   const info = await window.electronAPI.checkDependencies();
@@ -248,6 +221,13 @@ document.addEventListener('DOMContentLoaded', () => {
     requestIdleCallback(deferDeps);
   } else {
     setTimeout(deferDeps, 0);
+  }
+  // Delay parse UI wiring until idle to speed up first paint
+  const deferParse = () => initParseUI();
+  if (window.requestIdleCallback) {
+    requestIdleCallback(deferParse);
+  } else {
+    setTimeout(deferParse, 0);
   }
 });
 
@@ -447,94 +427,126 @@ function renderSelected() {
   }
 }
 
-function updateStep({ id, title, progress, error, success, current = 0, total = 0 }) {
-  if (id !== currentStepId) {
-    parseSteps.innerHTML = '';
-    currentStepId = id;
-    const step = document.createElement('div');
-    step.classList.add('parse-step');
-    const titleEl = document.createElement('div');
-    titleEl.classList.add('step-title');
-    const bar = document.createElement('div');
-    bar.classList.add('step-bar');
-    const fill = document.createElement('div');
-    fill.classList.add('step-fill');
-    bar.appendChild(fill);
-    const meta = document.createElement('div');
-    meta.classList.add('step-meta');
-    const countEl = document.createElement('div');
-    countEl.classList.add('step-count');
-    const status = document.createElement('div');
-    status.classList.add('step-status');
-    meta.appendChild(countEl);
-    meta.appendChild(status);
-    step.appendChild(titleEl);
-    step.appendChild(bar);
-    step.appendChild(meta);
-    parseSteps.appendChild(step);
-  }
-  const step = parseSteps.querySelector('.parse-step');
-  if (!step) return;
-  step.classList.remove('error', 'success');
-  step.querySelector('.step-title').textContent = title;
-  step.querySelector('.step-fill').style.width = `${Math.floor((progress || 0) * 100)}%`;
-  const countEl = step.querySelector('.step-count');
-  if (total > 0) {
-    countEl.textContent = `${current}/${total}`;
-  } else {
-    countEl.textContent = '';
-  }
-  const status = step.querySelector('.step-status');
-  if (error) {
-    step.classList.add('error');
-    status.textContent = error;
-  } else {
-    status.textContent = '';
-    if (success) {
-      step.classList.add('success');
+function initParseUI() {
+  const descriptionInput = document.getElementById('description');
+  const parseBtn = document.getElementById('parse-btn');
+  const parseWindow = document.getElementById('parse-window');
+  const parseOutput = document.getElementById('parse-output');
+  const parseSteps = document.getElementById('parse-steps');
+  const parseOpenFolderBtn = document.getElementById('parse-open-folder');
+  const parseCloseBtn = document.getElementById('parse-close');
+  const parseCancelBtn = document.getElementById('parse-cancel');
+  let currentStepId = null;
+
+  function updateStep({ id, title, progress, error, success, current = 0, total = 0 }) {
+    if (id !== currentStepId) {
+      parseSteps.innerHTML = '';
+      currentStepId = id;
+      const step = document.createElement('div');
+      step.classList.add('parse-step');
+      const titleEl = document.createElement('div');
+      titleEl.classList.add('step-title');
+      const bar = document.createElement('div');
+      bar.classList.add('step-bar');
+      const fill = document.createElement('div');
+      fill.classList.add('step-fill');
+      bar.appendChild(fill);
+      const meta = document.createElement('div');
+      meta.classList.add('step-meta');
+      const countEl = document.createElement('div');
+      countEl.classList.add('step-count');
+      const status = document.createElement('div');
+      status.classList.add('step-status');
+      meta.appendChild(countEl);
+      meta.appendChild(status);
+      step.appendChild(titleEl);
+      step.appendChild(bar);
+      step.appendChild(meta);
+      parseSteps.appendChild(step);
+    }
+    const step = parseSteps.querySelector('.parse-step');
+    if (!step) return;
+    step.classList.remove('error', 'success');
+    step.querySelector('.step-title').textContent = title;
+    step.querySelector('.step-fill').style.width = `${Math.floor((progress || 0) * 100)}%`;
+    const countEl = step.querySelector('.step-count');
+    if (total > 0) {
+      countEl.textContent = `${current}/${total}`;
+    } else {
+      countEl.textContent = '';
+    }
+    const status = step.querySelector('.step-status');
+    if (error) {
+      step.classList.add('error');
+      status.textContent = error;
+    } else {
+      status.textContent = '';
+      if (success) {
+        step.classList.add('success');
+      }
+    }
+    if (progress >= 1 && !error && id !== 'complete') {
+      currentStepId = null;
     }
   }
-  if (progress >= 1 && !error && id !== 'complete') {
+
+  function openParseWindow() {
+    mainWindowEl.classList.add('fade-out');
+    parseWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Parse';
+    parseOutput.textContent = '';
+    parseSteps.innerHTML = '';
     currentStepId = null;
+    parseOpenFolderBtn.disabled = true;
+    parseCloseBtn.disabled = true;
+    parseCancelBtn.disabled = false;
   }
-}
 
-function openParseWindow() {
-  mainWindowEl.classList.add('fade-out');
-  parseWindow.classList.add('active');
-  document.getElementById('title-text').textContent = 'Parse';
-  parseOutput.textContent = '';
-  parseSteps.innerHTML = '';
-  currentStepId = null;
-  parseOpenFolderBtn.disabled = true;
-  parseCloseBtn.disabled = true;
-  parseCancelBtn.disabled = false;
-}
-
-function closeParseWindow() {
-  parseWindow.classList.remove('active');
-  mainWindowEl.classList.remove('fade-out');
-  document.getElementById('title-text').textContent = 'Top Stats AIO';
-}
-
-async function startParse() {
-  if (selected.size === 0) {
-    alert('Please select at least one file to parse.');
-    return;
+  function closeParseWindow() {
+    parseWindow.classList.remove('active');
+    mainWindowEl.classList.remove('fade-out');
+    document.getElementById('title-text').textContent = 'Top Stats AIO';
   }
-  openParseWindow();
-  const files = Array.from(selected.keys());
-  const options = {
-    parser: localStorage.getItem('parserSelection') || 'topstats',
-    dpsUserToken: localStorage.getItem('dpsReportUserToken') || '',
-    guildName: localStorage.getItem('combinerGuildName') || '',
-    guildId: localStorage.getItem('combinerGuildId') || '',
-    apiKey: localStorage.getItem('combinerApiKey') || '',
-    dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
-    description: descriptionInput.value.trim()
-  };
-  await window.electronAPI.startParse({ files, options });
+
+  async function startParse() {
+    if (selected.size === 0) {
+      alert('Please select at least one file to parse.');
+      return;
+    }
+    openParseWindow();
+    const files = Array.from(selected.keys());
+    const options = {
+      parser: localStorage.getItem('parserSelection') || 'topstats',
+      dpsUserToken: localStorage.getItem('dpsReportUserToken') || '',
+      guildName: localStorage.getItem('combinerGuildName') || '',
+      guildId: localStorage.getItem('combinerGuildId') || '',
+      apiKey: localStorage.getItem('combinerApiKey') || '',
+      dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
+      description: descriptionInput.value.trim()
+    };
+    await window.electronAPI.startParse({ files, options });
+  }
+
+  parseBtn.addEventListener('click', startParse);
+  parseCloseBtn.addEventListener('click', closeParseWindow);
+  parseOpenFolderBtn.addEventListener('click', () => window.electronAPI.openParsedFolder());
+  parseCancelBtn.addEventListener('click', () => {
+    parseCancelBtn.disabled = true;
+    window.electronAPI.cancelParse();
+  });
+  window.electronAPI.onParseProgress(msg => {
+    parseOutput.textContent += msg + '\n';
+    parseOutput.scrollTop = parseOutput.scrollHeight;
+  });
+  window.electronAPI.onParseStep(data => updateStep(data));
+  window.electronAPI.onParseComplete(success => {
+    parseOpenFolderBtn.disabled = !success;
+    parseCloseBtn.disabled = false;
+    parseCancelBtn.disabled = true;
+    updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
+  });
 }
+
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
