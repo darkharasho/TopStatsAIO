@@ -22,7 +22,7 @@ The primary directive of this application is to increase the user friendliness o
 - Built-in downloader to automatically fetch the latest versions of required prerequisites
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner`
 - Light and dark themes to suit your preference
-- Notifies you of new releases after the app loads with a Mica-style prompt
+- Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
 
 ## Setup
 

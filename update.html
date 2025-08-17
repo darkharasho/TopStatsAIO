@@ -41,9 +41,11 @@
     window.electronAPI.onThemeChanged(applyTheme);
     document.getElementById('download').addEventListener('click', () => {
       window.electronAPI.openExternal(url);
+      window.electronAPI.updateDownloaded();
       window.electronAPI.close();
     });
     document.getElementById('later').addEventListener('click', () => {
+      window.electronAPI.updateLater();
       window.electronAPI.close();
     });
   </script>
