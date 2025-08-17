@@ -1,118 +1,119 @@
 console.time('renderer-init');
-const chooseFolderBtn = document.getElementById('choose-folder');
-const fileTreeContainer = document.getElementById('file-tree-list');
-const selectedList = document.getElementById('selected-list');
-const selectedFolderSpan = document.getElementById('selected-folder');
-const titlebar = document.getElementById('titlebar');
-const dateFilterInput = document.getElementById('date-filter');
-const dateSelectBtn = document.getElementById('date-select');
-const unselectAllBtn = document.getElementById('unselect-all');
-const settingsBtn = document.getElementById('settings');
-const updateNoticeBtn = document.getElementById('update-notice');
-const progressContainer = document.getElementById('progress-container');
-const progressBar = document.getElementById('progress');
-const mainWindowEl = document.getElementById('main-window');
-const settingsWindow = document.getElementById('settings-window');
-const closeSettingsBtn = document.getElementById('close-settings');
-const darkBtn = document.getElementById('theme-dark');
-const lightBtn = document.getElementById('theme-light');
-const downloadCliBtn = document.getElementById('download-cli');
-const downloadCombinerBtn = document.getElementById('download-combiner');
-const downloadParserBtn = document.getElementById('download-parser');
-const cliVersionText = document.getElementById('cli-version');
-const combinerVersionText = document.getElementById('combiner-version');
-const parserVersionText = document.getElementById('parser-version');
-const parserTopStatsRadio = document.getElementById('parser-topstats');
-const parserCombinerRadio = document.getElementById('parser-combiner');
-const dpsUserTokenInput = document.getElementById('dps-user-token');
-const combinerGuildNameInput = document.getElementById('combiner-guild-name');
-const combinerGuildIdInput = document.getElementById('combiner-guild-id');
-const combinerApiKeyInput = document.getElementById('combiner-api-key');
-const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
-const versionText = document.getElementById('version-text');
-const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
-const selected = new Map();
-let currentFolder = '';
-let rootList;
-let folderLists = new Map();
-let loadAll = false;
+requestAnimationFrame(() => {
+  const chooseFolderBtn = document.getElementById('choose-folder');
+  const fileTreeContainer = document.getElementById('file-tree-list');
+  const selectedList = document.getElementById('selected-list');
+  const selectedFolderSpan = document.getElementById('selected-folder');
+  const titlebar = document.getElementById('titlebar');
+  const dateFilterInput = document.getElementById('date-filter');
+  const dateSelectBtn = document.getElementById('date-select');
+  const unselectAllBtn = document.getElementById('unselect-all');
+  const settingsBtn = document.getElementById('settings');
+  const updateNoticeBtn = document.getElementById('update-notice');
+  const progressContainer = document.getElementById('progress-container');
+  const progressBar = document.getElementById('progress');
+  const mainWindowEl = document.getElementById('main-window');
+  const settingsWindow = document.getElementById('settings-window');
+  const closeSettingsBtn = document.getElementById('close-settings');
+  const darkBtn = document.getElementById('theme-dark');
+  const lightBtn = document.getElementById('theme-light');
+  const downloadCliBtn = document.getElementById('download-cli');
+  const downloadCombinerBtn = document.getElementById('download-combiner');
+  const downloadParserBtn = document.getElementById('download-parser');
+  const cliVersionText = document.getElementById('cli-version');
+  const combinerVersionText = document.getElementById('combiner-version');
+  const parserVersionText = document.getElementById('parser-version');
+  const parserTopStatsRadio = document.getElementById('parser-topstats');
+  const parserCombinerRadio = document.getElementById('parser-combiner');
+  const dpsUserTokenInput = document.getElementById('dps-user-token');
+  const combinerGuildNameInput = document.getElementById('combiner-guild-name');
+  const combinerGuildIdInput = document.getElementById('combiner-guild-id');
+  const combinerApiKeyInput = document.getElementById('combiner-api-key');
+  const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
+  const versionText = document.getElementById('version-text');
+  const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
+  const selected = new Map();
+  let currentFolder = '';
+  let rootList;
+  let folderLists = new Map();
+  let loadAll = false;
 
-dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
-combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
-combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
-combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
-combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
+  dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
+  combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
+  combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
+  combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
+  combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 
-document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
-document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
-document.getElementById('close').addEventListener('click', () => window.electronAPI.close());
-titlebar.addEventListener('wheel', e => e.preventDefault(), { passive: false });
-settingsBtn.addEventListener('click', openSettings);
-updateNoticeBtn.addEventListener('click', () => window.electronAPI.showUpdatePrompt());
-closeSettingsBtn.addEventListener('click', closeSettings);
+  document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
+  document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
+  document.getElementById('close').addEventListener('click', () => window.electronAPI.close());
+  titlebar.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+  settingsBtn.addEventListener('click', openSettings);
+  updateNoticeBtn.addEventListener('click', () => window.electronAPI.showUpdatePrompt());
+  closeSettingsBtn.addEventListener('click', closeSettings);
 
-function openSettings() {
-  mainWindowEl.classList.add('fade-out');
-  settingsWindow.classList.add('active');
-}
+  function openSettings() {
+    mainWindowEl.classList.add('fade-out');
+    settingsWindow.classList.add('active');
+  }
 
-function closeSettings() {
-  mainWindowEl.classList.remove('fade-out');
-  settingsWindow.classList.remove('active');
-}
+  function closeSettings() {
+    mainWindowEl.classList.remove('fade-out');
+    settingsWindow.classList.remove('active');
+  }
 
-darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
-lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-gradientRadios.forEach(r => {
-  r.addEventListener('change', () => {
-    if (r.checked) {
-      applyGradient(r.value);
+  darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
+  lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
+  gradientRadios.forEach(r => {
+    r.addEventListener('change', () => {
+      if (r.checked) {
+        applyGradient(r.value);
+      }
+    });
+  });
+  downloadCliBtn.addEventListener('click', async () => {
+    downloadCliBtn.disabled = true;
+    await window.electronAPI.downloadDependency('cli');
+    downloadCliBtn.disabled = false;
+    setTimeout(() => checkDeps().catch(console.error), 0);
+  });
+  downloadCombinerBtn.addEventListener('click', async () => {
+    downloadCombinerBtn.disabled = true;
+    await window.electronAPI.downloadDependency('combiner');
+    downloadCombinerBtn.disabled = false;
+    setTimeout(() => checkDeps().catch(console.error), 0);
+  });
+  downloadParserBtn.addEventListener('click', async () => {
+    downloadParserBtn.disabled = true;
+    await window.electronAPI.downloadDependency('parser');
+    downloadParserBtn.disabled = false;
+    setTimeout(() => checkDeps().catch(console.error), 0);
+  });
+  parserTopStatsRadio.addEventListener('change', () => {
+    if (parserTopStatsRadio.checked) {
+      localStorage.setItem('parserSelection', 'topstats');
     }
   });
-});
-downloadCliBtn.addEventListener('click', async () => {
-  downloadCliBtn.disabled = true;
-  await window.electronAPI.downloadDependency('cli');
-  downloadCliBtn.disabled = false;
-  setTimeout(() => checkDeps().catch(console.error), 0);
-});
-downloadCombinerBtn.addEventListener('click', async () => {
-  downloadCombinerBtn.disabled = true;
-  await window.electronAPI.downloadDependency('combiner');
-  downloadCombinerBtn.disabled = false;
-  setTimeout(() => checkDeps().catch(console.error), 0);
-});
-downloadParserBtn.addEventListener('click', async () => {
-  downloadParserBtn.disabled = true;
-  await window.electronAPI.downloadDependency('parser');
-  downloadParserBtn.disabled = false;
-  setTimeout(() => checkDeps().catch(console.error), 0);
-});
-parserTopStatsRadio.addEventListener('change', () => {
-  if (parserTopStatsRadio.checked) {
-    localStorage.setItem('parserSelection', 'topstats');
-  }
-});
-parserCombinerRadio.addEventListener('change', () => {
-  if (parserCombinerRadio.checked) {
-    localStorage.setItem('parserSelection', 'combiner');
-  }
-});
-dpsUserTokenInput.addEventListener('input', () => {
-  localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
-});
-combinerGuildNameInput.addEventListener('input', () => {
-  localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
-});
-combinerGuildIdInput.addEventListener('input', () => {
-  localStorage.setItem('combinerGuildId', combinerGuildIdInput.value);
-});
-combinerApiKeyInput.addEventListener('input', () => {
-  localStorage.setItem('combinerApiKey', combinerApiKeyInput.value);
-});
-combinerGlickoCheckbox.addEventListener('change', () => {
-  localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
-});
+  parserCombinerRadio.addEventListener('change', () => {
+    if (parserCombinerRadio.checked) {
+      localStorage.setItem('parserSelection', 'combiner');
+    }
+  });
+  dpsUserTokenInput.addEventListener('input', () => {
+    localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
+  });
+  combinerGuildNameInput.addEventListener('input', () => {
+    localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
+  });
+  combinerGuildIdInput.addEventListener('input', () => {
+    localStorage.setItem('combinerGuildId', combinerGuildIdInput.value);
+  });
+  combinerApiKeyInput.addEventListener('input', () => {
+    localStorage.setItem('combinerApiKey', combinerApiKeyInput.value);
+  });
+  combinerGlickoCheckbox.addEventListener('change', () => {
+    localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
+  });
 async function checkDeps() {
   console.time('renderer-check-deps');
   const info = await window.electronAPI.checkDependencies();
@@ -180,7 +181,6 @@ window.electronAPI.onLoadProgress(data => {
   }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
   console.timeEnd('renderer-init');
   console.time('dom-content');
   const savedTheme = localStorage.getItem('theme');
@@ -238,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(deferParse, 0);
   }
   console.timeEnd('dom-content');
-});
 
 chooseFolderBtn.addEventListener('click', async () => {
   const dir = await window.electronAPI.selectFolder();
@@ -616,3 +615,4 @@ function applyGradient(name) {
   document.documentElement.style.setProperty('--btn-border-hover', c2);
   localStorage.setItem('gradientTheme', name);
 }
+});
