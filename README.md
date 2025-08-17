@@ -109,6 +109,34 @@ versioned files like:
 - `TopStatsAIO-1_0_0-standalone.zip` – zipped portable executable
 - `TopStatsAIO-1_0_0-setup.exe` – Windows installer
 
+
+## My App Disappeared, What Happened?
+
+Sometimes, Windows Defender or other antivirus software may incorrectly flag TopStatsAIO as suspicious and quarantine or remove it. If this happens, follow these steps to restore and allow the app:
+
+1. **Check Windows Security Notifications**  
+   Open the Windows Security app (search for "Windows Security" in the Start menu) and look for any recent notifications about quarantined files.
+
+2. **Restore the Application**  
+   - Go to **Virus & threat protection** > **Protection history**.
+   - Find the entry for TopStatsAIO (it may mention the `.exe` file).
+   - Click on the entry and choose **Allow on device** or **Restore**.
+
+3. **Add an Exclusion**  
+   To prevent future removals:
+   - In Windows Security, go to **Virus & threat protection settings**.
+   - Scroll down to **Exclusions** and click **Add or remove exclusions**.
+   - Click **Add an exclusion** and select **Folder**.
+   - Choose the folder where TopStatsAIO is installed.
+
+4. **Reinstall if Needed**  
+   If the app was deleted, re-download it from the [official releases page](https://github.com/darkharasho/TopStatsAIO/releases) and repeat the steps above.
+
+**Note:**  
+False positives are common with new or unsigned applications. TopStatsAIO does not contain malware. Always download from the official GitHub releases page.
+
+---
+
 ## Recognition
 Thank you to the GW2 Analytics communinty and Drevarr specifically for helping create this. Shout out to my PAN friends for the excitement and eagerness to help test. Thank you Aza for inspiring me to finally write this UI! Huge thanks to Paralda for informing me of the latest and greatest
 
