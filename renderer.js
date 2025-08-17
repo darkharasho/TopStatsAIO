@@ -15,7 +15,6 @@ const settingsWindow = document.getElementById('settings-window');
 const closeSettingsBtn = document.getElementById('close-settings');
 const darkBtn = document.getElementById('theme-dark');
 const lightBtn = document.getElementById('theme-light');
-const greyBtn = document.getElementById('theme-grey');
 const downloadCliBtn = document.getElementById('download-cli');
 const downloadCombinerBtn = document.getElementById('download-combiner');
 const downloadParserBtn = document.getElementById('download-parser');
@@ -71,7 +70,6 @@ function closeSettings() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-greyBtn.addEventListener('click', () => window.electronAPI.setTheme('grey'));
 gradientRadios.forEach(r => {
   r.addEventListener('change', () => {
     if (r.checked) {
@@ -198,7 +196,10 @@ window.electronAPI.onLoadProgress(data => {
 
 document.addEventListener('DOMContentLoaded', async () => {
   const savedTheme = localStorage.getItem('theme');
-  const theme = savedTheme || await window.electronAPI.getTheme();
+  let theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : await window.electronAPI.getTheme();
+  if (theme !== 'light' && theme !== 'dark') {
+    theme = 'dark';
+  }
   applyTheme(theme);
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
@@ -515,19 +516,12 @@ async function startParse() {
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
-  document.body.classList.toggle('grey', theme === 'grey');
   if (theme === 'light') {
     lightBtn.classList.add('selected');
     darkBtn.classList.remove('selected');
-    greyBtn.classList.remove('selected');
-  } else if (theme === 'grey') {
-    greyBtn.classList.add('selected');
-    darkBtn.classList.remove('selected');
-    lightBtn.classList.remove('selected');
   } else {
     darkBtn.classList.add('selected');
     lightBtn.classList.remove('selected');
-    greyBtn.classList.remove('selected');
   }
   localStorage.setItem('theme', theme);
 }
@@ -538,6 +532,10 @@ function applyGradient(name) {
     case 'sunset':
       c1 = '#ffeb3b';
       c2 = '#f44336';
+      break;
+    case 'grey':
+      c1 = '#d3d3d3';
+      c2 = '#a6a6a6';
       break;
     case 'forest':
       c1 = '#a8e063';

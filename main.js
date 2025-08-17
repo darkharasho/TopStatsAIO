@@ -203,7 +203,7 @@ ipcMain.handle('get-version', () => app.getVersion());
 
 ipcMain.on('set-theme', (event, theme) => {
   appTheme = theme;
-  nativeTheme.themeSource = theme === 'grey' ? 'light' : theme;
+  nativeTheme.themeSource = theme;
   BrowserWindow.getAllWindows().forEach(w => {
     w.webContents.send('theme-changed', theme);
   });
