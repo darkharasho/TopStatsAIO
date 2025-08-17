@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onParseComplete: (cb) => ipcRenderer.on('parse-complete', (e, success) => cb(success)),
   openParsedFolder: () => ipcRenderer.invoke('open-parsed-folder'),
   cancelParse: () => ipcRenderer.send('cancel-parse'),
+  openParserFolder: (which) => ipcRenderer.invoke('open-parser-folder', which),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   showUpdatePrompt: () => ipcRenderer.invoke('show-update-prompt'),
   onShowUpdateNotice: (cb) => ipcRenderer.on('show-update-notice', () => cb()),

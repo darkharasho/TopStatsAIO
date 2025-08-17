@@ -24,6 +24,7 @@ const combinerVersionText = document.getElementById('combiner-version');
 const parserVersionText = document.getElementById('parser-version');
 const parserTopStatsRadio = document.getElementById('parser-topstats');
 const parserCombinerRadio = document.getElementById('parser-combiner');
+const openParserFolderBtn = document.getElementById('open-parser-folder');
 const dpsUserTokenInput = document.getElementById('dps-user-token');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
@@ -119,6 +120,10 @@ parserCombinerRadio.addEventListener('change', () => {
     localStorage.setItem('parserSelection', 'combiner');
     updateDescriptionVisibility();
   }
+});
+openParserFolderBtn.addEventListener('click', () => {
+  const sel = localStorage.getItem('parserSelection') || 'combiner';
+  window.electronAPI.openParserFolder(sel);
 });
 dpsUserTokenInput.addEventListener('input', () => {
   localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
