@@ -219,7 +219,7 @@ window.electronAPI.onLoadProgress(data => {
     dateFilterInput.value = `${yyyy}-${mm}-${dd}T00:00`;
   }
   if (saved) {
-    setTimeout(() => startLoad(saved, false), 0);
+    setTimeout(() => startLoad(saved, true), 0);
   }
   // Defer dependency checks until the browser is idle so startup renders faster
   const deferDeps = () => {
@@ -242,7 +242,7 @@ window.electronAPI.onLoadProgress(data => {
 chooseFolderBtn.addEventListener('click', async () => {
   const dir = await window.electronAPI.selectFolder();
   if (!dir) return;
-  startLoad(dir, false);
+  startLoad(dir, true);
 });
 
 dateFilterInput.addEventListener('change', () => {
