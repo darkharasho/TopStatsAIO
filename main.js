@@ -328,10 +328,18 @@ ipcMain.handle('open-parser-folder', async (event, which) => {
     await shell.openPath(dir);
     const ex1 = path.join(dir, 'example_output');
     const ex2 = path.join(dir, 'Example_Output');
-    if (fs.existsSync(ex1)) {
-      await shell.openPath(ex1);
-    } else if (fs.existsSync(ex2)) {
-      await shell.openPath(ex2);
+    const target = fs.existsSync(ex1) ? ex1 : fs.existsSync(ex2) ? ex2 : null;
+    if (target) {
+      try {
+        const items = await fs.promises.readdir(target);
+        if (items.length > 0) {
+          await shell.showItemInFolder(path.join(target, items[0]));
+        } else {
+          await shell.openPath(target);
+        }
+      } catch {
+        await shell.openPath(target);
+      }
     }
     return true;
   } catch (e) {
