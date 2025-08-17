@@ -21,6 +21,9 @@
         --muted-color:#999;
         --progress-track:#333;
         --progress-bar:#0078d4;
+        --skeleton-bg:#1e1e1e;
+        --skeleton-base:#2a2a2a;
+        --skeleton-highlight:#3a3a3a;
       }
       body.light {
         --text-color:#000;
@@ -36,6 +39,9 @@
         --muted-color:#666;
         --progress-track:#ccc;
         --btn-border-hover:#8e44ad;
+        --skeleton-bg:#f0f0f0;
+        --skeleton-base:#e0e0e0;
+        --skeleton-highlight:#f5f5f5;
       }
       body { color:var(--text-color); background:transparent; font-family:'Segoe UI', sans-serif; margin:0; padding:20px; overflow:hidden; }
       #titlebar { height:32px; display:flex; align-items:center; justify-content:space-between; -webkit-app-region:drag; position:fixed; top:0; left:0; right:0; overflow:hidden; padding-left:8px; }
@@ -152,14 +158,14 @@
 
       input:focus, button:focus { outline:none; box-shadow:0 0 0 1px var(--btn-border); border-color:var(--btn-border); }
       /* Skeleton screen styles */
-      #skeleton-screen { position:fixed; inset:0; background:#f0f0f0; z-index:10000; display:flex; flex-direction:column; gap:16px; padding:16px; transition:opacity 0.3s ease; }
+      #skeleton-screen { position:fixed; inset:0; background:var(--skeleton-bg); z-index:10000; display:flex; flex-direction:column; gap:16px; padding:16px; transition:opacity 0.3s ease; }
       #skeleton-screen.hidden { opacity:0; pointer-events:none; }
-      .skeleton { background:linear-gradient(90deg,#e0e0e0 25%,#f5f5f5 37%,#e0e0e0 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
+      .skeleton { background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 37%,var(--skeleton-base) 63%); background-size:400% 100%; animation:shimmer 1.4s ease infinite; }
       .skeleton-row { display:flex; align-items:center; gap:12px; }
       .skeleton-avatar { width:40px; height:40px; border-radius:50%; }
-      .skeleton-line { height:12px; border-radius:4px; margin-bottom:8px; }
+      .skeleton-line { height:12px; border-radius:4px; margin-bottom:8px; width:100%; }
       .skeleton-line.short { width:60%; }
-      .skeleton-block { height:120px; border-radius:8px; }
+      .skeleton-block { height:120px; border-radius:8px; width:100%; }
       @keyframes shimmer { 0% { background-position:-400px 0; } 100% { background-position:400px 0; } }
     </style>
 </head>
