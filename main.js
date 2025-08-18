@@ -38,11 +38,32 @@ async function getLatest(repo) {
   return await fetchJson(`https://api.github.com/repos/${repo}/releases/latest`);
 }
 
-async function downloadFile(url, dest) {
+async function downloadFile(url, dest, onProgress) {
   const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
   if (!res.ok) throw new Error('Download failed');
-  const buf = Buffer.from(await res.arrayBuffer());
-  await fs.promises.writeFile(dest, buf);
+  const total = Number(res.headers.get('content-length')) || 0;
+  const file = fs.createWriteStream(dest);
+  if (res.body && res.body.getReader) {
+    const reader = res.body.getReader();
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      file.write(Buffer.from(value));
+      received += value.length;
+      if (onProgress && total) onProgress(received / total);
+    }
+    file.end();
+    await new Promise((resolve, reject) => {
+      file.on('finish', resolve);
+      file.on('error', reject);
+    });
+  } else {
+    const buf = Buffer.from(await res.arrayBuffer());
+    file.write(buf);
+    file.end();
+    if (onProgress) onProgress(1);
+  }
 }
 
 async function downloadDependency(which) {
@@ -204,10 +225,24 @@ async function applyUpdate(zipPath, parentPid) {
     }
   }
   try {
+    const tmpDir = await fs.promises.mkdtemp(path.join(path.dirname(zipPath), 'extract-'));
     const zip = new AdmZip(zipPath);
-    zip.extractAllTo(execDir, true);
+    zip.extractAllTo(tmpDir, true);
+    const entries = await fs.promises.readdir(tmpDir);
+    let rootDir = tmpDir;
+    if (entries.length === 1) {
+      const inner = path.join(tmpDir, entries[0]);
+      try {
+        if ((await fs.promises.stat(inner)).isDirectory()) rootDir = inner;
+      } catch {}
+    }
+    const items = await fs.promises.readdir(rootDir);
+    for (const item of items) {
+      await fs.promises.cp(path.join(rootDir, item), path.join(execDir, item), { recursive: true, force: true });
+    }
     await fs.promises.unlink(zipPath).catch(() => {});
     await fs.promises.rm(path.dirname(zipPath), { recursive: true, force: true }).catch(() => {});
+    await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
     spawn(process.execPath, [], { detached: true, stdio: 'ignore' }).unref();
   } catch (e) {
     logError('Failed to apply update:', e);
@@ -215,20 +250,23 @@ async function applyUpdate(zipPath, parentPid) {
   app.quit();
 }
 
-async function performAppUpdate() {
+async function performAppUpdate(wc) {
   if (!pendingUpdate) return;
   try {
     const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+    const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
     if (isInstalled()) {
       if (!pendingUpdate.setupUrl) throw new Error('No installer available');
       const setupPath = path.join(tmpDir, 'setup.exe');
-      await downloadFile(pendingUpdate.setupUrl, setupPath);
+      await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
+      send('apply', 1);
       spawn(setupPath, [], { detached: true, stdio: 'ignore' }).unref();
       app.quit();
     } else {
       if (!pendingUpdate.standaloneUrl) throw new Error('No portable package available');
       const zipPath = path.join(tmpDir, 'update.zip');
-      await downloadFile(pendingUpdate.standaloneUrl, zipPath);
+      await downloadFile(pendingUpdate.standaloneUrl, zipPath, p => send('download', p));
+      send('apply', 1);
       const args = app.isPackaged
         ? ['--apply-update', zipPath, String(process.pid)]
         : [app.getAppPath(), '--apply-update', zipPath, String(process.pid)];
@@ -237,6 +275,7 @@ async function performAppUpdate() {
     }
   } catch (e) {
     logError('Failed to apply update:', e);
+    wc && wc.send('update-progress', { stage: 'error', error: e.message });
     dialog.showErrorBox('Update failed', e.message);
   }
 }
@@ -409,7 +448,7 @@ ipcMain.handle('show-update-prompt', () => {
   if (mainWindow) showUpdatePrompt(mainWindow);
 });
 
-ipcMain.handle('perform-update', () => performAppUpdate());
+ipcMain.handle('perform-update', (e) => performAppUpdate(e.sender));
 
 ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;
