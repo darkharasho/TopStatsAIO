@@ -399,7 +399,7 @@ ipcMain.handle('open-parsed-folder', async () => {
 });
 
 ipcMain.handle('open-parser-folder', async (event, which) => {
-  ensureDeps();
+  ensureDeps(depsDir);
   const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
   try {
     const ex1 = path.join(dir, 'example_output');
