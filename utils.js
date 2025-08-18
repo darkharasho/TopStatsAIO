@@ -34,6 +34,7 @@ async function editTopStatsConfig(template, dest, opts) {
     if (l.startsWith('guild_name = ')) return `guild_name = ${opts.guildName || ''}`;
     if (l.startsWith('guild_id = ')) return `guild_id = ${opts.guildId || ''}`;
     if (l.startsWith('api_key = ')) return `api_key = ${opts.apiKey || ''}`;
+    if (l.startsWith('db_output_filename = ')) return `db_output_filename = ${opts.dbFilename || 'TopStats.db'}`;
     if (l.startsWith('db_path = ')) return `db_path = ${opts.dbPath || '.'}`;
     if (l.startsWith('db_update = ')) return `db_update = ${opts.dbUpdate ? 'true' : 'false'}`;
     if (l.startsWith('fight_data_charts = ')) return `fight_data_charts = ${opts.fightCharts ? 'true' : 'false'}`;

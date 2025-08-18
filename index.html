@@ -169,7 +169,7 @@
 
       #parse-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; padding:40px; display:flex; flex-direction:column; gap:20px; overflow:auto; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
       #parse-window.active { opacity:1; pointer-events:auto; }
-      .parse-output { background:var(--bg-btn); color:var(--text-color); border:1px solid transparent; border-radius:8px; padding:10px; flex:1; overflow:auto; border-image:var(--card-border); }
+      .parse-output { background:var(--bg-btn); color:var(--text-color); border:1px solid transparent; border-radius:8px; padding:10px; flex:1; overflow:auto; border-image:var(--card-border); -webkit-user-select:text; user-select:text; }
       .parse-actions { display:flex; gap:10px; }
 
       #parse-steps { display:flex; flex-direction:column; gap:10px; }
