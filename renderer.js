@@ -520,10 +520,14 @@ function selectAllInFolder(path) {
 }
 
 function unselectAllInFolder(rel) {
+  const normalizedRel = rel.replace(/\\/g, '/');
   for (const [path, data] of [...selected.entries()]) {
-    if (data.rel.startsWith(`${rel}/`)) {
+    const dr = data.rel.replace(/\\/g, '/');
+    if (dr === normalizedRel || dr.startsWith(`${normalizedRel}/`)) {
       selected.delete(path);
-      const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(path)}"]`);
+      const item = fileTreeContainer.querySelector(
+        `li.file-item[data-path="${CSS.escape(path)}"]`
+      );
       if (item) {
         item.classList.remove('selected');
       }

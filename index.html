@@ -37,7 +37,8 @@
         --progress-track:#ccc;
         --btn-border-hover:#8e44ad;
       }
-      body { color:var(--text-color); background:transparent; font-family:'Segoe UI', sans-serif; margin:0; padding:20px; overflow:hidden; }
+      body { color:var(--text-color); background:transparent; font-family:'Segoe UI', sans-serif; margin:0; padding:20px; overflow:hidden; -webkit-user-select:none; user-select:none; }
+      input, textarea { -webkit-user-select:text; user-select:text; }
       #titlebar { height:32px; display:flex; align-items:center; justify-content:space-between; -webkit-app-region:drag; position:fixed; top:0; left:0; right:0; overflow:hidden; padding-left:8px; }
       #title-left { display:flex; align-items:center; gap:8px; }
       #title-logo { height:20px; }
