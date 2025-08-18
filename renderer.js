@@ -213,7 +213,13 @@ parseCancelBtn.addEventListener('click', () => {
   window.electronAPI.cancelParse();
 });
 window.electronAPI.onParseProgress(msg => {
-  parseOutput.textContent += msg + '\n';
+  const line = document.createElement('div');
+  line.textContent = msg;
+  line.classList.add('parse-line');
+  if (msg.toLowerCase().includes('error')) {
+    line.classList.add('error');
+  }
+  parseOutput.appendChild(line);
   parseOutput.scrollTop = parseOutput.scrollHeight;
 });
 window.electronAPI.onParseStep(data => updateStep(data));
@@ -718,7 +724,7 @@ function openParseWindow() {
   mainWindowEl.classList.add('fade-out');
   parseWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Parse';
-  parseOutput.textContent = '';
+  parseOutput.innerHTML = '';
   parseSteps.innerHTML = '';
   currentStepId = null;
   parseOpenFolderBtn.disabled = true;
