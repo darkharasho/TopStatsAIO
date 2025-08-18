@@ -229,7 +229,10 @@ async function performAppUpdate() {
       if (!pendingUpdate.standaloneUrl) throw new Error('No portable package available');
       const zipPath = path.join(tmpDir, 'update.zip');
       await downloadFile(pendingUpdate.standaloneUrl, zipPath);
-      spawn(process.execPath, ['--apply-update', zipPath, String(process.pid)], { detached: true, stdio: 'ignore' }).unref();
+      const args = app.isPackaged
+        ? ['--apply-update', zipPath, String(process.pid)]
+        : [app.getAppPath(), '--apply-update', zipPath, String(process.pid)];
+      spawn(process.execPath, args, { detached: true, stdio: 'ignore' }).unref();
       app.quit();
     }
   } catch (e) {
