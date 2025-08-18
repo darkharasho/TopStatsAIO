@@ -7,7 +7,8 @@ const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
-const DB_NAME = 'TopStats.db';
+// Support both the new and legacy database filenames
+const DB_NAMES = ['TopStats.db', 'Top_Stats.db'];
 
 let depsDir;
 let versionsFile;
@@ -351,19 +352,21 @@ ipcMain.handle('start-parse', async (event, data) => {
   const send = msg => wc.send('parse-progress', msg);
   const step = (id, title, progress, error, current = 0, total = 0) =>
     wc.send('parse-step', { id, title, progress, error, current, total });
-  const persistentDb = path.join(userDataDir, DB_NAME);
   const processedDir = path.join(tempDir, 'ProcessedLogs');
-  const tempDb = path.join(tempDir, DB_NAME);
-  const processedDb = path.join(processedDir, DB_NAME);
   try {
     let loaded = false;
-    if (fs.existsSync(persistentDb)) {
-      try { await fs.promises.copyFile(persistentDb, tempDb); } catch {}
-      if (opts.parser === 'combiner') {
-        await fs.promises.mkdir(processedDir, { recursive: true });
-        try { await fs.promises.copyFile(persistentDb, processedDb); } catch {}
+    for (const name of DB_NAMES) {
+      const persistentDb = path.join(userDataDir, name);
+      const tempDb = path.join(tempDir, name);
+      if (fs.existsSync(persistentDb)) {
+        try { await fs.promises.copyFile(persistentDb, tempDb); } catch {}
+        if (opts.parser === 'combiner') {
+          await fs.promises.mkdir(processedDir, { recursive: true });
+          const processedDb = path.join(processedDir, name);
+          try { await fs.promises.copyFile(persistentDb, processedDb); } catch {}
+        }
+        loaded = true;
       }
-      loaded = true;
     }
     send(loaded ? 'Loaded existing database' : 'No existing database found');
   } catch (e) {
@@ -439,8 +442,12 @@ ipcMain.handle('start-parse', async (event, data) => {
       step('cli', 'EI CLI', 1, 'No logs', 0, 0);
     }
     await fs.promises.mkdir(processedDir, { recursive: true });
-    if (fs.existsSync(tempDb)) {
-      try { await fs.promises.copyFile(tempDb, processedDb); } catch (e) { logError('Failed to stage database', e); }
+    for (const name of DB_NAMES) {
+      const tempDb = path.join(tempDir, name);
+      const processedDb = path.join(processedDir, name);
+      if (fs.existsSync(tempDb)) {
+        try { await fs.promises.copyFile(tempDb, processedDb); } catch (e) { logError('Failed to stage database', e); }
+      }
     }
     const generated = await fs.promises.readdir(tempDir);
     for (const f of generated) {
@@ -514,20 +521,31 @@ ipcMain.handle('start-parse', async (event, data) => {
       }
     }
     try {
-      await fs.promises.mkdir(path.dirname(persistentDb), { recursive: true });
+      await fs.promises.mkdir(userDataDir, { recursive: true });
       const candidates = [];
       for (const dir of [tempDir, processedDir]) {
-        const db = path.join(dir, DB_NAME);
-        try {
-          const stat = await fs.promises.stat(db);
-          candidates.push({ path: db, mtime: stat.mtimeMs });
-        } catch {}
+        for (const name of DB_NAMES) {
+          const db = path.join(dir, name);
+          try {
+            const stat = await fs.promises.stat(db);
+            candidates.push({ path: db, mtime: stat.mtimeMs });
+          } catch {}
+        }
       }
       if (candidates.length > 0) {
         candidates.sort((a, b) => b.mtime - a.mtime);
         const src = candidates[0].path;
-        try { await fs.promises.copyFile(src, persistentDb); } catch {}
-        send(`Saved database to ${persistentDb}`);
+        let saved = false;
+        for (const name of DB_NAMES) {
+          const dest = path.join(userDataDir, name);
+          try {
+            await fs.promises.copyFile(src, dest);
+            saved = true;
+          } catch (e) {
+            logError('Failed to persist database', e);
+          }
+        }
+        send(saved ? `Saved database to ${userDataDir}` : 'Failed to save database');
       } else {
         send('No database produced to save');
       }
