@@ -192,6 +192,29 @@ async function checkForAppUpdates(parent) {
   }
 }
 
+async function applyUpdate(zipPath, parentPid) {
+  const execDir = path.dirname(process.execPath);
+  // wait for parent process to exit
+  while (parentPid) {
+    try {
+      process.kill(parentPid, 0);
+      await new Promise(r => setTimeout(r, 500));
+    } catch {
+      break;
+    }
+  }
+  try {
+    const zip = new AdmZip(zipPath);
+    zip.extractAllTo(execDir, true);
+    await fs.promises.unlink(zipPath).catch(() => {});
+    await fs.promises.rm(path.dirname(zipPath), { recursive: true, force: true }).catch(() => {});
+    spawn(process.execPath, [], { detached: true, stdio: 'ignore' }).unref();
+  } catch (e) {
+    logError('Failed to apply update:', e);
+  }
+  app.quit();
+}
+
 async function performAppUpdate() {
   if (!pendingUpdate) return;
   try {
@@ -206,10 +229,7 @@ async function performAppUpdate() {
       if (!pendingUpdate.standaloneUrl) throw new Error('No portable package available');
       const zipPath = path.join(tmpDir, 'update.zip');
       await downloadFile(pendingUpdate.standaloneUrl, zipPath);
-      const zip = new AdmZip(zipPath);
-      const execDir = path.dirname(process.execPath);
-      zip.extractAllTo(execDir, true);
-      spawn(process.execPath, [], { detached: true, stdio: 'ignore' }).unref();
+      spawn(process.execPath, ['--apply-update', zipPath, String(process.pid)], { detached: true, stdio: 'ignore' }).unref();
       app.quit();
     }
   } catch (e) {
@@ -218,6 +238,12 @@ async function performAppUpdate() {
   }
 }
 
+const applyIdx = process.argv.indexOf('--apply-update');
+if (applyIdx !== -1) {
+  const zipPath = process.argv[applyIdx + 1];
+  const parentPid = Number(process.argv[applyIdx + 2]);
+  app.whenReady().then(() => applyUpdate(zipPath, parentPid));
+} else {
 app.whenReady().then(() => {
   const userData = app.getPath('userData');
   depsDir = path.join(userData, 'dependencies');
@@ -242,6 +268,7 @@ app.whenReady().then(() => {
     }
   });
 });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
