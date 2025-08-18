@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>Top Stats AIO</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
       :root {
         --text-color:#fff;
@@ -57,12 +56,31 @@
       .action-icon:hover { color:var(--btn-border); }
       .card-actions { display:flex; align-items:center; gap:8px; }
 
-      button { background:var(--bg-btn); color:var(--text-color); border:1px solid var(--btn-border); padding:6px 12px; border-radius:4px; cursor:pointer; }
-      button:hover { background:var(--bg-btn-hover); border-color:var(--btn-border-hover); }
-      button:disabled { background:var(--bg-btn); color:var(--muted-color); border-color:var(--label-border); cursor:default; pointer-events:none; }
+      button {
+        background:var(--bg-btn);
+        color:var(--text-color);
+        border:1px solid transparent;
+        border-image:var(--card-border);
+        padding:6px 12px;
+        border-radius:4px;
+        cursor:pointer;
+      }
+      button:hover {
+        background:var(--bg-btn-hover);
+        border-color:transparent;
+        border-image:var(--card-border);
+      }
+      button:disabled {
+        background:var(--bg-btn);
+        color:var(--muted-color);
+        border-color:var(--label-border);
+        border-image:none;
+        cursor:default;
+        pointer-events:none;
+      }
       .theme-btn { border:1px solid var(--label-border); }
       .theme-btn.selected { border-color:var(--btn-border); box-shadow:0 0 0 1px var(--btn-border); }
-      .remove-btn { border-color:#e81123; }
+      .remove-btn { border-color:#e81123; border-image:none; }
       .remove-btn:hover { background:#2d0000; }
       .parse-btn { border:1px solid transparent; border-image:var(--card-border); }
       .parse-btn:hover { border-color:transparent; border-image:var(--card-border); }
@@ -83,7 +101,8 @@
       .file-root ul { padding-left:16px; }
       .file-row { display:flex; align-items:center; gap:6px; padding:4px 8px; border-bottom:1px solid #2a2a2a; }
       .file-row:hover { background:rgba(255,255,255,0.05); }
-      .folder .arrow { width:16px; cursor:pointer; }
+      .file-row.folder { cursor:pointer; }
+      .folder .arrow { width:16px; }
       .item-icon { width:16px; }
       .file-name { cursor:pointer; }
       .file-item { cursor:pointer; }
@@ -211,7 +230,7 @@
     </div>
     <div id="actions" class="card">
       <div id="date-section">
-        <input type="text" id="date-filter" />
+        <input type="datetime-local" id="date-filter" />
         <button id="date-select">Select Since</button>
       </div>
       <input type="text" id="description" placeholder="Optional Description" />
@@ -327,10 +346,10 @@
       </div>
     </div>
   </div>
-  <ul id="context-menu" class="hidden">
-    <li id="context-select-all">Select All</li>
-  </ul>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="renderer.js"></script>
-</body>
-</html>
+    <ul id="context-menu" class="hidden">
+      <li id="context-select-all">Select All</li>
+      <li id="context-unselect-all">Unselect All</li>
+    </ul>
+    <script src="renderer.js"></script>
+  </body>
+  </html>

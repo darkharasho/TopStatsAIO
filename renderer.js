@@ -12,6 +12,7 @@ const selectAllBtn = document.getElementById('select-all');
 const refreshBtn = document.getElementById('refresh-files');
 const contextMenu = document.getElementById('context-menu');
 const contextSelectAll = document.getElementById('context-select-all');
+const contextUnselectAll = document.getElementById('context-unselect-all');
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress');
 const fileLoading = document.getElementById('file-tree-loading');
@@ -53,11 +54,6 @@ let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
 
-flatpickr(dateFilterInput, {
-  enableTime: true,
-  dateFormat: 'Y-m-d\\TH:i',
-  position: 'above'
-});
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
@@ -91,6 +87,11 @@ contextSelectAll.addEventListener('click', () => {
   contextMenu.classList.add('hidden');
   const path = contextMenu.dataset.path;
   if (path) selectAllInFolder(path);
+});
+contextUnselectAll.addEventListener('click', () => {
+  contextMenu.classList.add('hidden');
+  const rel = contextMenu.dataset.path;
+  if (rel) unselectAllInFolder(rel);
 });
 document.addEventListener('click', () => contextMenu.classList.add('hidden'));
 closeSettingsBtn.addEventListener('click', closeSettings);
@@ -417,7 +418,7 @@ function renderNode(node, container) {
     li.addEventListener('click', toggle);
     li.addEventListener('contextmenu', e => {
       e.preventDefault();
-      showContextMenu(node.path, e.pageX, e.pageY);
+      showContextMenu(node.path, e.pageX, e.pageY, 'select');
     });
     if (loadAll) {
       li.dataset.loaded = 'true';
@@ -489,10 +490,12 @@ function renderNode(node, container) {
   }
 }
 
-function showContextMenu(path, x, y) {
+function showContextMenu(path, x, y, mode) {
   contextMenu.dataset.path = path;
   contextMenu.style.top = `${y}px`;
   contextMenu.style.left = `${x}px`;
+  contextSelectAll.classList.toggle('hidden', mode !== 'select');
+  contextUnselectAll.classList.toggle('hidden', mode !== 'unselect');
   contextMenu.classList.remove('hidden');
 }
 
@@ -513,6 +516,19 @@ function selectAllInFolder(path) {
     });
   };
   selectIn(container);
+  renderSelected();
+}
+
+function unselectAllInFolder(rel) {
+  for (const [path, data] of [...selected.entries()]) {
+    if (data.rel.startsWith(`${rel}/`)) {
+      selected.delete(path);
+      const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(path)}"]`);
+      if (item) {
+        item.classList.remove('selected');
+      }
+    }
+  }
   renderSelected();
 }
 
@@ -543,13 +559,13 @@ function renderSelected() {
       }
     }
   }
-  const renderNode = (node, container) => {
+  const renderNode = (node, container, prefix = '') => {
     if (node.children) {
       for (const [name, child] of Object.entries(node.children)) {
         const li = document.createElement('li');
         li.classList.add('file-row', 'folder');
         const arrow = document.createElement('span');
-        arrow.textContent = '▶';
+        arrow.textContent = '▼';
         arrow.classList.add('arrow');
         li.appendChild(arrow);
         const icon = document.createElement('span');
@@ -560,16 +576,21 @@ function renderSelected() {
         nameSpan.textContent = name;
         nameSpan.classList.add('file-name');
         li.appendChild(nameSpan);
+        const rel = prefix ? `${prefix}/${name}` : name;
+        li.dataset.rel = rel;
         container.appendChild(li);
         const ul = document.createElement('ul');
-        ul.classList.add('hidden');
         container.appendChild(ul);
         const toggle = () => {
           const hidden = ul.classList.toggle('hidden');
           arrow.textContent = hidden ? '▶' : '▼';
         };
         li.addEventListener('click', toggle);
-        renderNode(child, ul);
+        li.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          showContextMenu(rel, e.pageX, e.pageY, 'unselect');
+        });
+        renderNode(child, ul, rel);
       }
     }
     if (node.files) {
@@ -591,7 +612,8 @@ function renderSelected() {
         const btn = document.createElement('button');
         btn.textContent = 'Remove';
         btn.classList.add('remove-btn');
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
           selected.delete(file.path);
           const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(file.path)}"]`);
           if (item) {
