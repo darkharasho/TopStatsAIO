@@ -7,9 +7,9 @@ Your one stop shop for generating top stats. This program uses both Elite Insigh
 
 ---
 
-<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/cec60373-5ae8-4afd-90fe-458016560340" />
+<img width="750" alt="image" src="https://github.com/user-attachments/assets/cec60373-5ae8-4afd-90fe-458016560340" />
 
-<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/38195b55-af42-419d-8b53-51554faa0006" />
+<img width="750" alt="image" src="https://github.com/user-attachments/assets/38195b55-af42-419d-8b53-51554faa0006" />
 
 ---
 
