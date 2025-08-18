@@ -2,12 +2,18 @@ const chooseFolderBtn = document.getElementById('choose-folder');
 const fileTreeContainer = document.getElementById('file-tree-list');
 const selectedList = document.getElementById('selected-list');
 const selectedFolderSpan = document.getElementById('selected-folder');
+const selectedFolderInput = document.getElementById('selected-folder-input');
 const titlebar = document.getElementById('titlebar');
 const dateFilterInput = document.getElementById('date-filter');
 const dateSelectBtn = document.getElementById('date-select');
 const unselectAllBtn = document.getElementById('unselect-all');
 const settingsBtn = document.getElementById('settings');
 const updateNoticeBtn = document.getElementById('update-notice');
+const selectAllBtn = document.getElementById('select-all');
+const refreshBtn = document.getElementById('refresh-files');
+const contextMenu = document.getElementById('context-menu');
+const contextSelectAll = document.getElementById('context-select-all');
+const contextUnselectAll = document.getElementById('context-unselect-all');
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress');
 const fileLoading = document.getElementById('file-tree-loading');
@@ -49,6 +55,7 @@ let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
 
+
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
@@ -62,6 +69,60 @@ document.getElementById('close').addEventListener('click', () => window.electron
 titlebar.addEventListener('wheel', e => e.preventDefault(), { passive: false });
 settingsBtn.addEventListener('click', openSettings);
 updateNoticeBtn.addEventListener('click', () => window.electronAPI.showUpdatePrompt());
+selectAllBtn.addEventListener('click', () => {
+  fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
+    const p = li.dataset.path;
+    if (!selected.has(p)) {
+      selected.set(p, { rel: li.dataset.rel, mtime: parseInt(li.dataset.mtime, 10) });
+      li.classList.add('selected');
+    }
+  });
+  renderSelected();
+});
+refreshBtn.addEventListener('click', () => {
+  if (currentFolder) {
+    startLoad(currentFolder, true);
+  }
+});
+contextSelectAll.addEventListener('click', () => {
+  contextMenu.classList.add('hidden');
+  const path = contextMenu.dataset.path;
+  if (path) selectAllInFolder(path);
+});
+contextUnselectAll.addEventListener('click', () => {
+  contextMenu.classList.add('hidden');
+  const rel = contextMenu.dataset.path;
+  if (rel) unselectAllInFolder(rel);
+});
+document.addEventListener('click', () => contextMenu.classList.add('hidden'));
+selectedFolderSpan.addEventListener('click', () => {
+  selectedFolderInput.value = currentFolder;
+  const width = selectedFolderSpan.offsetWidth;
+  const style = window.getComputedStyle(selectedFolderSpan);
+  selectedFolderInput.style.width = width + 'px';
+  selectedFolderInput.style.fontSize = style.fontSize;
+  selectedFolderSpan.classList.add('hidden');
+  selectedFolderInput.classList.remove('hidden');
+  selectedFolderInput.focus();
+  selectedFolderInput.select();
+});
+selectedFolderInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const dir = selectedFolderInput.value.trim();
+    if (dir) startLoad(dir);
+    selectedFolderInput.blur();
+  } else if (e.key === 'Escape') {
+    selectedFolderInput.value = currentFolder;
+    selectedFolderInput.blur();
+  }
+});
+selectedFolderInput.addEventListener('blur', () => {
+  selectedFolderSpan.textContent = currentFolder;
+  selectedFolderSpan.classList.remove('hidden');
+  selectedFolderInput.classList.add('hidden');
+  selectedFolderInput.style.width = '';
+  selectedFolderInput.style.fontSize = '';
+});
 closeSettingsBtn.addEventListener('click', closeSettings);
 
 function openSettings() {
@@ -286,7 +347,7 @@ dateSelectBtn.addEventListener('click', () => {
   fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
     const m = parseInt(li.dataset.mtime, 10);
     if (m >= ts && !selected.has(li.dataset.path)) {
-      selected.set(li.dataset.path, li.dataset.rel);
+      selected.set(li.dataset.path, { rel: li.dataset.rel, mtime: m });
       li.classList.add('selected');
     }
   });
@@ -383,8 +444,11 @@ function renderNode(node, container) {
         window.electronAPI.loadFolder(node.path, currentFolder);
       }
     };
-    arrow.addEventListener('click', toggle);
-    nameSpan.addEventListener('click', toggle);
+    li.addEventListener('click', toggle);
+    li.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showContextMenu(node.path, e.pageX, e.pageY, 'select');
+    });
     if (loadAll) {
       li.dataset.loaded = 'true';
       window.electronAPI.loadFolder(node.path, currentFolder);
@@ -429,7 +493,7 @@ function renderNode(node, container) {
             const path = item.dataset.path;
             if (shouldSelect) {
               if (!selected.has(path)) {
-                selected.set(path, item.dataset.rel);
+                selected.set(path, { rel: item.dataset.rel, mtime: parseInt(item.dataset.mtime, 10) });
                 item.classList.add('selected');
               }
             } else {
@@ -445,7 +509,7 @@ function renderNode(node, container) {
           selected.delete(p);
           li.classList.remove('selected');
         } else {
-          selected.set(p, li.dataset.rel);
+          selected.set(p, { rel: li.dataset.rel, mtime: parseInt(li.dataset.mtime, 10) });
           li.classList.add('selected');
         }
       }
@@ -453,6 +517,52 @@ function renderNode(node, container) {
       renderSelected();
     });
   }
+}
+
+function showContextMenu(path, x, y, mode) {
+  contextMenu.dataset.path = path;
+  contextMenu.style.top = `${y}px`;
+  contextMenu.style.left = `${x}px`;
+  contextSelectAll.classList.toggle('hidden', mode !== 'select');
+  contextUnselectAll.classList.toggle('hidden', mode !== 'unselect');
+  contextMenu.classList.remove('hidden');
+}
+
+function selectAllInFolder(path) {
+  const container = folderLists.get(path);
+  if (!container) return;
+  const selectIn = ul => {
+    ul.querySelectorAll(':scope > li.file-item').forEach(li => {
+      const p = li.dataset.path;
+      if (!selected.has(p)) {
+        selected.set(p, { rel: li.dataset.rel, mtime: parseInt(li.dataset.mtime, 10) });
+        li.classList.add('selected');
+      }
+    });
+    ul.querySelectorAll(':scope > li.folder').forEach(f => {
+      const child = folderLists.get(f.dataset.path);
+      if (child) selectIn(child);
+    });
+  };
+  selectIn(container);
+  renderSelected();
+}
+
+function unselectAllInFolder(rel) {
+  const normalizedRel = rel.replace(/\\/g, '/');
+  for (const [path, data] of [...selected.entries()]) {
+    const dr = data.rel.replace(/\\/g, '/');
+    if (dr === normalizedRel || dr.startsWith(`${normalizedRel}/`)) {
+      selected.delete(path);
+      const item = fileTreeContainer.querySelector(
+        `li.file-item[data-path="${CSS.escape(path)}"]`
+      );
+      if (item) {
+        item.classList.remove('selected');
+      }
+    }
+  }
+  renderSelected();
 }
 
 function formatDate(ms) {
@@ -467,23 +577,89 @@ function formatDate(ms) {
 
 function renderSelected() {
   selectedList.innerHTML = '';
-  for (const [path, rel] of selected.entries()) {
-    const li = document.createElement('li');
-    li.textContent = rel;
-    const btn = document.createElement('button');
-    btn.textContent = 'Remove';
-    btn.classList.add('remove-btn');
-    btn.addEventListener('click', () => {
-      selected.delete(path);
-      const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(path)}"]`);
-      if (item) {
-        item.classList.remove('selected');
+  const tree = {};
+  for (const [path, data] of selected.entries()) {
+    const parts = data.rel.split(/[\\/]/);
+    let node = tree;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i === parts.length - 1) {
+        node.files = node.files || [];
+        node.files.push({ name: part, path, mtime: data.mtime });
+      } else {
+        node.children = node.children || {};
+        node = node.children[part] = node.children[part] || {};
       }
-      renderSelected();
-    });
-    li.appendChild(btn);
-    selectedList.appendChild(li);
+    }
   }
+  const renderNode = (node, container, prefix = '') => {
+    if (node.children) {
+      for (const [name, child] of Object.entries(node.children)) {
+        const li = document.createElement('li');
+        li.classList.add('file-row', 'folder');
+        const arrow = document.createElement('span');
+        arrow.textContent = '▼';
+        arrow.classList.add('arrow');
+        li.appendChild(arrow);
+        const icon = document.createElement('span');
+        icon.textContent = '📁';
+        icon.classList.add('item-icon');
+        li.appendChild(icon);
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = name;
+        nameSpan.classList.add('file-name');
+        li.appendChild(nameSpan);
+        const rel = prefix ? `${prefix}/${name}` : name;
+        li.dataset.rel = rel;
+        container.appendChild(li);
+        const ul = document.createElement('ul');
+        container.appendChild(ul);
+        const toggle = () => {
+          const hidden = ul.classList.toggle('hidden');
+          arrow.textContent = hidden ? '▶' : '▼';
+        };
+        li.addEventListener('click', toggle);
+        li.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          showContextMenu(rel, e.pageX, e.pageY, 'unselect');
+        });
+        renderNode(child, ul, rel);
+      }
+    }
+    if (node.files) {
+      for (const file of node.files) {
+        const li = document.createElement('li');
+        li.classList.add('file-row');
+        const icon = document.createElement('span');
+        icon.textContent = '📄';
+        icon.classList.add('item-icon');
+        li.appendChild(icon);
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file.name;
+        nameSpan.classList.add('file-name');
+        li.appendChild(nameSpan);
+        const dateSpan = document.createElement('span');
+        dateSpan.textContent = formatDate(file.mtime);
+        dateSpan.classList.add('file-date');
+        li.appendChild(dateSpan);
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.classList.add('remove-btn');
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          selected.delete(file.path);
+          const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(file.path)}"]`);
+          if (item) {
+            item.classList.remove('selected');
+          }
+          renderSelected();
+        });
+        li.appendChild(btn);
+        container.appendChild(li);
+      }
+    }
+  };
+  renderNode(tree, selectedList);
 }
 
 function updateStep({ id, title, progress, error, success, current = 0, total = 0 }) {
