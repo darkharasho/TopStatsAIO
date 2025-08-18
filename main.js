@@ -353,18 +353,22 @@ ipcMain.handle('start-parse', async (event, data) => {
   const step = (id, title, progress, error, current = 0, total = 0) =>
     wc.send('parse-step', { id, title, progress, error, current, total });
   const persistentDb = path.join(userDataDir, DB_NAME);
-  const tempDb = path.join(tempDir, DB_NAME);
   const processedDir = path.join(tempDir, 'ProcessedLogs');
-  const processedDb = path.join(processedDir, DB_NAME);
+  const tempDbs = DB_ALIASES.map(name => path.join(tempDir, name));
+  const processedDbs = DB_ALIASES.map(name => path.join(processedDir, name));
   try {
     let loaded = false;
     for (const name of DB_ALIASES) {
       const cand = path.join(userDataDir, name);
       if (fs.existsSync(cand)) {
-        await fs.promises.copyFile(cand, tempDb);
+        for (const t of tempDbs) {
+          try { await fs.promises.copyFile(cand, t); } catch {}
+        }
         if (opts.parser === 'combiner') {
           await fs.promises.mkdir(processedDir, { recursive: true });
-          await fs.promises.copyFile(cand, processedDb);
+          for (const p of processedDbs) {
+            try { await fs.promises.copyFile(cand, p); } catch {}
+          }
         }
         loaded = true;
         break;
@@ -444,8 +448,10 @@ ipcMain.handle('start-parse', async (event, data) => {
       step('cli', 'EI CLI', 1, 'No logs', 0, 0);
     }
     await fs.promises.mkdir(processedDir, { recursive: true });
-    if (fs.existsSync(tempDb)) {
-      try { await fs.promises.copyFile(tempDb, processedDb); } catch (e) { logError('Failed to stage database', e); }
+    for (let i = 0; i < DB_ALIASES.length; i++) {
+      if (fs.existsSync(tempDbs[i])) {
+        try { await fs.promises.copyFile(tempDbs[i], processedDbs[i]); } catch (e) { logError('Failed to stage database', e); }
+      }
     }
     const generated = await fs.promises.readdir(tempDir);
     for (const f of generated) {
@@ -520,21 +526,27 @@ ipcMain.handle('start-parse', async (event, data) => {
     }
     try {
       await fs.promises.mkdir(path.dirname(persistentDb), { recursive: true });
-      const dirs = opts.parser === 'combiner' ? [processedDir, tempDir] : [tempDir, processedDir];
-      let persisted = false;
-      for (const dir of dirs) {
+      const candidates = [];
+      for (const dir of [tempDir, processedDir]) {
         for (const name of DB_ALIASES) {
           const db = path.join(dir, name);
-          if (fs.existsSync(db)) {
-            await fs.promises.copyFile(db, persistentDb);
-            send(`Saved database to ${persistentDb}`);
-            persisted = true;
-            break;
-          }
+          try {
+            const stat = await fs.promises.stat(db);
+            candidates.push({ path: db, mtime: stat.mtimeMs });
+          } catch {}
         }
-        if (persisted) break;
       }
-      if (!persisted) send('No database produced to save');
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => b.mtime - a.mtime);
+        const src = candidates[0].path;
+        for (const name of DB_ALIASES) {
+          const dest = path.join(userDataDir, name);
+          try { await fs.promises.copyFile(src, dest); } catch {}
+        }
+        send(`Saved database to ${persistentDb}`);
+      } else {
+        send('No database produced to save');
+      }
     } catch (e) {
       logError('Failed to persist database', e);
       send('Failed to save database');
