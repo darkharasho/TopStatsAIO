@@ -41,6 +41,7 @@ describe('utils', () => {
       guildName: 'Test',
       guildId: '123',
       apiKey: 'ABC',
+      dbPath: 'C:/data',
       dbUpdate: true,
       fightCharts: true,
     });
@@ -48,6 +49,7 @@ describe('utils', () => {
     expect(content).toMatch('guild_name = Test');
     expect(content).toMatch('guild_id = 123');
     expect(content).toMatch('api_key = ABC');
+    expect(content).toMatch('db_path = C:/data');
     expect(content).toMatch('db_update = true');
     expect(content).toMatch('fight_data_charts = true');
   });

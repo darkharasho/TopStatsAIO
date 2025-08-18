@@ -439,6 +439,10 @@ ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;
   const files = data.files || [];
   const opts = data.options || {};
+  if (opts.parser === 'combiner') {
+    const basePath = process.env.PORTABLE_EXECUTABLE_DIR || app.getPath('userData');
+    opts.dbPath = basePath.replace(/\\/g, '/');
+  }
   const parsedDir = path.join(app.getPath('userData'), 'parsed_files');
   await fs.promises.rm(parsedDir, { recursive: true, force: true });
   await fs.promises.mkdir(parsedDir, { recursive: true });
