@@ -146,6 +146,11 @@ function createWindow() {
 
 const allowDevUpdates = process.argv.includes('--dev-update');
 
+function isInstalled() {
+  const p = process.execPath.toLowerCase();
+  return p.includes('program files') || p.includes(path.join('appdata', 'local', 'programs').toLowerCase());
+}
+
 function showUpdatePrompt(parent) {
   if (!pendingUpdate) return;
   const prompt = new BrowserWindow({
@@ -163,7 +168,7 @@ function showUpdatePrompt(parent) {
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  prompt.loadFile('update.html', { query: { version: pendingUpdate.version, url: pendingUpdate.url } });
+  prompt.loadFile('update.html', { query: { version: pendingUpdate.version } });
   prompt.once('ready-to-show', () => prompt.show());
 }
 
@@ -173,11 +178,43 @@ async function checkForAppUpdates(parent) {
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
-      pendingUpdate = { version: latest, url: rel.html_url };
+      const standalone = rel.assets.find(a => /standalone\.zip$/i.test(a.name));
+      const setup = rel.assets.find(a => /setup\.exe$/i.test(a.name));
+      pendingUpdate = {
+        version: latest,
+        standaloneUrl: standalone ? standalone.browser_download_url : null,
+        setupUrl: setup ? setup.browser_download_url : null
+      };
       showUpdatePrompt(parent);
     }
   } catch (err) {
     logError('Update check failed:', err);
+  }
+}
+
+async function performAppUpdate() {
+  if (!pendingUpdate) return;
+  try {
+    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+    if (isInstalled()) {
+      if (!pendingUpdate.setupUrl) throw new Error('No installer available');
+      const setupPath = path.join(tmpDir, 'setup.exe');
+      await downloadFile(pendingUpdate.setupUrl, setupPath);
+      spawn(setupPath, [], { detached: true, stdio: 'ignore' }).unref();
+      app.quit();
+    } else {
+      if (!pendingUpdate.standaloneUrl) throw new Error('No portable package available');
+      const zipPath = path.join(tmpDir, 'update.zip');
+      await downloadFile(pendingUpdate.standaloneUrl, zipPath);
+      const zip = new AdmZip(zipPath);
+      const execDir = path.dirname(process.execPath);
+      zip.extractAllTo(execDir, true);
+      spawn(process.execPath, [], { detached: true, stdio: 'ignore' }).unref();
+      app.quit();
+    }
+  } catch (e) {
+    logError('Failed to apply update:', e);
+    dialog.showErrorBox('Update failed', e.message);
   }
 }
 
@@ -341,6 +378,8 @@ ipcMain.on('update-downloaded', () => {
 ipcMain.handle('show-update-prompt', () => {
   if (mainWindow) showUpdatePrompt(mainWindow);
 });
+
+ipcMain.handle('perform-update', () => performAppUpdate());
 
 ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;

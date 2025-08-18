@@ -30,18 +30,17 @@
   <p id="msg"></p>
   <div id="buttons">
     <button id="later">Later</button>
-    <button id="download" autofocus>Download</button>
+    <button id="download" autofocus>Update</button>
   </div>
   <script>
     const params = new URLSearchParams(location.search);
     const version = params.get('version');
-    const url = params.get('url');
     document.getElementById('msg').textContent = `Version ${version} is available.`;
     function applyTheme(t){ document.body.classList.toggle('light', t === 'light'); }
     window.electronAPI.getTheme().then(applyTheme);
     window.electronAPI.onThemeChanged(applyTheme);
-    document.getElementById('download').addEventListener('click', () => {
-      window.electronAPI.openExternal(url);
+    document.getElementById('download').addEventListener('click', async () => {
+      await window.electronAPI.performUpdate();
       window.electronAPI.updateDownloaded();
       window.electronAPI.close();
     });

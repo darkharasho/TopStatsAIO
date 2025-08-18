@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showUpdatePrompt: () => ipcRenderer.invoke('show-update-prompt'),
   onShowUpdateNotice: (cb) => ipcRenderer.on('show-update-notice', () => cb()),
   onHideUpdateNotice: (cb) => ipcRenderer.on('hide-update-notice', () => cb()),
+  performUpdate: () => ipcRenderer.invoke('perform-update'),
   updateLater: () => ipcRenderer.send('update-later'),
   updateDownloaded: () => ipcRenderer.send('update-downloaded')
 });
