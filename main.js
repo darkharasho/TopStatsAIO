@@ -213,7 +213,10 @@ function showUpdatePrompt(parent) {
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  prompt.loadFile('update.html', { query: { version: pendingUpdate.version } });
+  const mode = isInstalled() && pendingUpdate.setupUrl ? 'install' : 'link';
+  prompt.loadFile('update.html', {
+    query: { version: pendingUpdate.version, mode, url: pendingUpdate.releaseUrl || '' }
+  });
   prompt.once('ready-to-show', () => prompt.show());
 }
 
@@ -224,12 +227,12 @@ async function checkForAppUpdates(parent) {
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
       const assets = rel.assets || [];
-      const standalone = assets.find(a => /standalone.*\.zip$/i.test(a.name));
       const setup = assets.find(a => /setup.*\.exe$/i.test(a.name));
-      if (standalone || setup) {
+      const canShow = !isInstalled() || setup;
+      if (canShow) {
         pendingUpdate = {
           version: latest,
-          standaloneUrl: standalone ? standalone.browser_download_url : null,
+          releaseUrl: rel.html_url,
           setupUrl: setup ? setup.browser_download_url : null
         };
         if (parent && parent.webContents) {
@@ -246,48 +249,21 @@ async function checkForAppUpdates(parent) {
 async function performAppUpdate(wc) {
   if (!pendingUpdate) return;
   try {
+    if (!isInstalled()) {
+      await shell.openExternal(pendingUpdate.releaseUrl);
+      return;
+    }
     const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
     const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
     log('performAppUpdate temp dir', tmpDir);
-    if (isInstalled()) {
-      if (!pendingUpdate.setupUrl) throw new Error('No installer available');
-      const setupPath = path.join(tmpDir, 'setup.exe');
-      log('Downloading installer to', setupPath);
-      await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
-      send('apply', 1);
-      log('Spawning installer');
-      spawn(setupPath, [], { detached: true, stdio: 'ignore' }).unref();
-      app.quit();
-    } else {
-      if (!pendingUpdate.standaloneUrl) throw new Error('No portable package available');
-      const zipPath = path.join(tmpDir, 'update.zip');
-      log('Downloading portable update to', zipPath);
-      await downloadFile(pendingUpdate.standaloneUrl, zipPath, p => send('download', p));
-      send('apply', 1);
-      const execPath = process.execPath;
-      const execDir = path.dirname(execPath);
-      const exeName = path.basename(execPath);
-      const helperExe = path.join(tmpDir, exeName);
-      await fs.promises.copyFile(execPath, helperExe);
-      const supportFiles = ['icudtl.dat', 'chrome_100_percent.pak', 'chrome_200_percent.pak', 'v8_context_snapshot.bin', 'snapshot_blob.bin'];
-      for (const f of supportFiles) {
-        const src = path.join(execDir, f);
-        if (fs.existsSync(src)) {
-          await fs.promises.copyFile(src, path.join(tmpDir, f));
-        }
-      }
-      const updaterScriptSrc = path.join(__dirname, 'scripts', 'apply-update.js');
-      const updaterScript = path.join(tmpDir, 'apply-update.js');
-      await fs.promises.copyFile(updaterScriptSrc, updaterScript);
-      const args = [updaterScript, zipPath, String(process.pid), execDir, exeName];
-      log('Spawning updater', helperExe, args);
-      spawn(helperExe, args, {
-        detached: true,
-        stdio: 'ignore',
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
-      }).unref();
-      app.quit();
-    }
+    if (!pendingUpdate.setupUrl) throw new Error('No installer available');
+    const setupPath = path.join(tmpDir, 'setup.exe');
+    log('Downloading installer to', setupPath);
+    await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
+    send('apply', 1);
+    log('Spawning installer');
+    spawn(setupPath, [], { detached: true, stdio: 'ignore' }).unref();
+    app.quit();
   } catch (e) {
     logError('Failed to apply update:', e);
     wc && wc.send('update-progress', { stage: 'error', error: e.message });

@@ -39,6 +39,8 @@
   <script>
     const params = new URLSearchParams(location.search);
     const version = params.get('version');
+    const mode = params.get('mode');
+    const url = params.get('url');
     document.getElementById('msg').textContent = `Version ${version} is available.`;
     function applyTheme(t){ document.body.classList.toggle('light', t === 'light'); }
     window.electronAPI.getTheme().then(applyTheme);
@@ -48,25 +50,33 @@
     const prog = document.getElementById('prog');
     const status = document.getElementById('status');
 
-    document.getElementById('download').addEventListener('click', () => {
-      buttons.style.display = 'none';
-      progressBox.style.display = 'block';
-      window.electronAPI.updateDownloaded();
-      window.electronAPI.performUpdate();
-    });
-    window.electronAPI.onUpdateProgress(data => {
-      if (data.stage === 'download') {
-        prog.value = data.progress;
-        status.textContent = `Downloading... ${Math.round(data.progress * 100)}%`;
-      } else if (data.stage === 'apply') {
-        prog.value = 1;
-        status.textContent = 'Installing...';
-      } else if (data.stage === 'error') {
-        status.textContent = `Error: ${data.error}`;
-        progressBox.style.display = 'none';
-        buttons.style.display = 'block';
-      }
-    });
+    if (mode === 'link') {
+      document.getElementById('download').addEventListener('click', () => {
+        window.electronAPI.openExternal(url);
+        window.electronAPI.updateDownloaded();
+        window.electronAPI.close();
+      });
+    } else {
+      document.getElementById('download').addEventListener('click', () => {
+        buttons.style.display = 'none';
+        progressBox.style.display = 'block';
+        window.electronAPI.updateDownloaded();
+        window.electronAPI.performUpdate();
+      });
+      window.electronAPI.onUpdateProgress(data => {
+        if (data.stage === 'download') {
+          prog.value = data.progress;
+          status.textContent = `Downloading... ${Math.round(data.progress * 100)}%`;
+        } else if (data.stage === 'apply') {
+          prog.value = 1;
+          status.textContent = 'Installing...';
+        } else if (data.stage === 'error') {
+          status.textContent = `Error: ${data.error}`;
+          progressBox.style.display = 'none';
+          buttons.style.display = 'block';
+        }
+      });
+    }
     document.getElementById('later').addEventListener('click', () => {
       window.electronAPI.updateLater();
       window.electronAPI.close();
