@@ -8,6 +8,10 @@ const dateSelectBtn = document.getElementById('date-select');
 const unselectAllBtn = document.getElementById('unselect-all');
 const settingsBtn = document.getElementById('settings');
 const updateNoticeBtn = document.getElementById('update-notice');
+const selectAllBtn = document.getElementById('select-all');
+const refreshBtn = document.getElementById('refresh-files');
+const contextMenu = document.getElementById('context-menu');
+const contextSelectAll = document.getElementById('context-select-all');
 const progressContainer = document.getElementById('progress-container');
 const progressBar = document.getElementById('progress');
 const fileLoading = document.getElementById('file-tree-loading');
@@ -49,6 +53,12 @@ let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
 
+flatpickr(dateFilterInput, {
+  enableTime: true,
+  dateFormat: 'Y-m-d\\TH:i',
+  position: 'above'
+});
+
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
@@ -62,6 +72,27 @@ document.getElementById('close').addEventListener('click', () => window.electron
 titlebar.addEventListener('wheel', e => e.preventDefault(), { passive: false });
 settingsBtn.addEventListener('click', openSettings);
 updateNoticeBtn.addEventListener('click', () => window.electronAPI.showUpdatePrompt());
+selectAllBtn.addEventListener('click', () => {
+  fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
+    const p = li.dataset.path;
+    if (!selected.has(p)) {
+      selected.set(p, { rel: li.dataset.rel, mtime: parseInt(li.dataset.mtime, 10) });
+      li.classList.add('selected');
+    }
+  });
+  renderSelected();
+});
+refreshBtn.addEventListener('click', () => {
+  if (currentFolder) {
+    startLoad(currentFolder, true);
+  }
+});
+contextSelectAll.addEventListener('click', () => {
+  contextMenu.classList.add('hidden');
+  const path = contextMenu.dataset.path;
+  if (path) selectAllInFolder(path);
+});
+document.addEventListener('click', () => contextMenu.classList.add('hidden'));
 closeSettingsBtn.addEventListener('click', closeSettings);
 
 function openSettings() {
@@ -286,7 +317,7 @@ dateSelectBtn.addEventListener('click', () => {
   fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
     const m = parseInt(li.dataset.mtime, 10);
     if (m >= ts && !selected.has(li.dataset.path)) {
-      selected.set(li.dataset.path, li.dataset.rel);
+      selected.set(li.dataset.path, { rel: li.dataset.rel, mtime: m });
       li.classList.add('selected');
     }
   });
@@ -383,8 +414,11 @@ function renderNode(node, container) {
         window.electronAPI.loadFolder(node.path, currentFolder);
       }
     };
-    arrow.addEventListener('click', toggle);
-    nameSpan.addEventListener('click', toggle);
+    li.addEventListener('click', toggle);
+    li.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      showContextMenu(node.path, e.pageX, e.pageY);
+    });
     if (loadAll) {
       li.dataset.loaded = 'true';
       window.electronAPI.loadFolder(node.path, currentFolder);
@@ -429,7 +463,7 @@ function renderNode(node, container) {
             const path = item.dataset.path;
             if (shouldSelect) {
               if (!selected.has(path)) {
-                selected.set(path, item.dataset.rel);
+                selected.set(path, { rel: item.dataset.rel, mtime: parseInt(item.dataset.mtime, 10) });
                 item.classList.add('selected');
               }
             } else {
@@ -445,7 +479,7 @@ function renderNode(node, container) {
           selected.delete(p);
           li.classList.remove('selected');
         } else {
-          selected.set(p, li.dataset.rel);
+          selected.set(p, { rel: li.dataset.rel, mtime: parseInt(li.dataset.mtime, 10) });
           li.classList.add('selected');
         }
       }
@@ -453,6 +487,33 @@ function renderNode(node, container) {
       renderSelected();
     });
   }
+}
+
+function showContextMenu(path, x, y) {
+  contextMenu.dataset.path = path;
+  contextMenu.style.top = `${y}px`;
+  contextMenu.style.left = `${x}px`;
+  contextMenu.classList.remove('hidden');
+}
+
+function selectAllInFolder(path) {
+  const container = folderLists.get(path);
+  if (!container) return;
+  const selectIn = ul => {
+    ul.querySelectorAll(':scope > li.file-item').forEach(li => {
+      const p = li.dataset.path;
+      if (!selected.has(p)) {
+        selected.set(p, { rel: li.dataset.rel, mtime: parseInt(li.dataset.mtime, 10) });
+        li.classList.add('selected');
+      }
+    });
+    ul.querySelectorAll(':scope > li.folder').forEach(f => {
+      const child = folderLists.get(f.dataset.path);
+      if (child) selectIn(child);
+    });
+  };
+  selectIn(container);
+  renderSelected();
 }
 
 function formatDate(ms) {
@@ -467,23 +528,83 @@ function formatDate(ms) {
 
 function renderSelected() {
   selectedList.innerHTML = '';
-  for (const [path, rel] of selected.entries()) {
-    const li = document.createElement('li');
-    li.textContent = rel;
-    const btn = document.createElement('button');
-    btn.textContent = 'Remove';
-    btn.classList.add('remove-btn');
-    btn.addEventListener('click', () => {
-      selected.delete(path);
-      const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(path)}"]`);
-      if (item) {
-        item.classList.remove('selected');
+  const tree = {};
+  for (const [path, data] of selected.entries()) {
+    const parts = data.rel.split(/[\\/]/);
+    let node = tree;
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (i === parts.length - 1) {
+        node.files = node.files || [];
+        node.files.push({ name: part, path, mtime: data.mtime });
+      } else {
+        node.children = node.children || {};
+        node = node.children[part] = node.children[part] || {};
       }
-      renderSelected();
-    });
-    li.appendChild(btn);
-    selectedList.appendChild(li);
+    }
   }
+  const renderNode = (node, container) => {
+    if (node.children) {
+      for (const [name, child] of Object.entries(node.children)) {
+        const li = document.createElement('li');
+        li.classList.add('file-row', 'folder');
+        const arrow = document.createElement('span');
+        arrow.textContent = '▶';
+        arrow.classList.add('arrow');
+        li.appendChild(arrow);
+        const icon = document.createElement('span');
+        icon.textContent = '📁';
+        icon.classList.add('item-icon');
+        li.appendChild(icon);
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = name;
+        nameSpan.classList.add('file-name');
+        li.appendChild(nameSpan);
+        container.appendChild(li);
+        const ul = document.createElement('ul');
+        ul.classList.add('hidden');
+        container.appendChild(ul);
+        const toggle = () => {
+          const hidden = ul.classList.toggle('hidden');
+          arrow.textContent = hidden ? '▶' : '▼';
+        };
+        li.addEventListener('click', toggle);
+        renderNode(child, ul);
+      }
+    }
+    if (node.files) {
+      for (const file of node.files) {
+        const li = document.createElement('li');
+        li.classList.add('file-row');
+        const icon = document.createElement('span');
+        icon.textContent = '📄';
+        icon.classList.add('item-icon');
+        li.appendChild(icon);
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file.name;
+        nameSpan.classList.add('file-name');
+        li.appendChild(nameSpan);
+        const dateSpan = document.createElement('span');
+        dateSpan.textContent = formatDate(file.mtime);
+        dateSpan.classList.add('file-date');
+        li.appendChild(dateSpan);
+        const btn = document.createElement('button');
+        btn.textContent = 'Remove';
+        btn.classList.add('remove-btn');
+        btn.addEventListener('click', () => {
+          selected.delete(file.path);
+          const item = fileTreeContainer.querySelector(`li.file-item[data-path="${CSS.escape(file.path)}"]`);
+          if (item) {
+            item.classList.remove('selected');
+          }
+          renderSelected();
+        });
+        li.appendChild(btn);
+        container.appendChild(li);
+      }
+    }
+  };
+  renderNode(tree, selectedList);
 }
 
 function updateStep({ id, title, progress, error, success, current = 0, total = 0 }) {
