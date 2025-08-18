@@ -47,6 +47,7 @@ let rootList;
 let folderLists = new Map();
 let loadAll = false;
 let currentStepId = null;
+let lastSelectedItem = null;
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
@@ -200,6 +201,7 @@ window.electronAPI.onTreeStart(data => {
   if (data.path === currentFolder) {
     selectedFolderSpan.textContent = currentFolder;
     selected.clear();
+    lastSelectedItem = null;
     renderSelected();
     progressContainer.classList.remove('hidden');
     progressBar.style.width = '0%';
@@ -294,6 +296,7 @@ dateSelectBtn.addEventListener('click', () => {
 unselectAllBtn.addEventListener('click', () => {
   selected.clear();
   fileTreeContainer.querySelectorAll('li.file-item.selected').forEach(li => li.classList.remove('selected'));
+  lastSelectedItem = null;
   renderSelected();
 });
 
@@ -412,15 +415,41 @@ function renderNode(node, container) {
 
     insertSorted(container, li, node);
 
-    li.addEventListener('click', () => {
+    li.addEventListener('click', e => {
       const p = li.dataset.path;
-      if (selected.has(p)) {
-        selected.delete(p);
-        li.classList.remove('selected');
+      if (e.shiftKey && lastSelectedItem) {
+        const items = Array.from(fileTreeContainer.querySelectorAll('li.file-item'));
+        const startIndex = items.indexOf(lastSelectedItem);
+        const endIndex = items.indexOf(li);
+        if (startIndex !== -1 && endIndex !== -1) {
+          const [from, to] = startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+          const shouldSelect = !selected.has(p);
+          for (let i = from; i <= to; i++) {
+            const item = items[i];
+            const path = item.dataset.path;
+            if (shouldSelect) {
+              if (!selected.has(path)) {
+                selected.set(path, item.dataset.rel);
+                item.classList.add('selected');
+              }
+            } else {
+              if (selected.has(path)) {
+                selected.delete(path);
+                item.classList.remove('selected');
+              }
+            }
+          }
+        }
       } else {
-        selected.set(p, li.dataset.rel);
-        li.classList.add('selected');
+        if (selected.has(p)) {
+          selected.delete(p);
+          li.classList.remove('selected');
+        } else {
+          selected.set(p, li.dataset.rel);
+          li.classList.add('selected');
+        }
       }
+      lastSelectedItem = li;
       renderSelected();
     });
   }

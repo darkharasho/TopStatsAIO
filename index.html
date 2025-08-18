@@ -70,6 +70,10 @@
       #file-tree, #selected-files { flex:1; display:flex; flex-direction:column; }
       #file-tree-list { flex:1; overflow:auto; }
       #selected-list { flex:1; overflow:auto; list-style:none; margin:0; padding:0; }
+      #file-tree-list, #file-tree-list *, #selected-list, #selected-list * {
+        -webkit-user-select: none;
+        user-select: none;
+      }
       .file-root, .file-root ul { list-style:none; padding-left:0; margin:0; }
       .file-root ul { padding-left:16px; }
       .file-row { display:flex; align-items:center; gap:6px; padding:4px 8px; border-bottom:1px solid #2a2a2a; }
