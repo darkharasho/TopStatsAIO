@@ -7,6 +7,7 @@ const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
+const DB_NAME = 'TopStats.db';
 
 let depsDir;
 let versionsFile;
@@ -349,6 +350,18 @@ ipcMain.handle('start-parse', async (event, data) => {
   const send = msg => wc.send('parse-progress', msg);
   const step = (id, title, progress, error, current = 0, total = 0) =>
     wc.send('parse-step', { id, title, progress, error, current, total });
+  const persistentDb = path.join(app.getPath('userData'), DB_NAME);
+  const tempDb = path.join(tempDir, DB_NAME);
+  try {
+    if (fs.existsSync(persistentDb)) {
+      await fs.promises.copyFile(persistentDb, tempDb);
+      send('Loaded existing database');
+    } else {
+      send('No existing database found');
+    }
+  } catch (e) {
+    logError('Failed to load existing database', e);
+  }
   let cancelled = false;
   let child = null;
   currentParseCancel = () => {
@@ -501,6 +514,13 @@ ipcMain.handle('start-parse', async (event, data) => {
     wc.send('parse-complete', false);
   } finally {
     currentParseCancel = null;
+    try {
+      if (fs.existsSync(tempDb)) {
+        await fs.promises.copyFile(tempDb, persistentDb);
+      }
+    } catch (e) {
+      logError('Failed to persist database', e);
+    }
     try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
   }
 });
