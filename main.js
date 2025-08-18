@@ -520,21 +520,24 @@ ipcMain.handle('start-parse', async (event, data) => {
     }
     try {
       await fs.promises.mkdir(path.dirname(persistentDb), { recursive: true });
-      const dirs = [processedDir, tempDir];
+      const dirs = opts.parser === 'combiner' ? [processedDir, tempDir] : [tempDir, processedDir];
       let persisted = false;
       for (const dir of dirs) {
         for (const name of DB_ALIASES) {
           const db = path.join(dir, name);
           if (fs.existsSync(db)) {
             await fs.promises.copyFile(db, persistentDb);
+            send(`Saved database to ${persistentDb}`);
             persisted = true;
             break;
           }
         }
         if (persisted) break;
       }
+      if (!persisted) send('No database produced to save');
     } catch (e) {
       logError('Failed to persist database', e);
+      send('Failed to save database');
     }
     wc.send('parse-complete', true);
   } catch (e) {
