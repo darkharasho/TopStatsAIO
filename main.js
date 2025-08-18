@@ -362,6 +362,10 @@ ipcMain.handle('start-parse', async (event, data) => {
       const cand = path.join(userDataDir, name);
       if (fs.existsSync(cand)) {
         await fs.promises.copyFile(cand, tempDb);
+        if (opts.parser === 'combiner') {
+          await fs.promises.mkdir(processedDir, { recursive: true });
+          await fs.promises.copyFile(cand, processedDb);
+        }
         loaded = true;
         break;
       }
@@ -514,16 +518,6 @@ ipcMain.handle('start-parse', async (event, data) => {
         send(`Output: ${file}`);
       }
     }
-    wc.send('parse-complete', true);
-  } catch (e) {
-    if (cancelled) {
-      send('Parsing cancelled.');
-    } else {
-      send(`Error: ${e.message}`);
-    }
-    wc.send('parse-complete', false);
-  } finally {
-    currentParseCancel = null;
     try {
       await fs.promises.mkdir(path.dirname(persistentDb), { recursive: true });
       const dirs = [processedDir, tempDir];
@@ -542,6 +536,16 @@ ipcMain.handle('start-parse', async (event, data) => {
     } catch (e) {
       logError('Failed to persist database', e);
     }
+    wc.send('parse-complete', true);
+  } catch (e) {
+    if (cancelled) {
+      send('Parsing cancelled.');
+    } else {
+      send(`Error: ${e.message}`);
+    }
+    wc.send('parse-complete', false);
+  } finally {
+    currentParseCancel = null;
     try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
   }
 });
