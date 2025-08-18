@@ -208,63 +208,24 @@ async function checkForAppUpdates(parent) {
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
-      const standalone = rel.assets.find(a => /standalone\.zip$/i.test(a.name));
-      const setup = rel.assets.find(a => /setup\.exe$/i.test(a.name));
-      pendingUpdate = {
-        version: latest,
-        standaloneUrl: standalone ? standalone.browser_download_url : null,
-        setupUrl: setup ? setup.browser_download_url : null
-      };
-      showUpdatePrompt(parent);
+      const assets = rel.assets || [];
+      const standalone = assets.find(a => /standalone.*\.zip$/i.test(a.name));
+      const setup = assets.find(a => /setup.*\.exe$/i.test(a.name));
+      if (standalone || setup) {
+        pendingUpdate = {
+          version: latest,
+          standaloneUrl: standalone ? standalone.browser_download_url : null,
+          setupUrl: setup ? setup.browser_download_url : null
+        };
+        if (parent && parent.webContents) {
+          parent.webContents.send('show-update-notice');
+        }
+        showUpdatePrompt(parent);
+      }
     }
   } catch (err) {
     logError('Update check failed:', err);
   }
-}
-
-async function applyUpdate(zipPath, parentPid, targetDir, exeName) {
-  log('applyUpdate start', zipPath, parentPid, targetDir, exeName);
-  const execDir = targetDir || path.dirname(process.execPath);
-  const execName = exeName || path.basename(process.execPath);
-  // wait for parent process to exit
-  while (parentPid) {
-    try {
-      process.kill(parentPid, 0);
-      await new Promise(r => setTimeout(r, 500));
-    } catch {
-      break;
-    }
-  }
-  try {
-    const tmpDir = await fs.promises.mkdtemp(path.join(path.dirname(zipPath), 'extract-'));
-    log('Extracting update to', tmpDir);
-    const zip = new AdmZip(zipPath);
-    zip.extractAllTo(tmpDir, true);
-    const entries = await fs.promises.readdir(tmpDir);
-    let rootDir = tmpDir;
-    if (entries.length === 1) {
-      const inner = path.join(tmpDir, entries[0]);
-      try {
-        if ((await fs.promises.stat(inner)).isDirectory()) rootDir = inner;
-      } catch {}
-    }
-    const items = await fs.promises.readdir(rootDir);
-    for (const item of items) {
-      const src = path.join(rootDir, item);
-      const dest = path.join(execDir, item);
-      log('Copying', src, '->', dest);
-      await fs.promises.cp(src, dest, { recursive: true, force: true });
-    }
-    await fs.promises.unlink(zipPath).catch(() => {});
-    await fs.promises.rm(path.dirname(zipPath), { recursive: true, force: true }).catch(() => {});
-    await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    const newExe = path.join(execDir, execName);
-    log('Launching new version', newExe);
-    spawn(newExe, [], { detached: true, stdio: 'ignore' }).unref();
-  } catch (e) {
-    logError('Failed to apply update:', e);
-  }
-  app.quit();
 }
 
 async function performAppUpdate(wc) {
@@ -291,12 +252,25 @@ async function performAppUpdate(wc) {
       const execPath = process.execPath;
       const execDir = path.dirname(execPath);
       const exeName = path.basename(execPath);
-      const updaterPath = path.join(tmpDir, exeName);
-      await fs.promises.copyFile(execPath, updaterPath);
-      log('Copied updater to', updaterPath);
-      const args = ['--apply-update', zipPath, String(process.pid), execDir, exeName];
-      log('Spawning updater', updaterPath, args);
-      spawn(updaterPath, args, { detached: true, stdio: 'ignore' }).unref();
+      const helperExe = path.join(tmpDir, exeName);
+      await fs.promises.copyFile(execPath, helperExe);
+      const supportFiles = ['icudtl.dat', 'chrome_100_percent.pak', 'chrome_200_percent.pak', 'v8_context_snapshot.bin', 'snapshot_blob.bin'];
+      for (const f of supportFiles) {
+        const src = path.join(execDir, f);
+        if (fs.existsSync(src)) {
+          await fs.promises.copyFile(src, path.join(tmpDir, f));
+        }
+      }
+      const updaterScriptSrc = path.join(__dirname, 'scripts', 'apply-update.js');
+      const updaterScript = path.join(tmpDir, 'apply-update.js');
+      await fs.promises.copyFile(updaterScriptSrc, updaterScript);
+      const args = [updaterScript, zipPath, String(process.pid), execDir, exeName];
+      log('Spawning updater', helperExe, args);
+      spawn(helperExe, args, {
+        detached: true,
+        stdio: 'ignore',
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+      }).unref();
       app.quit();
     }
   } catch (e) {
@@ -306,14 +280,6 @@ async function performAppUpdate(wc) {
   }
 }
 
-const applyIdx = process.argv.indexOf('--apply-update');
-if (applyIdx !== -1) {
-  const zipPath = process.argv[applyIdx + 1];
-  const parentPid = Number(process.argv[applyIdx + 2]);
-  const targetDir = process.argv[applyIdx + 3];
-  const exeName = process.argv[applyIdx + 4];
-  app.whenReady().then(() => applyUpdate(zipPath, parentPid, targetDir, exeName));
-} else {
 app.whenReady().then(() => {
   const userData = app.getPath('userData');
   depsDir = path.join(userData, 'dependencies');
@@ -338,7 +304,6 @@ app.whenReady().then(() => {
     }
   });
 });
-}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
