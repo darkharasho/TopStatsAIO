@@ -38,9 +38,21 @@ process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
 async function fetchJson(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Fetch failed');
-  return await res.json();
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'TopStatsAIO',
+        Accept: 'application/vnd.github+json'
+      }
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Fetch failed: ${res.status} ${res.statusText}\n${text}`);
+    }
+    return await res.json();
+  } catch (err) {
+    throw new Error(`Fetch failed: ${err.message}`);
+  }
 }
 
 async function getLatest(repo) {
@@ -49,7 +61,10 @@ async function getLatest(repo) {
 
 async function downloadFile(url, dest, onProgress) {
   const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Download failed');
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Download failed: ${res.status} ${res.statusText}\n${text}`);
+  }
   const total = Number(res.headers.get('content-length')) || 0;
   const file = fs.createWriteStream(dest);
   if (res.body && res.body.getReader) {
