@@ -352,6 +352,8 @@ ipcMain.handle('start-parse', async (event, data) => {
     wc.send('parse-step', { id, title, progress, error, current, total });
   const persistentDb = path.join(app.getPath('userData'), DB_NAME);
   const tempDb = path.join(tempDir, DB_NAME);
+  const processedDir = path.join(tempDir, 'ProcessedLogs');
+  const processedDb = path.join(processedDir, DB_NAME);
   try {
     if (fs.existsSync(persistentDb)) {
       await fs.promises.copyFile(persistentDb, tempDb);
@@ -398,7 +400,6 @@ ipcMain.handle('start-parse', async (event, data) => {
     send('Config files prepared');
 
     let cliExe = path.join(depsDir, 'eicli', 'GuildWars2EliteInsights-CLI.exe');
-    const processedDir = path.join(tempDir, 'ProcessedLogs');
     if (!fs.existsSync(cliExe)) {
       const alt = path.join(depsDir, 'eicli', 'gw2eicli.exe');
       if (fs.existsSync(alt)) {
@@ -433,6 +434,9 @@ ipcMain.handle('start-parse', async (event, data) => {
       step('cli', 'EI CLI', 1, 'No logs', 0, 0);
     }
     await fs.promises.mkdir(processedDir, { recursive: true });
+    if (fs.existsSync(tempDb)) {
+      try { await fs.promises.copyFile(tempDb, processedDb); } catch (e) { logError('Failed to stage database', e); }
+    }
     const generated = await fs.promises.readdir(tempDir);
     for (const f of generated) {
       if (f.toLowerCase().endsWith('.json.gz')) {
@@ -515,8 +519,12 @@ ipcMain.handle('start-parse', async (event, data) => {
   } finally {
     currentParseCancel = null;
     try {
-      if (fs.existsSync(tempDb)) {
-        await fs.promises.copyFile(tempDb, persistentDb);
+      const dbCandidates = [processedDb, tempDb];
+      for (const db of dbCandidates) {
+        if (fs.existsSync(db)) {
+          await fs.promises.copyFile(db, persistentDb);
+          break;
+        }
       }
     } catch (e) {
       logError('Failed to persist database', e);
