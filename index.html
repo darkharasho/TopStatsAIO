@@ -52,6 +52,7 @@
       #folder-actions { display:flex; align-items:center; gap:10px; margin:12px; }
       #action-buttons { margin-left:auto; display:flex; align-items:center; gap:8px; }
       .folder-label { background:var(--label-bg); padding:6px 12px; border-radius:4px; border:1px solid var(--label-border); color:var(--label-color); }
+      #selected-folder, #selected-folder-input { -webkit-user-select:text; user-select:text; cursor:text; }
 
       .action-icon { cursor:pointer; font-size:20px; }
       .action-icon:hover { color:var(--btn-border); }
@@ -203,6 +204,7 @@
     <div id="folder-actions">
       <button id="choose-folder">Select Folder</button>
       <span id="selected-folder" class="folder-label"></span>
+      <input id="selected-folder-input" class="folder-label hidden" type="text" />
       <div id="action-buttons">
         <span id="update-notice" aria-label="Update available" class="action-icon hidden">&#9888;</span>
         <span id="settings" aria-label="Settings" class="action-icon">&#9881;</span>

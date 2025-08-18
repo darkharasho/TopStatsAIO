@@ -2,6 +2,7 @@ const chooseFolderBtn = document.getElementById('choose-folder');
 const fileTreeContainer = document.getElementById('file-tree-list');
 const selectedList = document.getElementById('selected-list');
 const selectedFolderSpan = document.getElementById('selected-folder');
+const selectedFolderInput = document.getElementById('selected-folder-input');
 const titlebar = document.getElementById('titlebar');
 const dateFilterInput = document.getElementById('date-filter');
 const dateSelectBtn = document.getElementById('date-select');
@@ -94,6 +95,28 @@ contextUnselectAll.addEventListener('click', () => {
   if (rel) unselectAllInFolder(rel);
 });
 document.addEventListener('click', () => contextMenu.classList.add('hidden'));
+selectedFolderSpan.addEventListener('click', () => {
+  selectedFolderInput.value = currentFolder;
+  selectedFolderSpan.classList.add('hidden');
+  selectedFolderInput.classList.remove('hidden');
+  selectedFolderInput.focus();
+  selectedFolderInput.select();
+});
+selectedFolderInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const dir = selectedFolderInput.value.trim();
+    if (dir) startLoad(dir);
+    selectedFolderInput.blur();
+  } else if (e.key === 'Escape') {
+    selectedFolderInput.value = currentFolder;
+    selectedFolderInput.blur();
+  }
+});
+selectedFolderInput.addEventListener('blur', () => {
+  selectedFolderSpan.textContent = currentFolder;
+  selectedFolderSpan.classList.remove('hidden');
+  selectedFolderInput.classList.add('hidden');
+});
 closeSettingsBtn.addEventListener('click', closeSettings);
 
 function openSettings() {
