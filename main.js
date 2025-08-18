@@ -25,24 +25,69 @@ function logError(...args) {
   } catch {}
 }
 
+function log(...args) {
+  console.log(...args);
+  if (!logFile) return;
+  const msg = args.map(a => String(a)).join(' ');
+  try {
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch {}
+}
+
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
 async function fetchJson(url) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Fetch failed');
-  return await res.json();
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'TopStatsAIO',
+        Accept: 'application/vnd.github+json'
+      }
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Fetch failed: ${res.status} ${res.statusText}\n${text}`);
+    }
+    return await res.json();
+  } catch (err) {
+    throw new Error(`Fetch failed: ${err.message}`);
+  }
 }
 
 async function getLatest(repo) {
   return await fetchJson(`https://api.github.com/repos/${repo}/releases/latest`);
 }
 
-async function downloadFile(url, dest) {
+async function downloadFile(url, dest, onProgress) {
   const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) throw new Error('Download failed');
-  const buf = Buffer.from(await res.arrayBuffer());
-  await fs.promises.writeFile(dest, buf);
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Download failed: ${res.status} ${res.statusText}\n${text}`);
+  }
+  const total = Number(res.headers.get('content-length')) || 0;
+  const file = fs.createWriteStream(dest);
+  if (res.body && res.body.getReader) {
+    const reader = res.body.getReader();
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      file.write(Buffer.from(value));
+      received += value.length;
+      if (onProgress && total) onProgress(received / total);
+    }
+    file.end();
+    await new Promise((resolve, reject) => {
+      file.on('finish', resolve);
+      file.on('error', reject);
+    });
+  } else {
+    const buf = Buffer.from(await res.arrayBuffer());
+    file.write(buf);
+    file.end();
+    if (onProgress) onProgress(1);
+  }
 }
 
 async function downloadDependency(which) {
@@ -146,6 +191,11 @@ function createWindow() {
 
 const allowDevUpdates = process.argv.includes('--dev-update');
 
+function isInstalled() {
+  const p = process.execPath.toLowerCase();
+  return p.includes('program files') || p.includes(path.join('appdata', 'local', 'programs').toLowerCase());
+}
+
 function showUpdatePrompt(parent) {
   if (!pendingUpdate) return;
   const prompt = new BrowserWindow({
@@ -163,7 +213,10 @@ function showUpdatePrompt(parent) {
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  prompt.loadFile('update.html', { query: { version: pendingUpdate.version, url: pendingUpdate.url } });
+  const mode = isInstalled() && pendingUpdate.setupUrl ? 'install' : 'link';
+  prompt.loadFile('update.html', {
+    query: { version: pendingUpdate.version, mode, url: pendingUpdate.releaseUrl || '' }
+  });
   prompt.once('ready-to-show', () => prompt.show());
 }
 
@@ -173,11 +226,49 @@ async function checkForAppUpdates(parent) {
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
-      pendingUpdate = { version: latest, url: rel.html_url };
-      showUpdatePrompt(parent);
+      const assets = rel.assets || [];
+      const setup = assets.find(a => /setup.*\.exe$/i.test(a.name));
+      const canShow = !isInstalled() || setup;
+      if (canShow) {
+        pendingUpdate = {
+          version: latest,
+          releaseUrl: rel.html_url,
+          setupUrl: setup ? setup.browser_download_url : null
+        };
+        if (parent && parent.webContents) {
+          parent.webContents.send('show-update-notice');
+        }
+        showUpdatePrompt(parent);
+      }
     }
   } catch (err) {
     logError('Update check failed:', err);
+  }
+}
+
+async function performAppUpdate(wc) {
+  if (!pendingUpdate) return;
+  try {
+    if (!isInstalled()) {
+      await shell.openExternal(pendingUpdate.releaseUrl);
+      return;
+    }
+    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+    const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+    log('performAppUpdate temp dir', tmpDir);
+    if (!pendingUpdate.setupUrl) throw new Error('No installer available');
+    const setupPath = path.join(tmpDir, 'setup.exe');
+    log('Downloading installer to', setupPath);
+    await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
+    send('apply', 1);
+    log('Launching installer');
+    const err = await shell.openPath(setupPath);
+    if (err) throw new Error(err);
+    app.quit();
+  } catch (e) {
+    logError('Failed to apply update:', e);
+    wc && wc.send('update-progress', { stage: 'error', error: e.message });
+    dialog.showErrorBox('Update failed', e.message);
   }
 }
 
@@ -341,6 +432,8 @@ ipcMain.on('update-downloaded', () => {
 ipcMain.handle('show-update-prompt', () => {
   if (mainWindow) showUpdatePrompt(mainWindow);
 });
+
+ipcMain.handle('perform-update', (e) => performAppUpdate(e.sender));
 
 ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;

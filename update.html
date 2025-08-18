@@ -30,21 +30,53 @@
   <p id="msg"></p>
   <div id="buttons">
     <button id="later">Later</button>
-    <button id="download" autofocus>Download</button>
+    <button id="download" autofocus>Update</button>
+  </div>
+  <div id="progress" style="display:none; margin-top:20px;">
+    <progress id="prog" value="0" max="1" style="width:100%"></progress>
+    <div id="status" style="margin-top:8px;font-size:14px"></div>
   </div>
   <script>
     const params = new URLSearchParams(location.search);
     const version = params.get('version');
+    const mode = params.get('mode');
     const url = params.get('url');
     document.getElementById('msg').textContent = `Version ${version} is available.`;
     function applyTheme(t){ document.body.classList.toggle('light', t === 'light'); }
     window.electronAPI.getTheme().then(applyTheme);
     window.electronAPI.onThemeChanged(applyTheme);
-    document.getElementById('download').addEventListener('click', () => {
-      window.electronAPI.openExternal(url);
-      window.electronAPI.updateDownloaded();
-      window.electronAPI.close();
-    });
+    const buttons = document.getElementById('buttons');
+    const progressBox = document.getElementById('progress');
+    const prog = document.getElementById('prog');
+    const status = document.getElementById('status');
+
+    if (mode === 'link') {
+      document.getElementById('download').addEventListener('click', () => {
+        window.electronAPI.openExternal(url);
+        window.electronAPI.updateDownloaded();
+        window.electronAPI.close();
+      });
+    } else {
+      document.getElementById('download').addEventListener('click', () => {
+        buttons.style.display = 'none';
+        progressBox.style.display = 'block';
+        window.electronAPI.updateDownloaded();
+        window.electronAPI.performUpdate();
+      });
+      window.electronAPI.onUpdateProgress(data => {
+        if (data.stage === 'download') {
+          prog.value = data.progress;
+          status.textContent = `Downloading... ${Math.round(data.progress * 100)}%`;
+        } else if (data.stage === 'apply') {
+          prog.value = 1;
+          status.textContent = 'Installing...';
+        } else if (data.stage === 'error') {
+          status.textContent = `Error: ${data.error}`;
+          progressBox.style.display = 'none';
+          buttons.style.display = 'block';
+        }
+      });
+    }
     document.getElementById('later').addEventListener('click', () => {
       window.electronAPI.updateLater();
       window.electronAPI.close();
