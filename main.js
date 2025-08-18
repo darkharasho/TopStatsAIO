@@ -261,8 +261,9 @@ async function performAppUpdate(wc) {
     log('Downloading installer to', setupPath);
     await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
     send('apply', 1);
-    log('Spawning installer');
-    spawn(setupPath, [], { detached: true, stdio: 'ignore' }).unref();
+    log('Launching installer');
+    const err = await shell.openPath(setupPath);
+    if (err) throw new Error(err);
     app.quit();
   } catch (e) {
     logError('Failed to apply update:', e);
