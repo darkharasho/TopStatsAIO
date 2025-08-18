@@ -57,7 +57,7 @@ The primary directive of this application is to increase the user friendliness o
 This app does not handle downloading the dependencies needed for [arcdps_top_stat_parser](https://github.com/Drevarr/arcdps_top_stats_parser). You will need to install [python](https://www.python.org/downloads/) and run `pip3 install xlrd xlutils xlwt jsons requests xlsxwriter` in order to use the parser. 
 
 ## NOTE
-This generates the `json`/`tid` files necessary to use with TiddlyWiki. To see the actual results, please follow the steps in the [GW2 EI Log Parser](https://github.com/Drevarr/GW2_EI_log_combiner?tab=readme-ov-file#gw2_ei_log_combiner--):
+This generates the `json`/`tid` files necessary to use with TiddlyWiki, and saves `TopStats.db` in your parsed files folder when Glicko DB updates are enabled. To see the actual results, please follow the steps in the [GW2 EI Log Parser](https://github.com/Drevarr/GW2_EI_log_combiner?tab=readme-ov-file#gw2_ei_log_combiner--):
 - Navigate to your `Top Stats Parser` Folder
 - Open the file `/Example_Output/Top_Stats_Index.html` in your browser of choice.
 - Drag and Drop the file `Drag_and_Drop_Log_Summary_for_2024yourdatatime.json` onto the opened `Top_Stats_Index.html` in your browser and click import
