@@ -97,6 +97,10 @@ contextUnselectAll.addEventListener('click', () => {
 document.addEventListener('click', () => contextMenu.classList.add('hidden'));
 selectedFolderSpan.addEventListener('click', () => {
   selectedFolderInput.value = currentFolder;
+  const width = selectedFolderSpan.offsetWidth;
+  const style = window.getComputedStyle(selectedFolderSpan);
+  selectedFolderInput.style.width = width + 'px';
+  selectedFolderInput.style.fontSize = style.fontSize;
   selectedFolderSpan.classList.add('hidden');
   selectedFolderInput.classList.remove('hidden');
   selectedFolderInput.focus();
@@ -116,6 +120,8 @@ selectedFolderInput.addEventListener('blur', () => {
   selectedFolderSpan.textContent = currentFolder;
   selectedFolderSpan.classList.remove('hidden');
   selectedFolderInput.classList.add('hidden');
+  selectedFolderInput.style.width = '';
+  selectedFolderInput.style.fontSize = '';
 });
 closeSettingsBtn.addEventListener('click', closeSettings);
 
