@@ -8,6 +8,7 @@ const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
 const DB_NAME = 'TopStats.db';
+const DB_ALIASES = [DB_NAME, 'Top_Stats.db'];
 
 let depsDir;
 let versionsFile;
@@ -343,24 +344,29 @@ ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;
   const files = data.files || [];
   const opts = data.options || {};
-  const parsedDir = path.join(app.getPath('userData'), 'parsed_files');
+  const userDataDir = app.getPath('userData');
+  const parsedDir = path.join(userDataDir, 'parsed_files');
   await fs.promises.rm(parsedDir, { recursive: true, force: true });
   await fs.promises.mkdir(parsedDir, { recursive: true });
   const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsaio-'));
   const send = msg => wc.send('parse-progress', msg);
   const step = (id, title, progress, error, current = 0, total = 0) =>
     wc.send('parse-step', { id, title, progress, error, current, total });
-  const persistentDb = path.join(app.getPath('userData'), DB_NAME);
+  const persistentDb = path.join(userDataDir, DB_NAME);
   const tempDb = path.join(tempDir, DB_NAME);
   const processedDir = path.join(tempDir, 'ProcessedLogs');
   const processedDb = path.join(processedDir, DB_NAME);
   try {
-    if (fs.existsSync(persistentDb)) {
-      await fs.promises.copyFile(persistentDb, tempDb);
-      send('Loaded existing database');
-    } else {
-      send('No existing database found');
+    let loaded = false;
+    for (const name of DB_ALIASES) {
+      const cand = path.join(userDataDir, name);
+      if (fs.existsSync(cand)) {
+        await fs.promises.copyFile(cand, tempDb);
+        loaded = true;
+        break;
+      }
     }
+    send(loaded ? 'Loaded existing database' : 'No existing database found');
   } catch (e) {
     logError('Failed to load existing database', e);
   }
@@ -519,12 +525,19 @@ ipcMain.handle('start-parse', async (event, data) => {
   } finally {
     currentParseCancel = null;
     try {
-      const dbCandidates = [processedDb, tempDb];
-      for (const db of dbCandidates) {
-        if (fs.existsSync(db)) {
-          await fs.promises.copyFile(db, persistentDb);
-          break;
+      await fs.promises.mkdir(path.dirname(persistentDb), { recursive: true });
+      const dirs = [processedDir, tempDir];
+      let persisted = false;
+      for (const dir of dirs) {
+        for (const name of DB_ALIASES) {
+          const db = path.join(dir, name);
+          if (fs.existsSync(db)) {
+            await fs.promises.copyFile(db, persistentDb);
+            persisted = true;
+            break;
+          }
         }
+        if (persisted) break;
       }
     } catch (e) {
       logError('Failed to persist database', e);
