@@ -231,14 +231,18 @@ ipcMain.handle('load-folder', async (event, dir, rootDir) => {
       const fullPath = path.join(dir, entry.name);
       try {
         const stat = await fs.promises.stat(fullPath);
-        const node = {
-          name: entry.name,
-          path: fullPath,
-          relativePath: path.relative(rootDir, fullPath),
-          type: entry.isDirectory() ? 'directory' : 'file',
-          mtime: stat.mtimeMs
-        };
-        wc.send('tree-node', { parent: dir, node });
+        const isDir = entry.isDirectory();
+        const isZevtc = !isDir && entry.name.toLowerCase().endsWith('.zevtc');
+        if (isDir || isZevtc) {
+          const node = {
+            name: entry.name,
+            path: fullPath,
+            relativePath: path.relative(rootDir, fullPath),
+            type: isDir ? 'directory' : 'file',
+            mtime: stat.mtimeMs
+          };
+          wc.send('tree-node', { parent: dir, node });
+        }
       } catch { /* ignore failed stats */ }
       count++;
       wc.send('load-progress', { parent: dir, progress: count / total });
