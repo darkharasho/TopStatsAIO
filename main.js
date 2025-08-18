@@ -25,6 +25,15 @@ function logError(...args) {
   } catch {}
 }
 
+function log(...args) {
+  console.log(...args);
+  if (!logFile) return;
+  const msg = args.map(a => String(a)).join(' ');
+  try {
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch {}
+}
+
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
@@ -213,8 +222,10 @@ async function checkForAppUpdates(parent) {
   }
 }
 
-async function applyUpdate(zipPath, parentPid) {
-  const execDir = path.dirname(process.execPath);
+async function applyUpdate(zipPath, parentPid, targetDir, exeName) {
+  log('applyUpdate start', zipPath, parentPid, targetDir, exeName);
+  const execDir = targetDir || path.dirname(process.execPath);
+  const execName = exeName || path.basename(process.execPath);
   // wait for parent process to exit
   while (parentPid) {
     try {
@@ -226,6 +237,7 @@ async function applyUpdate(zipPath, parentPid) {
   }
   try {
     const tmpDir = await fs.promises.mkdtemp(path.join(path.dirname(zipPath), 'extract-'));
+    log('Extracting update to', tmpDir);
     const zip = new AdmZip(zipPath);
     zip.extractAllTo(tmpDir, true);
     const entries = await fs.promises.readdir(tmpDir);
@@ -238,12 +250,17 @@ async function applyUpdate(zipPath, parentPid) {
     }
     const items = await fs.promises.readdir(rootDir);
     for (const item of items) {
-      await fs.promises.cp(path.join(rootDir, item), path.join(execDir, item), { recursive: true, force: true });
+      const src = path.join(rootDir, item);
+      const dest = path.join(execDir, item);
+      log('Copying', src, '->', dest);
+      await fs.promises.cp(src, dest, { recursive: true, force: true });
     }
     await fs.promises.unlink(zipPath).catch(() => {});
     await fs.promises.rm(path.dirname(zipPath), { recursive: true, force: true }).catch(() => {});
     await fs.promises.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-    spawn(process.execPath, [], { detached: true, stdio: 'ignore' }).unref();
+    const newExe = path.join(execDir, execName);
+    log('Launching new version', newExe);
+    spawn(newExe, [], { detached: true, stdio: 'ignore' }).unref();
   } catch (e) {
     logError('Failed to apply update:', e);
   }
@@ -255,22 +272,31 @@ async function performAppUpdate(wc) {
   try {
     const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
     const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+    log('performAppUpdate temp dir', tmpDir);
     if (isInstalled()) {
       if (!pendingUpdate.setupUrl) throw new Error('No installer available');
       const setupPath = path.join(tmpDir, 'setup.exe');
+      log('Downloading installer to', setupPath);
       await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
       send('apply', 1);
+      log('Spawning installer');
       spawn(setupPath, [], { detached: true, stdio: 'ignore' }).unref();
       app.quit();
     } else {
       if (!pendingUpdate.standaloneUrl) throw new Error('No portable package available');
       const zipPath = path.join(tmpDir, 'update.zip');
+      log('Downloading portable update to', zipPath);
       await downloadFile(pendingUpdate.standaloneUrl, zipPath, p => send('download', p));
       send('apply', 1);
-      const args = app.isPackaged
-        ? ['--apply-update', zipPath, String(process.pid)]
-        : [app.getAppPath(), '--apply-update', zipPath, String(process.pid)];
-      spawn(process.execPath, args, { detached: true, stdio: 'ignore' }).unref();
+      const execPath = process.execPath;
+      const execDir = path.dirname(execPath);
+      const exeName = path.basename(execPath);
+      const updaterPath = path.join(tmpDir, exeName);
+      await fs.promises.copyFile(execPath, updaterPath);
+      log('Copied updater to', updaterPath);
+      const args = ['--apply-update', zipPath, String(process.pid), execDir, exeName];
+      log('Spawning updater', updaterPath, args);
+      spawn(updaterPath, args, { detached: true, stdio: 'ignore' }).unref();
       app.quit();
     }
   } catch (e) {
@@ -284,7 +310,9 @@ const applyIdx = process.argv.indexOf('--apply-update');
 if (applyIdx !== -1) {
   const zipPath = process.argv[applyIdx + 1];
   const parentPid = Number(process.argv[applyIdx + 2]);
-  app.whenReady().then(() => applyUpdate(zipPath, parentPid));
+  const targetDir = process.argv[applyIdx + 3];
+  const exeName = process.argv[applyIdx + 4];
+  app.whenReady().then(() => applyUpdate(zipPath, parentPid, targetDir, exeName));
 } else {
 app.whenReady().then(() => {
   const userData = app.getPath('userData');
