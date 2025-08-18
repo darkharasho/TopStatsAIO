@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
+const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
 
 let depsDir;
 let versionsFile;
@@ -129,10 +130,9 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1100,
     height: 800,
-    backgroundColor: '#00000000',
-    backgroundMaterial: 'mica',
+    backgroundColor: useMica ? '#00000000' : '#2d2d2d',
+    ...(useMica ? { backgroundMaterial: 'mica', visualEffectState: 'active' } : {}),
     titleBarStyle: 'hidden',
-    visualEffectState: 'active',
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
     webPreferences: {
@@ -155,10 +155,9 @@ function showUpdatePrompt(parent) {
     height: 180,
     resizable: false,
     frame: false,
-    backgroundColor: '#00000000',
-    backgroundMaterial: 'mica',
+    backgroundColor: useMica ? '#00000000' : '#2d2d2d',
+    ...(useMica ? { backgroundMaterial: 'mica', visualEffectState: 'active' } : {}),
     titleBarStyle: 'hidden',
-    visualEffectState: 'active',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
