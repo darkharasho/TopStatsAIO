@@ -4,12 +4,20 @@
       const html = doc.documentElement;
       const body = doc.body;
       if (html) {
-        if (html.style.overflow !== 'auto') html.style.overflow = 'auto';
-        if (html.style.height !== 'auto') html.style.height = 'auto';
+        if (html.style.getPropertyValue('overflow') !== 'auto' || html.style.getPropertyPriority('overflow') !== 'important') {
+          html.style.setProperty('overflow', 'auto', 'important');
+        }
+        if (html.style.getPropertyValue('height') !== 'auto' || html.style.getPropertyPriority('height') !== 'important') {
+          html.style.setProperty('height', 'auto', 'important');
+        }
       }
       if (body) {
-        if (body && body.style.overflow !== 'auto') body.style.overflow = 'auto';
-        if (body && body.style.height !== 'auto') body.style.height = 'auto';
+        if (body.style.getPropertyValue('overflow') !== 'auto' || body.style.getPropertyPriority('overflow') !== 'important') {
+          body.style.setProperty('overflow', 'auto', 'important');
+        }
+        if (body.style.getPropertyValue('height') !== 'auto' || body.style.getPropertyPriority('height') !== 'important') {
+          body.style.setProperty('height', 'auto', 'important');
+        }
       }
     }
     enforce();
