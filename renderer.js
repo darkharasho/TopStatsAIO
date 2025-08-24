@@ -275,64 +275,10 @@ parseCancelBtn.addEventListener('click', () => {
   window.electronAPI.cancelParse();
 });
 
-function logUpload(...args) {
-  console.log('[upload]', ...args);
-}
-
-function focusUploadFrame(reason) {
-  const rect = uploadFrame.getBoundingClientRect();
-  const x = Math.min(10, rect.width - 1);
-  const y = Math.min(10, rect.height - 1);
-  uploadFrame.focus();
-  uploadFrame.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, x, y });
-  uploadFrame.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, x, y });
-  logUpload('focusUploadFrame', reason, 'activeElement', document.activeElement?.tagName);
-}
-
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
-  focusUploadFrame('mouseenter');
+  uploadFrame.focus();
 });
-
-function enforceUploadScroll() {
-  logUpload('enforce scroll');
-  const css = 'html, body { overflow: auto !important; height: auto !important; }';
-  uploadFrame
-    .insertCSS(css)
-    .catch(err => logUpload('insertCSS failed', err))
-    .then(() =>
-      uploadFrame.executeJavaScript(
-        `(() => {
-          const force = () => {
-            document.documentElement.style.overflow = 'auto';
-            document.body.style.overflow = 'auto';
-            document.documentElement.style.height = 'auto';
-            document.body.style.height = 'auto';
-          };
-          force();
-          const opts = { attributes: true, attributeFilter: ['style', 'class'] };
-          new MutationObserver(force).observe(document.documentElement, opts);
-          new MutationObserver(force).observe(document.body, opts);
-          if (!window.__uploadScrollDebug) {
-            window.__uploadScrollDebug = true;
-            window.addEventListener('scroll', () => console.log('[upload] scroll', { x: window.scrollX, y: window.scrollY }));
-            window.addEventListener(
-              'wheel',
-              e => console.log('[upload] inner wheel', { deltaX: e.deltaX, deltaY: e.deltaY }),
-              { passive: true }
-            );
-            console.log('[upload] scroll debug injected');
-          }
-          return {
-            htmlOverflow: getComputedStyle(document.documentElement).overflow,
-            bodyOverflow: getComputedStyle(document.body).overflow
-          };
-        })()`
-      )
-    )
-    .then(styles => logUpload('overflow styles', styles))
-    .catch(err => logUpload('scroll enforce failed', err));
-}
 
 function updateUploadNavButtons() {
   uploadBackBtn.disabled = !uploadFrame.canGoBack();
@@ -377,58 +323,34 @@ uploadUrlBar.addEventListener('keydown', e => {
   }
 });
 uploadFrame.addEventListener('did-start-loading', () => {
-  logUpload('did-start-loading');
   uploadIsLoading = true;
   uploadRefreshBtn.textContent = STOP_ICON;
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadLoading.classList.add('active');
-  uploadFrame.style.opacity = '0';
-  uploadFrame.style.pointerEvents = 'none';
   updateUploadNavButtons();
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
-  logUpload('did-stop-loading');
   uploadIsLoading = false;
   uploadRefreshBtn.textContent = REFRESH_ICON;
   uploadLoading.classList.remove('active');
-  uploadFrame.style.opacity = '1';
-  uploadFrame.style.pointerEvents = 'auto';
   updateUploadNavButtons();
-  enforceUploadScroll();
-  focusUploadFrame('did-stop-loading');
+  uploadFrame.focus();
 });
 uploadFrame.addEventListener('dom-ready', () => {
-  logUpload('dom-ready');
-  enforceUploadScroll();
-  focusUploadFrame('dom-ready');
+  uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
-  logUpload('did-fail-load', e.errorCode, e.errorDescription);
   uploadIsLoading = false;
   uploadRefreshBtn.textContent = REFRESH_ICON;
   uploadLoading.classList.remove('active');
-  uploadFrame.style.opacity = '1';
-  uploadFrame.style.pointerEvents = 'auto';
   if (e.errorCode !== -3) {
     uploadStatus.textContent = `Failed to load: ${e.errorDescription}`;
     uploadStatus.classList.add('error');
   }
 });
 uploadFrame.addEventListener('did-finish-load', () => {
-  logUpload('did-finish-load');
-  enforceUploadScroll();
-  focusUploadFrame('did-finish-load');
-});
-uploadFrame.addEventListener('console-message', e => {
-  logUpload('webview', e.message);
-});
-uploadFrame.addEventListener('ipc-message', e => {
-  if (e.channel === 'scroll-injected') {
-    logUpload('preload ready');
-  } else if (e.channel === 'wheel') {
-    logUpload('webview wheel', e.args[0]);
-  }
+  uploadFrame.focus();
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -977,11 +899,8 @@ function openUploadWindow(url, payload) {
   uploadRefreshBtn.textContent = STOP_ICON;
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
-  uploadFrame.style.opacity = '0';
-  uploadFrame.style.pointerEvents = 'none';
   uploadBackBtn.disabled = true;
   uploadForwardBtn.disabled = true;
-  logUpload('openUploadWindow', url, 'payload length', payload.length);
   let dropScript;
   if (payload.length) {
     dropScript = `(() => {
@@ -1015,14 +934,12 @@ function openUploadWindow(url, payload) {
   }
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
-    focusUploadFrame('initial load');
+    uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
   uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
-    logUpload('navigated', e.url);
-    enforceUploadScroll();
     updateUploadNavButtons();
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
@@ -1043,8 +960,6 @@ function closeUploadWindow() {
   uploadStatus.classList.remove('error');
   uploadIsLoading = false;
   uploadRefreshBtn.textContent = REFRESH_ICON;
-  uploadFrame.style.opacity = '1';
-  uploadFrame.style.pointerEvents = 'auto';
   if (uploadNavHandler) {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
