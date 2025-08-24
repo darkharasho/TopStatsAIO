@@ -262,6 +262,9 @@ parseCancelBtn.addEventListener('click', () => {
   window.electronAPI.cancelParse();
 });
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
+uploadWindow.addEventListener('mouseenter', () => {
+  if (!uploadIsLoading) uploadFrame.focus();
+});
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
     logUpload('stop requested');
@@ -302,6 +305,9 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
+});
+uploadFrame.addEventListener('dom-ready', () => {
+  uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
   logUpload('did-fail-load', e.errorCode, e.errorDescription, e.validatedURL);
@@ -872,18 +878,18 @@ function openUploadWindow(url, payload) {
       const target=document.body||document.documentElement;
       if(!target) return;
       console.log('dropping', files.length, 'files');
+      const dt=new DataTransfer();
       files.forEach(f=>{
-        console.log('dropping', f.name);
+        console.log('adding', f.name);
         const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
-        const dt=new DataTransfer();
         dt.items.add(file);
-        const enterEvt=new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true});
-        target.dispatchEvent(enterEvt);
-        const overEvt=new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true});
-        target.dispatchEvent(overEvt);
-        const dropEvt=new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true});
-        target.dispatchEvent(dropEvt);
       });
+      dt.effectAllowed='copy';
+      dt.dropEffect='copy';
+      const opts={dataTransfer:dt,bubbles:true,cancelable:true};
+      target.dispatchEvent(new DragEvent('dragenter',opts));
+      target.dispatchEvent(new DragEvent('dragover',opts));
+      target.dispatchEvent(new DragEvent('drop',opts));
     }
     if(document.readyState==='complete'){
       setTimeout(doDrop,500);
