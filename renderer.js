@@ -283,7 +283,7 @@ window.addEventListener('wheel', e => {
   const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height - 1));
   uploadFrame.sendInputEvent({ type: 'mouseWheel', deltaX: e.deltaX, deltaY: e.deltaY, x, y });
   e.preventDefault();
-}, { passive: false });
+}, { passive: false, capture: true });
 
 function enforceUploadScroll() {
   uploadFrame.insertCSS('html, body { overflow-y: auto !important; }').catch(() => {});
