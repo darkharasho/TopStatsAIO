@@ -868,31 +868,36 @@ function openUploadWindow(url, payload) {
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
-     const target=document.body||document.documentElement;
-     if(!target) return;
-     console.log('dropping', files.length, 'files');
-     setTimeout(()=>{
-       files.forEach(f=>{
-         console.log('dropping', f.name);
-         const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
-         const dt=new DataTransfer();
-         dt.items.add(file);
-         const enterEvt=new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true});
-         target.dispatchEvent(enterEvt);
-         const overEvt=new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true});
-         target.dispatchEvent(overEvt);
-         const dropEvt=new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true});
-         target.dispatchEvent(dropEvt);
-       });
-     },500);
-   })();`;
+    function doDrop(){
+      const target=document.body||document.documentElement;
+      if(!target) return;
+      console.log('dropping', files.length, 'files');
+      files.forEach(f=>{
+        console.log('dropping', f.name);
+        const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
+        const dt=new DataTransfer();
+        dt.items.add(file);
+        const enterEvt=new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true});
+        target.dispatchEvent(enterEvt);
+        const overEvt=new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true});
+        target.dispatchEvent(overEvt);
+        const dropEvt=new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true});
+        target.dispatchEvent(dropEvt);
+      });
+    }
+    if(document.readyState==='complete'){
+      setTimeout(doDrop,500);
+    }else{
+      window.addEventListener('load',()=>setTimeout(doDrop,500));
+    }
+  })();`;
   const handleFinish = () => {
     logUpload('injecting drop script');
     uploadFrame.executeJavaScript(dropScript).catch(()=>{});
     uploadFrame.focus();
-    uploadFrame.removeEventListener('did-finish-load', handleFinish);
+    uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
-  uploadFrame.addEventListener('did-finish-load', handleFinish);
+  uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
     logUpload('navigated to', e.url);
     uploadUrlBar.value = e.url;
