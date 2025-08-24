@@ -32,6 +32,7 @@ const parserTopStatsRadio = document.getElementById('parser-topstats');
 const parserCombinerRadio = document.getElementById('parser-combiner');
 const openParserFolderBtn = document.getElementById('open-parser-folder');
 const dpsUserTokenInput = document.getElementById('dps-user-token');
+const viewUrlInput = document.getElementById('view-url');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
@@ -43,6 +44,7 @@ const parseWindow = document.getElementById('parse-window');
 const parseOutput = document.getElementById('parse-output');
 const parseSteps = document.getElementById('parse-steps');
 const parseOpenFolderBtn = document.getElementById('parse-open-folder');
+const parseViewBtn = document.getElementById('parse-view');
 const parseCloseBtn = document.getElementById('parse-close');
 const parseCancelBtn = document.getElementById('parse-cancel');
 const versionText = document.getElementById('version-text');
@@ -57,6 +59,7 @@ let lastSelectedItem = null;
 
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
+viewUrlInput.value = localStorage.getItem('viewUrl') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
@@ -190,6 +193,9 @@ openParserFolderBtn.addEventListener('click', () => {
 dpsUserTokenInput.addEventListener('input', () => {
   localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
 });
+viewUrlInput.addEventListener('input', () => {
+  localStorage.setItem('viewUrl', viewUrlInput.value.trim());
+});
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
 });
@@ -208,6 +214,15 @@ combinerFightChartsCheckbox.addEventListener('change', () => {
 parseBtn.addEventListener('click', startParse);
 parseCloseBtn.addEventListener('click', closeParseWindow);
 parseOpenFolderBtn.addEventListener('click', () => window.electronAPI.openParsedFolder());
+parseViewBtn.addEventListener('click', () => {
+  const files = parseViewBtn.dataset.files ? JSON.parse(parseViewBtn.dataset.files) : [];
+  const url = localStorage.getItem('viewUrl') || '';
+  if (!url) {
+    alert('Viewer URL not configured in settings.');
+    return;
+  }
+  window.electronAPI.viewParsedFiles({ url, files });
+});
 parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
   window.electronAPI.cancelParse();
@@ -223,8 +238,11 @@ window.electronAPI.onParseProgress(msg => {
   parseOutput.scrollTop = parseOutput.scrollHeight;
 });
 window.electronAPI.onParseStep(data => updateStep(data));
-window.electronAPI.onParseComplete(success => {
+window.electronAPI.onParseComplete(result => {
+  const { success, files = [] } = typeof result === 'object' ? result : { success: !!result, files: [] };
   parseOpenFolderBtn.disabled = !success;
+  parseViewBtn.disabled = !success;
+  parseViewBtn.dataset.files = JSON.stringify(files);
   parseCloseBtn.disabled = false;
   parseCancelBtn.disabled = true;
   updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
@@ -728,6 +746,8 @@ function openParseWindow() {
   parseSteps.innerHTML = '';
   currentStepId = null;
   parseOpenFolderBtn.disabled = true;
+  parseViewBtn.disabled = true;
+  parseViewBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
 }

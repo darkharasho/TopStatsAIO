@@ -172,6 +172,7 @@
       .parse-output { background:var(--bg-btn); color:var(--text-color); border:1px solid transparent; border-radius:8px; padding:10px; flex:1; overflow:auto; border-image:var(--card-border); -webkit-user-select:text; user-select:text; font-family:monospace; white-space:pre-wrap; display:flex; flex-direction:column; gap:4px; }
       .parse-line.error { color:#e81123; }
       .parse-actions { display:flex; gap:10px; }
+      #parse-open-folder { margin-left:auto; }
 
       #parse-steps { display:flex; flex-direction:column; gap:10px; }
       .parse-step { }
@@ -241,16 +242,17 @@
       <button id="parse-btn" class="parse-btn">Parse</button>
     </div>
   </div>
-  <div id="parse-window">
-    <h2 class="parse-header">Parsing Logs</h2>
-    <div id="parse-steps"></div>
-    <div id="parse-output" class="parse-output"></div>
-    <div class="parse-actions">
-      <button id="parse-cancel">Cancel</button>
-      <button id="parse-open-folder" disabled>Open Folder</button>
-      <button id="parse-close" disabled>Back</button>
+    <div id="parse-window">
+      <h2 class="parse-header">Parsing Logs</h2>
+      <div id="parse-steps"></div>
+      <div id="parse-output" class="parse-output"></div>
+      <div class="parse-actions">
+        <button id="parse-cancel">Cancel</button>
+        <button id="parse-open-folder" disabled>Open Folder</button>
+        <button id="parse-view" disabled>View</button>
+        <button id="parse-close" disabled>Back</button>
+      </div>
     </div>
-  </div>
   <div id="settings-window">
     <button id="close-settings" aria-label="Close">&#x2715;</button>
     <h2 class="settings-header">Settings</h2>
@@ -276,6 +278,10 @@
           <div class="config-row">
             <label for="dps-user-token">DPSReportUserToken</label>
             <input type="text" id="dps-user-token" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="view-url">Viewer URL</label>
+            <input type="text" id="view-url" class="config-input" />
           </div>
         </div>
         <div class="card" id="combiner-config-card">

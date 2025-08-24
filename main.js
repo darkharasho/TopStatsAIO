@@ -398,6 +398,39 @@ ipcMain.handle('open-parsed-folder', async () => {
   }
 });
 
+ipcMain.handle('view-parsed-files', async (event, { url, files }) => {
+  try {
+    if (!url) return;
+    const payload = [];
+    for (const f of files || []) {
+      try {
+        const data = await fs.promises.readFile(f);
+        payload.push({ name: path.basename(f), data: data.toString('base64') });
+      } catch (e) {
+        logError('Failed to read file for view', e);
+      }
+    }
+    await mainWindow.loadURL(url);
+    const script = `(() => {
+      const files = ${JSON.stringify(payload)};
+      function b64ToUint8(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return bytes;}
+      files.forEach(f => {
+        const bytes=b64ToUint8(f.data);
+        const file=new File([bytes], f.name, {type:'application/json'});
+        const dt=new DataTransfer();
+        dt.items.add(file);
+        const enterEvt=new DragEvent('dragenter',{dataTransfer:dt});
+        document.body.dispatchEvent(enterEvt);
+        const dropEvt=new DragEvent('drop',{dataTransfer:dt});
+        document.body.dispatchEvent(dropEvt);
+      });
+    })();`;
+    await mainWindow.webContents.executeJavaScript(script);
+  } catch (e) {
+    logError('Failed to load viewer', e);
+  }
+});
+
 ipcMain.handle('open-parser-folder', async (event, which) => {
   ensureDeps(depsDir);
   const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
@@ -452,6 +485,7 @@ ipcMain.handle('start-parse', async (event, data) => {
     wc.send('parse-step', { id, title, progress, error, current, total });
   let cancelled = false;
   let child = null;
+  const outputFiles = [];
   currentParseCancel = () => {
     cancelled = true;
     if (child) child.kill();
@@ -472,7 +506,7 @@ ipcMain.handle('start-parse', async (event, data) => {
       }
       if (cancelled) {
         send('Parsing cancelled.');
-        wc.send('parse-complete', false);
+        wc.send('parse-complete', { success: false, files: [] });
         return;
       }
     }
@@ -493,7 +527,7 @@ ipcMain.handle('start-parse', async (event, data) => {
         cliExe = alt;
       } else {
         send('EI CLI not found.');
-        wc.send('parse-complete', false);
+        wc.send('parse-complete', { success: false, files: [] });
         return;
       }
     }
@@ -513,7 +547,7 @@ ipcMain.handle('start-parse', async (event, data) => {
         }
         if (cancelled) {
           send('Parsing cancelled.');
-          wc.send('parse-complete', false);
+          wc.send('parse-complete', { success: false, files: [] });
           return;
         }
       }
@@ -575,31 +609,33 @@ ipcMain.handle('start-parse', async (event, data) => {
 
     if (cancelled) {
       send('Parsing cancelled.');
-      wc.send('parse-complete', false);
+      wc.send('parse-complete', { success: false, files: [] });
       return;
     }
 
     const outDir = opts.parser === 'combiner' ? processedDir : tempDir;
     if (!fs.existsSync(outDir)) {
       send(`Output directory missing: ${outDir}`);
-      wc.send('parse-complete', false);
+      wc.send('parse-complete', { success: false, files: [] });
       return;
     }
     const outputs = await fs.promises.readdir(outDir);
     for (const file of outputs) {
       if (file.toLowerCase().endsWith('.json') || file.toLowerCase().endsWith('.tid')) {
-        await fs.promises.rename(path.join(outDir, file), path.join(parsedDir, file));
+        const dest = path.join(parsedDir, file);
+        await fs.promises.rename(path.join(outDir, file), dest);
+        outputFiles.push(dest);
         send(`Output: ${file}`);
       }
     }
-    wc.send('parse-complete', true);
+    wc.send('parse-complete', { success: true, files: outputFiles });
   } catch (e) {
     if (cancelled) {
       send('Parsing cancelled.');
     } else {
       send(`Error: ${e.message}`);
     }
-    wc.send('parse-complete', false);
+    wc.send('parse-complete', { success: false, files: [] });
   } finally {
     currentParseCancel = null;
     try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
