@@ -875,9 +875,11 @@ function openUploadWindow(url, payload) {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
     function doDrop(){
-      const target=document.body||document.documentElement;
+      const x = window.innerWidth/2;
+      const y = window.innerHeight/2;
+      const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
       if(!target) return;
-      console.log('dropping', files.length, 'files');
+      console.log('dropping', files.length, 'files onto', target.tagName);
       const dt=new DataTransfer();
       files.forEach(f=>{
         console.log('adding', f.name);
@@ -886,15 +888,17 @@ function openUploadWindow(url, payload) {
       });
       dt.effectAllowed='copy';
       dt.dropEffect='copy';
-      const opts={dataTransfer:dt,bubbles:true,cancelable:true};
-      target.dispatchEvent(new DragEvent('dragenter',opts));
-      target.dispatchEvent(new DragEvent('dragover',opts));
-      target.dispatchEvent(new DragEvent('drop',opts));
+      ['dragenter','dragover','drop'].forEach(type=>{
+        const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
+        if(type!=='drop') ev.preventDefault();
+        target.dispatchEvent(ev);
+      });
     }
+    const fire=()=>setTimeout(doDrop,1000);
     if(document.readyState==='complete'){
-      setTimeout(doDrop,500);
+      fire();
     }else{
-      window.addEventListener('load',()=>setTimeout(doDrop,500));
+      window.addEventListener('load',fire);
     }
   })();`;
   const handleFinish = () => {
