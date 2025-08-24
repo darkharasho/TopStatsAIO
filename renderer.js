@@ -55,6 +55,7 @@ const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
+const logUpload = (...args) => console.log('[upload]', ...args);
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
 let currentFolder = '';
@@ -248,6 +249,7 @@ parseUploadBtn.addEventListener('click', async () => {
     alert('Upload URL is invalid.');
     return;
   }
+  logUpload('opening viewer for', url, 'with', files.length, 'files');
   localStorage.setItem('uploadUrl', url);
   const payload = await window.electronAPI.uploadParsedFiles(files);
   openUploadWindow(url, payload);
@@ -259,8 +261,10 @@ parseCancelBtn.addEventListener('click', () => {
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
+    logUpload('stop requested');
     uploadFrame.stop();
   } else {
+    logUpload('reload requested');
     uploadFrame.reload();
   }
 });
@@ -268,6 +272,7 @@ uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     let url = normalizeUrl(uploadUrlBar.value);
     if (url) {
+      logUpload('navigating to', url);
       uploadLoading.classList.add('active');
       uploadFrame.classList.add('hidden');
       uploadFrame.loadURL(url);
@@ -280,6 +285,7 @@ uploadUrlBar.addEventListener('keydown', e => {
   }
 });
 uploadFrame.addEventListener('did-start-loading', () => {
+  logUpload('did-start-loading', uploadFrame.getURL());
   uploadIsLoading = true;
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadStatus.textContent = '';
@@ -288,12 +294,14 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadFrame.classList.add('hidden');
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
+  logUpload('did-stop-loading', uploadFrame.getURL());
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.classList.remove('hidden');
 });
 uploadFrame.addEventListener('did-fail-load', e => {
+  logUpload('did-fail-load', e.errorCode, e.errorDescription, e.validatedURL);
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
@@ -303,7 +311,10 @@ uploadFrame.addEventListener('did-fail-load', e => {
     uploadStatus.classList.add('error');
   }
 });
-uploadFrame.addEventListener('did-finish-load', () => uploadFrame.focus());
+uploadFrame.addEventListener('did-finish-load', () => {
+  logUpload('did-finish-load', uploadFrame.getURL());
+  uploadFrame.focus();
+});
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
   line.textContent = msg;
@@ -847,6 +858,7 @@ function openUploadWindow(url, payload) {
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.classList.add('hidden');
+  logUpload('opening upload window for', url, 'with', payload.length, 'files');
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
@@ -867,18 +879,21 @@ function openUploadWindow(url, payload) {
      },500);
    })();`;
   const handleFinish = () => {
+    logUpload('injecting drop script');
     uploadFrame.executeJavaScript(dropScript).catch(()=>{});
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-finish-load', handleFinish);
   };
   uploadFrame.addEventListener('did-finish-load', handleFinish);
   uploadNavHandler = e => {
+    logUpload('navigated to', e.url);
     uploadUrlBar.value = e.url;
     localStorage.setItem('uploadUrl', e.url);
     uploadUrlInput.value = e.url;
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
+  logUpload('initial load', url);
   uploadFrame.loadURL(url);
 }
 
@@ -890,6 +905,7 @@ function closeUploadWindow() {
   uploadStatus.classList.remove('error');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
+  logUpload('closing upload window');
   if (uploadNavHandler) {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
