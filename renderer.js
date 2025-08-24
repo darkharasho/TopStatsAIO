@@ -53,6 +53,7 @@ const uploadWindow = document.getElementById('upload-window');
 const uploadUrlBar = document.getElementById('upload-url-display');
 const uploadCloseBtn = document.getElementById('upload-close');
 const uploadRefreshBtn = document.getElementById('upload-refresh');
+const uploadCopyBtn = document.getElementById('upload-copy');
 const uploadHomeBtn = document.getElementById('upload-home');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
@@ -322,6 +323,9 @@ uploadHomeBtn.addEventListener('click', () => {
     uploadFrame.src = url;
     uploadUrlBar.value = url;
   }
+});
+uploadCopyBtn.addEventListener('click', () => {
+  window.electronAPI.copyText(uploadUrlBar.value);
 });
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {

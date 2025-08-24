@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -434,6 +434,10 @@ ipcMain.handle('open-parser-folder', async (event, which) => {
 
 ipcMain.handle('open-external', async (event, url) => {
   await shell.openExternal(url);
+});
+
+ipcMain.handle('copy-text', async (event, text) => {
+  clipboard.writeText(text || '');
 });
 
 ipcMain.on('cancel-parse', () => {
