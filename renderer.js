@@ -376,14 +376,16 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadLoading.classList.add('active');
-  uploadFrame.style.visibility = 'hidden';
+  uploadFrame.style.opacity = '0';
+  uploadFrame.style.pointerEvents = 'none';
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
   logUpload('did-stop-loading');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
-  uploadFrame.style.visibility = 'visible';
+  uploadFrame.style.opacity = '1';
+  uploadFrame.style.pointerEvents = 'auto';
   enforceUploadScroll();
   focusUploadFrame('did-stop-loading');
 });
@@ -397,7 +399,8 @@ uploadFrame.addEventListener('did-fail-load', e => {
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
-  uploadFrame.style.visibility = 'visible';
+  uploadFrame.style.opacity = '1';
+  uploadFrame.style.pointerEvents = 'auto';
   if (e.errorCode !== -3) {
     uploadStatus.textContent = `Failed to load: ${e.errorDescription}`;
     uploadStatus.classList.add('error');
@@ -958,7 +961,8 @@ function openUploadWindow(url, payload) {
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
-  uploadFrame.style.visibility = 'hidden';
+  uploadFrame.style.opacity = '0';
+  uploadFrame.style.pointerEvents = 'none';
   logUpload('openUploadWindow', url, 'payload length', payload.length);
   let dropScript;
   if (payload.length) {
@@ -1020,7 +1024,8 @@ function closeUploadWindow() {
   uploadStatus.classList.remove('error');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
-  uploadFrame.style.visibility = 'visible';
+  uploadFrame.style.opacity = '1';
+  uploadFrame.style.pointerEvents = 'auto';
   if (uploadNavHandler) {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
