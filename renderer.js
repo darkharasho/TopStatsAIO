@@ -294,28 +294,6 @@ uploadWindow.addEventListener('mouseenter', () => {
   focusUploadFrame('mouseenter');
 });
 
-// Capture wheel events on the upload window itself so they're logged and
-// forwarded even if the main window doesn't receive them.
-uploadWindow.addEventListener(
-  'wheel',
-  e => {
-    if (!uploadWindow.classList.contains('active')) return;
-    const rect = uploadFrame.getBoundingClientRect();
-    const inside =
-      e.clientX >= rect.left &&
-      e.clientX <= rect.right &&
-      e.clientY >= rect.top &&
-      e.clientY <= rect.bottom;
-    logUpload('wheel', { deltaX: e.deltaX, deltaY: e.deltaY, inside, target: e.target.tagName });
-    if (!inside) return;
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width - 1));
-    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height - 1));
-    uploadFrame.sendInputEvent({ type: 'mouseWheel', deltaX: e.deltaX, deltaY: e.deltaY, x, y });
-    e.preventDefault();
-  },
-  { passive: false, capture: true }
-);
-
 function enforceUploadScroll() {
   logUpload('enforce scroll');
   const css = 'html, body { overflow: auto !important; height: auto !important; }';
@@ -444,6 +422,13 @@ uploadFrame.addEventListener('did-finish-load', () => {
 });
 uploadFrame.addEventListener('console-message', e => {
   logUpload('webview', e.message);
+});
+uploadFrame.addEventListener('ipc-message', e => {
+  if (e.channel === 'scroll-injected') {
+    logUpload('preload ready');
+  } else if (e.channel === 'wheel') {
+    logUpload('webview wheel', e.args[0]);
+  }
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
