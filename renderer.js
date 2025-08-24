@@ -64,6 +64,19 @@ let currentStepId = null;
 let lastSelectedItem = null;
 let uploadNavHandler = null;
 
+function normalizeUrl(url) {
+  const trimmed = (url || '').trim();
+  try {
+    return new URL(trimmed).toString();
+  } catch {
+    try {
+      return new URL(`https://${trimmed}`).toString();
+    } catch {
+      return null;
+    }
+  }
+}
+
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
@@ -223,17 +236,17 @@ parseCloseBtn.addEventListener('click', closeParseWindow);
 parseOpenFolderBtn.addEventListener('click', () => window.electronAPI.openParsedFolder());
 parseUploadBtn.addEventListener('click', async () => {
   const files = parseUploadBtn.dataset.files ? JSON.parse(parseUploadBtn.dataset.files) : [];
-  const url = localStorage.getItem('uploadUrl') || '';
+  let url = localStorage.getItem('uploadUrl') || '';
   if (!url) {
     alert('Upload URL not configured in settings.');
     return;
   }
-  try {
-    new URL(url);
-  } catch {
+  url = normalizeUrl(url);
+  if (!url) {
     alert('Upload URL is invalid.');
     return;
   }
+  localStorage.setItem('uploadUrl', url);
   const payload = await window.electronAPI.uploadParsedFiles(files);
   openUploadWindow(url, payload);
 });
@@ -245,12 +258,13 @@ uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadRefreshBtn.addEventListener('click', () => uploadFrame.reload());
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    const url = uploadUrlBar.value.trim();
-    try {
-      new URL(url);
+    let url = normalizeUrl(uploadUrlBar.value);
+    if (url) {
       uploadFrame.loadURL(url);
       localStorage.setItem('uploadUrl', url);
-    } catch {
+      uploadUrlBar.value = url;
+      uploadUrlInput.value = url;
+    } else {
       alert('URL is invalid.');
     }
   }
@@ -795,6 +809,7 @@ function openUploadWindow(url, payload) {
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
+  uploadUrlInput.value = url;
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
