@@ -54,7 +54,14 @@
       .folder-label { background:var(--label-bg); padding:6px 12px; border-radius:4px; border:1px solid var(--label-border); color:var(--label-color); box-sizing:border-box; font:inherit; }
       #selected-folder, #selected-folder-input { -webkit-user-select:text; user-select:text; cursor:text; }
 
-      .action-icon { cursor:pointer; font-size:20px; }
+      .action-icon {
+        cursor:pointer;
+        font-size:20px;
+        background:none;
+        border:none;
+        padding:0;
+        color:inherit;
+      }
       .action-icon:hover { color:var(--btn-border); }
       .card-actions { display:flex; align-items:center; gap:8px; }
 
@@ -267,10 +274,10 @@
     </div>
     <div id="upload-window">
       <div id="upload-actions">
-        <span id="upload-home" class="action-icon" aria-label="Home">&#x2302;</span>
-        <span id="upload-refresh" class="action-icon" aria-label="Refresh">&#x21bb;</span>
-        <input id="upload-url-display" class="folder-label" type="text" />
-        <span id="upload-copy" class="action-icon" aria-label="Copy URL">&#x2398;</span>
+        <button id="upload-home" class="action-icon" aria-label="Home" title="Home" type="button">&#x2302;</button>
+        <button id="upload-refresh" class="action-icon" aria-label="Refresh" title="Refresh" type="button">&#x21bb;</button>
+        <input id="upload-url-display" class="folder-label" type="url" autocomplete="off" />
+        <button id="upload-copy" class="action-icon" aria-label="Copy URL" title="Copy URL" type="button">&#x2398;</button>
         <button id="upload-close">Close</button>
       </div>
       <div id="upload-loading"></div>

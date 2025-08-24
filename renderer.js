@@ -59,6 +59,8 @@ const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
+const REFRESH_ICON = '↻';
+const STOP_ICON = '✕';
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -372,7 +374,7 @@ uploadUrlBar.addEventListener('keydown', e => {
 uploadFrame.addEventListener('did-start-loading', () => {
   logUpload('did-start-loading');
   uploadIsLoading = true;
-  uploadRefreshBtn.innerHTML = '&#x2715;';
+  uploadRefreshBtn.textContent = STOP_ICON;
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadLoading.classList.add('active');
@@ -382,7 +384,7 @@ uploadFrame.addEventListener('did-start-loading', () => {
 uploadFrame.addEventListener('did-stop-loading', () => {
   logUpload('did-stop-loading');
   uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
+  uploadRefreshBtn.textContent = REFRESH_ICON;
   uploadLoading.classList.remove('active');
   uploadFrame.style.opacity = '1';
   uploadFrame.style.pointerEvents = 'auto';
@@ -397,7 +399,7 @@ uploadFrame.addEventListener('dom-ready', () => {
 uploadFrame.addEventListener('did-fail-load', e => {
   logUpload('did-fail-load', e.errorCode, e.errorDescription);
   uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
+  uploadRefreshBtn.textContent = REFRESH_ICON;
   uploadLoading.classList.remove('active');
   uploadFrame.style.opacity = '1';
   uploadFrame.style.pointerEvents = 'auto';
@@ -958,7 +960,7 @@ function openUploadWindow(url, payload) {
   uploadUrlInput.value = url;
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
-  uploadRefreshBtn.innerHTML = '&#x2715;';
+  uploadRefreshBtn.textContent = STOP_ICON;
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.opacity = '0';
@@ -1023,7 +1025,7 @@ function closeUploadWindow() {
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
+  uploadRefreshBtn.textContent = REFRESH_ICON;
   uploadFrame.style.opacity = '1';
   uploadFrame.style.pointerEvents = 'auto';
   if (uploadNavHandler) {
