@@ -277,8 +277,8 @@ uploadUrlBar.addEventListener('keydown', e => {
     if (url) {
       logUpload('navigating to', url);
       uploadLoading.classList.add('active');
-      uploadFrame.classList.add('hidden');
-      uploadFrame.loadURL(url);
+      uploadFrame.style.visibility = 'hidden';
+      uploadFrame.src = url;
       localStorage.setItem('uploadUrl', url);
       uploadUrlBar.value = url;
       uploadUrlInput.value = url;
@@ -294,21 +294,21 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadLoading.classList.add('active');
-  uploadFrame.classList.add('hidden');
+  uploadFrame.style.visibility = 'hidden';
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
   logUpload('did-stop-loading', uploadFrame.getURL());
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
-  uploadFrame.classList.remove('hidden');
+  uploadFrame.style.visibility = 'visible';
 });
 uploadFrame.addEventListener('did-fail-load', e => {
   logUpload('did-fail-load', e.errorCode, e.errorDescription, e.validatedURL);
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
-  uploadFrame.classList.remove('hidden');
+  uploadFrame.style.visibility = 'visible';
   if (e.errorCode !== -3) {
     uploadStatus.textContent = `Failed to load: ${e.errorDescription}`;
     uploadStatus.classList.add('error');
@@ -863,7 +863,7 @@ function openUploadWindow(url, payload) {
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
-  uploadFrame.classList.add('hidden');
+  uploadFrame.style.visibility = 'hidden';
   logUpload('opening upload window for', url, 'with', payload.length, 'files');
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
@@ -907,7 +907,7 @@ function openUploadWindow(url, payload) {
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
   logUpload('initial load', url);
-  uploadFrame.loadURL(url);
+  uploadFrame.src = url;
 }
 
 function closeUploadWindow() {
@@ -918,6 +918,7 @@ function closeUploadWindow() {
   uploadStatus.classList.remove('error');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
+  uploadFrame.style.visibility = 'visible';
   logUpload('closing upload window');
   if (uploadNavHandler) {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
