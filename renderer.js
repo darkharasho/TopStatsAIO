@@ -292,19 +292,6 @@ uploadHomeBtn.addEventListener('click', () => {
 uploadCopyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(uploadUrlBar.value).catch(() => {});
 });
-uploadUrlBar.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    let url = normalizeUrl(uploadUrlBar.value);
-    if (url) {
-      uploadLoading.classList.add('active');
-      uploadFrame.style.visibility = 'hidden';
-      uploadFrame.src = url;
-      uploadUrlBar.value = url;
-    } else {
-      alert('URL is invalid.');
-    }
-  }
-});
 uploadFrame.addEventListener('did-start-loading', () => {
   uploadIsLoading = true;
   uploadRefreshBtn.innerHTML = '&#x2715;';
