@@ -271,9 +271,8 @@ parseCancelBtn.addEventListener('click', () => {
   window.electronAPI.cancelParse();
 });
 
-const debugUpload = localStorage.getItem('debugUploadScroll') === 'true';
 function logUpload(...args) {
-  if (debugUpload) console.log('[upload]', ...args);
+  console.log('[upload]', ...args);
 }
 
 function focusUploadFrame(reason) {
@@ -352,6 +351,8 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
+  enforceUploadScroll();
+  focusUploadFrame('did-stop-loading');
 });
 uploadFrame.addEventListener('dom-ready', () => {
   logUpload('dom-ready');
