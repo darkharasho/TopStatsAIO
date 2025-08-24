@@ -275,6 +275,16 @@ uploadWindow.addEventListener('mouseenter', () => {
   uploadFrame.focus();
 });
 
+window.addEventListener('wheel', e => {
+  if (!uploadWindow.classList.contains('active')) return;
+  const rect = uploadFrame.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+  const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width - 1));
+  const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height - 1));
+  uploadFrame.sendInputEvent({ type: 'mouseWheel', deltaX: e.deltaX, deltaY: e.deltaY, x, y });
+  e.preventDefault();
+}, { passive: false });
+
 function enforceUploadScroll() {
   uploadFrame.insertCSS('html, body { overflow-y: auto !important; }').catch(() => {});
 }
