@@ -274,22 +274,11 @@ uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
   uploadFrame.focus();
 });
-window.addEventListener('wheel', e => {
-  if (!uploadWindow.classList.contains('active')) return;
-  const rect = uploadFrame.getBoundingClientRect();
-  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
-  const x = Math.min(Math.max(0, e.clientX - rect.left), rect.width - 1);
-  const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height - 1);
-  uploadFrame.focus();
-  uploadFrame.sendInputEvent({
-    type: 'mouseWheel',
-    x,
-    y,
-    deltaX: e.deltaX,
-    deltaY: e.deltaY
-  });
-  e.preventDefault();
-}, { passive: false, capture: true });
+
+function enforceUploadScroll() {
+  uploadFrame.insertCSS('html, body { overflow-y: auto !important; }').catch(() => {});
+}
+
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
     uploadFrame.stop();
@@ -332,6 +321,7 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadFrame.style.visibility = 'visible';
 });
 uploadFrame.addEventListener('dom-ready', () => {
+  enforceUploadScroll();
   uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
@@ -345,6 +335,7 @@ uploadFrame.addEventListener('did-fail-load', e => {
   }
 });
 uploadFrame.addEventListener('did-finish-load', () => {
+  enforceUploadScroll();
   uploadFrame.focus();
 });
 window.electronAPI.onParseProgress(msg => {
@@ -934,6 +925,7 @@ function openUploadWindow(url, payload) {
   uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
+    enforceUploadScroll();
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
