@@ -54,6 +54,7 @@ const uploadCloseBtn = document.getElementById('upload-close');
 const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
+const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
 let currentFolder = '';
@@ -63,6 +64,7 @@ let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
 let uploadNavHandler = null;
+let uploadIsLoading = false;
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -255,7 +257,13 @@ parseCancelBtn.addEventListener('click', () => {
   window.electronAPI.cancelParse();
 });
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
-uploadRefreshBtn.addEventListener('click', () => uploadFrame.reload());
+uploadRefreshBtn.addEventListener('click', () => {
+  if (uploadIsLoading) {
+    uploadFrame.stop();
+  } else {
+    uploadFrame.reload();
+  }
+});
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     let url = normalizeUrl(uploadUrlBar.value);
@@ -272,16 +280,28 @@ uploadUrlBar.addEventListener('keydown', e => {
   }
 });
 uploadFrame.addEventListener('did-start-loading', () => {
+  uploadIsLoading = true;
+  uploadRefreshBtn.innerHTML = '&#x2715;';
+  uploadStatus.textContent = '';
+  uploadStatus.classList.remove('error');
   uploadLoading.classList.add('active');
   uploadFrame.classList.add('hidden');
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
+  uploadIsLoading = false;
+  uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.classList.remove('hidden');
 });
-uploadFrame.addEventListener('did-fail-load', () => {
+uploadFrame.addEventListener('did-fail-load', e => {
+  uploadIsLoading = false;
+  uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.classList.remove('hidden');
+  if (e.errorCode !== -3) {
+    uploadStatus.textContent = `Failed to load: ${e.errorDescription}`;
+    uploadStatus.classList.add('error');
+  }
 });
 uploadFrame.addEventListener('did-finish-load', () => uploadFrame.focus());
 window.electronAPI.onParseProgress(msg => {
@@ -821,6 +841,10 @@ function openUploadWindow(url, payload) {
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
   uploadUrlInput.value = url;
+  uploadStatus.textContent = '';
+  uploadStatus.classList.remove('error');
+  uploadRefreshBtn.innerHTML = '&#x2715;';
+  uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.classList.add('hidden');
   const dropScript = `(() => {
@@ -862,6 +886,10 @@ function closeUploadWindow() {
   uploadWindow.classList.remove('active');
   parseWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Parse';
+  uploadStatus.textContent = '';
+  uploadStatus.classList.remove('error');
+  uploadIsLoading = false;
+  uploadRefreshBtn.innerHTML = '&#x21bb;';
   if (uploadNavHandler) {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);

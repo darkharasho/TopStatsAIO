@@ -178,6 +178,8 @@
       #upload-frame { flex:1; border:none; width:100%; }
       #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
       #upload-loading.active { display:block; }
+      #upload-status { text-align:center; padding:4px 8px; font-size:12px; color:var(--label-color); }
+      #upload-status.error { color:#e81123; }
       @keyframes spin { to { transform:rotate(360deg); } }
       .parse-output { background:var(--bg-btn); color:var(--text-color); border:1px solid transparent; border-radius:8px; padding:10px; flex:1; overflow:auto; border-image:var(--card-border); -webkit-user-select:text; user-select:text; font-family:monospace; white-space:pre-wrap; display:flex; flex-direction:column; gap:4px; }
       .parse-line.error { color:#e81123; }
@@ -263,15 +265,16 @@
         <button id="parse-upload" disabled>Upload</button>
       </div>
     </div>
-  <div id="upload-window">
-    <div id="upload-actions">
-      <span id="upload-refresh" class="action-icon">&#x21bb;</span>
-      <input id="upload-url-display" class="folder-label" />
-      <button id="upload-close">Close</button>
+    <div id="upload-window">
+      <div id="upload-actions">
+        <span id="upload-refresh" class="action-icon">&#x21bb;</span>
+        <input id="upload-url-display" class="folder-label" />
+        <button id="upload-close">Close</button>
+      </div>
+      <div id="upload-loading"></div>
+      <webview id="upload-frame"></webview>
+      <div id="upload-status"></div>
     </div>
-    <div id="upload-loading"></div>
-    <webview id="upload-frame"></webview>
-  </div>
   <div id="settings-window">
     <button id="close-settings" aria-label="Close">&#x2715;</button>
     <h2 class="settings-header">Settings</h2>
