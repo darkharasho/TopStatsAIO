@@ -274,8 +274,8 @@ uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
   if (!uploadIsLoading) uploadFrame.focus();
 });
-uploadWindow.addEventListener('wheel', e => {
-  if (uploadIsLoading) return;
+window.addEventListener('wheel', e => {
+  if (!uploadWindow.classList.contains('active') || uploadIsLoading) return;
   const rect = uploadFrame.getBoundingClientRect();
   uploadFrame.focus();
   uploadFrame.sendInputEvent({
@@ -286,7 +286,7 @@ uploadWindow.addEventListener('wheel', e => {
     deltaY: e.deltaY
   });
   e.preventDefault();
-}, { passive: false });
+}, { passive: false, capture: true });
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
     uploadFrame.stop();
