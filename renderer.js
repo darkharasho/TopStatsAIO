@@ -49,9 +49,11 @@ const parseCloseBtn = document.getElementById('parse-close');
 const parseCancelBtn = document.getElementById('parse-cancel');
 const versionText = document.getElementById('version-text');
 const uploadWindow = document.getElementById('upload-window');
-const uploadUrlDisplay = document.getElementById('upload-url-display');
+const uploadUrlBar = document.getElementById('upload-url-display');
 const uploadCloseBtn = document.getElementById('upload-close');
+const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
+const uploadLoading = document.getElementById('upload-loading');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
 let currentFolder = '';
@@ -240,6 +242,23 @@ parseCancelBtn.addEventListener('click', () => {
   window.electronAPI.cancelParse();
 });
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
+uploadRefreshBtn.addEventListener('click', () => uploadFrame.reload());
+uploadUrlBar.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const url = uploadUrlBar.value.trim();
+    try {
+      new URL(url);
+      uploadFrame.loadURL(url);
+      localStorage.setItem('uploadUrl', url);
+    } catch {
+      alert('URL is invalid.');
+    }
+  }
+});
+uploadFrame.addEventListener('did-start-loading', () => uploadLoading.classList.add('active'));
+uploadFrame.addEventListener('did-stop-loading', () => uploadLoading.classList.remove('active'));
+uploadFrame.addEventListener('did-fail-load', () => uploadLoading.classList.remove('active'));
+uploadFrame.addEventListener('did-finish-load', () => uploadFrame.focus());
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
   line.textContent = msg;
@@ -775,34 +794,40 @@ function openUploadWindow(url, payload) {
   parseWindow.classList.remove('active');
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
-  uploadUrlDisplay.textContent = url;
+  uploadUrlBar.value = url;
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
-    const target=document.body;
-    if(!target) return;
-    files.forEach(f=>{
-      const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
-      const dt=new DataTransfer();
-      dt.items.add(file);
-      const enterEvt=new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true});
-      target.dispatchEvent(enterEvt);
-      const overEvt=new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true});
-      target.dispatchEvent(overEvt);
-      const dropEvt=new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true});
-      target.dispatchEvent(dropEvt);
-    });
-  })();`;
-  const inject = () => uploadFrame.executeJavaScript(dropScript).catch(()=>{});
-  uploadFrame.addEventListener('dom-ready', inject, { once: true });
+     const target=document.body||document.documentElement;
+     if(!target) return;
+     setTimeout(()=>{
+       files.forEach(f=>{
+         const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
+         const dt=new DataTransfer();
+         dt.items.add(file);
+         const enterEvt=new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true});
+         target.dispatchEvent(enterEvt);
+         const overEvt=new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true});
+         target.dispatchEvent(overEvt);
+         const dropEvt=new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true});
+         target.dispatchEvent(dropEvt);
+       });
+     },500);
+   })();`;
+  const handleFinish = () => {
+    uploadFrame.executeJavaScript(dropScript).catch(()=>{});
+    uploadFrame.focus();
+    uploadFrame.removeEventListener('did-finish-load', handleFinish);
+  };
+  uploadFrame.addEventListener('did-finish-load', handleFinish);
   uploadNavHandler = e => {
-    uploadUrlDisplay.textContent = e.url;
+    uploadUrlBar.value = e.url;
     localStorage.setItem('uploadUrl', e.url);
     uploadUrlInput.value = e.url;
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
-  uploadFrame.src = url;
+  uploadFrame.loadURL(url);
 }
 
 function closeUploadWindow() {
