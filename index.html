@@ -171,7 +171,7 @@
       #parse-window.active { opacity:1; pointer-events:auto; }
       #upload-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
       #upload-window.active { opacity:1; pointer-events:auto; }
-      #upload-actions { display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid var(--label-border); }
+      #upload-actions { display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid transparent; border-image:var(--card-border); }
       #upload-refresh { font-size:20px; cursor:pointer; }
       #upload-url-display { flex:1; }
       #upload-close { margin-left:auto; }
@@ -269,7 +269,7 @@
       <div id="upload-actions">
         <span id="upload-home" class="action-icon" aria-label="Home">&#x2302;</span>
         <span id="upload-refresh" class="action-icon" aria-label="Refresh">&#x21bb;</span>
-        <input id="upload-url-display" class="folder-label" type="text" readonly />
+        <input id="upload-url-display" class="folder-label" type="text" />
         <span id="upload-copy" class="action-icon" aria-label="Copy URL">&#x2398;</span>
         <button id="upload-close">Close</button>
       </div>

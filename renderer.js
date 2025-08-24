@@ -292,6 +292,15 @@ uploadHomeBtn.addEventListener('click', () => {
 uploadCopyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(uploadUrlBar.value).catch(() => {});
 });
+uploadUrlBar.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const url = normalizeUrl(uploadUrlBar.value);
+    if (url) {
+      uploadFrame.src = url;
+      uploadUrlBar.value = url;
+    }
+  }
+});
 uploadFrame.addEventListener('did-start-loading', () => {
   uploadIsLoading = true;
   uploadRefreshBtn.innerHTML = '&#x2715;';
