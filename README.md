@@ -50,8 +50,8 @@ The primary directive of this application is to increase the user friendliness o
 1. Use the file tree on the left to expand folders and select .zetvc
 2. As you select files, they should appear in the `Selected Files` window
 3. After selection, hit the `Parse` button at the bottom right of the window
-4. Let the process run; once complete you will see buttons to `Open Folder` or `View`
-5. Clicking `View` launches the built‑in browser at your configured Upload URL and automatically drops the parsed files for you
+4. Let the process run; once complete you will see buttons to `Open Folder` or `Upload`
+5. Clicking `Upload` launches the built‑in browser at your configured Upload URL and automatically drops the parsed files for you
 6. Alternatively, use `Open Folder` to manually drag & drop the `.json` file into your TiddlyWiki of choice
 ### Options
 - You can set a description field at the bottom of the window for each log when using the `GW2_EI_log_combiner`; it is hidden when using the legacy `arcdps_top_stats_parser`
@@ -64,8 +64,6 @@ This generates the `json`/`tid` files necessary to use with TiddlyWiki. To see t
 - Navigate to your `Top Stats Parser` Folder
 - Open the file `/Example_Output/Top_Stats_Index.html` in your browser of choice.
 - Drag and Drop the file `Drag_and_Drop_Log_Summary_for_2024yourdatatime.json` onto the opened `Top_Stats_Index.html` in your browser and click import
-- Open the 1. imported file link to view the summary
-
 
 ## Development
 
