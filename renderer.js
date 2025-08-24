@@ -286,9 +286,7 @@ uploadUrlBar.addEventListener('keydown', e => {
       uploadLoading.classList.add('active');
       uploadFrame.style.visibility = 'hidden';
       uploadFrame.src = url;
-      localStorage.setItem('uploadUrl', url);
       uploadUrlBar.value = url;
-      uploadUrlInput.value = url;
     } else {
       alert('URL is invalid.');
     }
@@ -911,8 +909,6 @@ function openUploadWindow(url, payload) {
   uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
-    localStorage.setItem('uploadUrl', e.url);
-    uploadUrlInput.value = e.url;
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
