@@ -274,6 +274,19 @@ uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
   if (!uploadIsLoading) uploadFrame.focus();
 });
+uploadWindow.addEventListener('wheel', e => {
+  if (uploadIsLoading) return;
+  const rect = uploadFrame.getBoundingClientRect();
+  uploadFrame.focus();
+  uploadFrame.sendInputEvent({
+    type: 'mouseWheel',
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top,
+    deltaX: e.deltaX,
+    deltaY: e.deltaY
+  });
+  e.preventDefault();
+}, { passive: false });
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
     uploadFrame.stop();
