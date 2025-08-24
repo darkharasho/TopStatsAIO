@@ -32,7 +32,7 @@ const parserTopStatsRadio = document.getElementById('parser-topstats');
 const parserCombinerRadio = document.getElementById('parser-combiner');
 const openParserFolderBtn = document.getElementById('open-parser-folder');
 const dpsUserTokenInput = document.getElementById('dps-user-token');
-const viewUrlInput = document.getElementById('view-url');
+const uploadUrlInput = document.getElementById('upload-url');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
@@ -44,10 +44,14 @@ const parseWindow = document.getElementById('parse-window');
 const parseOutput = document.getElementById('parse-output');
 const parseSteps = document.getElementById('parse-steps');
 const parseOpenFolderBtn = document.getElementById('parse-open-folder');
-const parseViewBtn = document.getElementById('parse-view');
+const parseUploadBtn = document.getElementById('parse-upload');
 const parseCloseBtn = document.getElementById('parse-close');
 const parseCancelBtn = document.getElementById('parse-cancel');
 const versionText = document.getElementById('version-text');
+const uploadWindow = document.getElementById('upload-window');
+const uploadUrlDisplay = document.getElementById('upload-url-display');
+const uploadCloseBtn = document.getElementById('upload-close');
+const uploadFrame = document.getElementById('upload-frame');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
 let currentFolder = '';
@@ -59,7 +63,7 @@ let lastSelectedItem = null;
 
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
-viewUrlInput.value = localStorage.getItem('viewUrl') || '';
+uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
@@ -193,8 +197,8 @@ openParserFolderBtn.addEventListener('click', () => {
 dpsUserTokenInput.addEventListener('input', () => {
   localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
 });
-viewUrlInput.addEventListener('input', () => {
-  localStorage.setItem('viewUrl', viewUrlInput.value.trim());
+uploadUrlInput.addEventListener('input', () => {
+  localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
@@ -214,25 +218,27 @@ combinerFightChartsCheckbox.addEventListener('change', () => {
 parseBtn.addEventListener('click', startParse);
 parseCloseBtn.addEventListener('click', closeParseWindow);
 parseOpenFolderBtn.addEventListener('click', () => window.electronAPI.openParsedFolder());
-parseViewBtn.addEventListener('click', () => {
-  const files = parseViewBtn.dataset.files ? JSON.parse(parseViewBtn.dataset.files) : [];
-  const url = localStorage.getItem('viewUrl') || '';
+parseUploadBtn.addEventListener('click', async () => {
+  const files = parseUploadBtn.dataset.files ? JSON.parse(parseUploadBtn.dataset.files) : [];
+  const url = localStorage.getItem('uploadUrl') || '';
   if (!url) {
-    alert('Viewer URL not configured in settings.');
+    alert('Upload URL not configured in settings.');
     return;
   }
   try {
     new URL(url);
   } catch {
-    alert('Viewer URL is invalid.');
+    alert('Upload URL is invalid.');
     return;
   }
-  window.electronAPI.viewParsedFiles({ url, files });
+  const payload = await window.electronAPI.uploadParsedFiles(files);
+  openUploadWindow(url, payload);
 });
 parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
   window.electronAPI.cancelParse();
 });
+uploadCloseBtn.addEventListener('click', closeUploadWindow);
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
   line.textContent = msg;
@@ -247,8 +253,8 @@ window.electronAPI.onParseStep(data => updateStep(data));
 window.electronAPI.onParseComplete(result => {
   const { success, files = [] } = typeof result === 'object' ? result : { success: !!result, files: [] };
   parseOpenFolderBtn.disabled = !success;
-  parseViewBtn.disabled = !success;
-  parseViewBtn.dataset.files = JSON.stringify(files);
+  parseUploadBtn.disabled = !success;
+  parseUploadBtn.dataset.files = JSON.stringify(files);
   parseCloseBtn.disabled = false;
   parseCancelBtn.disabled = true;
   updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
@@ -752,8 +758,8 @@ function openParseWindow() {
   parseSteps.innerHTML = '';
   currentStepId = null;
   parseOpenFolderBtn.disabled = true;
-  parseViewBtn.disabled = true;
-  parseViewBtn.dataset.files = '[]';
+  parseUploadBtn.disabled = true;
+  parseUploadBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
 }
@@ -762,6 +768,39 @@ function closeParseWindow() {
   parseWindow.classList.remove('active');
   mainWindowEl.classList.remove('fade-out');
   document.getElementById('title-text').textContent = 'Top Stats AIO';
+}
+
+function openUploadWindow(url, payload) {
+  parseWindow.classList.remove('active');
+  uploadWindow.classList.add('active');
+  document.getElementById('title-text').textContent = 'Upload';
+  uploadUrlDisplay.textContent = url;
+  uploadFrame.src = url;
+  const dropScript = `(() => {
+    const files = ${JSON.stringify(payload)};
+    function b64ToUint8(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return bytes;}
+    files.forEach(f => {
+      const bytes=b64ToUint8(f.data);
+      const file=new File([bytes], f.name, {type:'application/json'});
+      const dt=new DataTransfer();
+      dt.items.add(file);
+      const enterEvt=new DragEvent('dragenter',{dataTransfer:dt});
+      document.body.dispatchEvent(enterEvt);
+      const dropEvt=new DragEvent('drop',{dataTransfer:dt});
+      document.body.dispatchEvent(dropEvt);
+    });
+  })();`;
+  const inject = () => uploadFrame.executeJavaScript(dropScript);
+  uploadFrame.addEventListener('dom-ready', inject, { once: true });
+  const updateUrl = e => { uploadUrlDisplay.textContent = e.url; };
+  uploadFrame.addEventListener('did-navigate', updateUrl);
+  uploadFrame.addEventListener('did-navigate-in-page', updateUrl);
+}
+
+function closeUploadWindow() {
+  uploadWindow.classList.remove('active');
+  parseWindow.classList.add('active');
+  document.getElementById('title-text').textContent = 'Parse';
 }
 
 async function startParse() {

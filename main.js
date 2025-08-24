@@ -181,7 +181,8 @@ function createWindow() {
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      webviewTag: true
     }
   });
 
@@ -398,42 +399,21 @@ ipcMain.handle('open-parsed-folder', async () => {
   }
 });
 
-ipcMain.handle('view-parsed-files', async (event, { url, files }) => {
+ipcMain.handle('upload-parsed-files', async (event, files) => {
   try {
-    if (!url) return;
-    try {
-      new URL(url);
-    } catch {
-      logError('Invalid viewer URL');
-      return;
-    }
     const payload = [];
     for (const f of files || []) {
       try {
         const data = await fs.promises.readFile(f);
         payload.push({ name: path.basename(f), data: data.toString('base64') });
       } catch (e) {
-        logError('Failed to read file for view', e);
+        logError('Failed to read file for upload', e);
       }
     }
-    await mainWindow.loadURL(url);
-    const script = `(() => {
-      const files = ${JSON.stringify(payload)};
-      function b64ToUint8(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return bytes;}
-      files.forEach(f => {
-        const bytes=b64ToUint8(f.data);
-        const file=new File([bytes], f.name, {type:'application/json'});
-        const dt=new DataTransfer();
-        dt.items.add(file);
-        const enterEvt=new DragEvent('dragenter',{dataTransfer:dt});
-        document.body.dispatchEvent(enterEvt);
-        const dropEvt=new DragEvent('drop',{dataTransfer:dt});
-        document.body.dispatchEvent(dropEvt);
-      });
-    })();`;
-    await mainWindow.webContents.executeJavaScript(script);
+    return payload;
   } catch (e) {
-    logError('Failed to load viewer', e);
+    logError('Failed to prepare upload', e);
+    return [];
   }
 });
 

@@ -21,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onParseStep: (cb) => ipcRenderer.on('parse-step', (e, data) => cb(data)),
     onParseComplete: (cb) => ipcRenderer.on('parse-complete', (e, data) => cb(data)),
     openParsedFolder: () => ipcRenderer.invoke('open-parsed-folder'),
-    viewParsedFiles: (data) => ipcRenderer.invoke('view-parsed-files', data),
+    uploadParsedFiles: (files) => ipcRenderer.invoke('upload-parsed-files', files),
   cancelParse: () => ipcRenderer.send('cancel-parse'),
   openParserFolder: (which) => ipcRenderer.invoke('open-parser-folder', which),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
