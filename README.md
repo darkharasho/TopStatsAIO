@@ -21,6 +21,7 @@ The primary directive of this application is to increase the user friendliness o
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner` (default)
 - Light and dark themes with customizable accent colors, including a subtle grey option
 - Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
+- Open a built-in viewer that loads a configured Upload URL and automatically drops your parsed files for upload
 
 ## Setup
 
@@ -39,6 +40,7 @@ The primary directive of this application is to increase the user friendliness o
 
 ### 3. Optional Settings
 - Configure a `DPSReportUserToken` for authenticated uploads
+- Specify an `Upload URL` used by the in-app viewer for automatic file drops
 - Choose between `GW2_EI_log_combiner` (default) and the legacy `arcdps_top_stats_parser` and supply paths for both
 - Switch between light and dark themes and pick from several accent colors, including a subtle grey
 - Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates and fight chart generation
@@ -48,8 +50,9 @@ The primary directive of this application is to increase the user friendliness o
 1. Use the file tree on the left to expand folders and select .zetvc
 2. As you select files, they should appear in the `Selected Files` window
 3. After selection, hit the `Parse` button at the bottom right of the window
-4. Let the process run, once complete you will see a button appear to `Open Folder`
-5. Drag & Drop that `.json` file into your TiddlyWiki of choice!
+4. Let the process run; once complete you will see buttons to `Open Folder` or `View`
+5. Clicking `View` launches the built‑in browser at your configured Upload URL and automatically drops the parsed files for you
+6. Alternatively, use `Open Folder` to manually drag & drop the `.json` file into your TiddlyWiki of choice
 ### Options
 - You can set a description field at the bottom of the window for each log when using the `GW2_EI_log_combiner`; it is hidden when using the legacy `arcdps_top_stats_parser`
 - There is a date/time picker in the bottom left. It will remember your last selected time. Select a date/time and press `Select Since` to select all logs from all subfolders that are created after that date & time
