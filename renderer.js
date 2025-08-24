@@ -55,7 +55,10 @@ const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
-const logUpload = (...args) => console.log('[upload]', ...args);
+const logUpload = (...args) => {
+  console.log('[upload]', ...args);
+  window.electronAPI.logUpload(...args);
+};
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
 let currentFolder = '';
@@ -314,6 +317,9 @@ uploadFrame.addEventListener('did-fail-load', e => {
 uploadFrame.addEventListener('did-finish-load', () => {
   logUpload('did-finish-load', uploadFrame.getURL());
   uploadFrame.focus();
+});
+uploadFrame.addEventListener('console-message', e => {
+  logUpload('console', e.level, e.message);
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -864,8 +870,10 @@ function openUploadWindow(url, payload) {
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
      const target=document.body||document.documentElement;
      if(!target) return;
+     console.log('dropping', files.length, 'files');
      setTimeout(()=>{
        files.forEach(f=>{
+         console.log('dropping', f.name);
          const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
          const dt=new DataTransfer();
          dt.items.add(file);

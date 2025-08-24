@@ -448,6 +448,10 @@ ipcMain.on('update-downloaded', () => {
   if (mainWindow) mainWindow.webContents.send('hide-update-notice');
 });
 
+ipcMain.on('log-upload', (event, args) => {
+  log('[upload]', ...args);
+});
+
 ipcMain.handle('show-update-prompt', () => {
   if (mainWindow) showUpdatePrompt(mainWindow);
 });
