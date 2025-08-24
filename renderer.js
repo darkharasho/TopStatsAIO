@@ -325,7 +325,7 @@ uploadHomeBtn.addEventListener('click', () => {
   }
 });
 uploadCopyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(uploadUrlBar.value).catch(() => {});
+  window.electronAPI.copyText(uploadUrlBar.value);
 });
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
