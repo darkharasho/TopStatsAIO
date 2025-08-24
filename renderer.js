@@ -55,6 +55,8 @@ const uploadCloseBtn = document.getElementById('upload-close');
 const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadHomeBtn = document.getElementById('upload-home');
 const uploadCopyBtn = document.getElementById('upload-copy');
+const uploadBackBtn = document.getElementById('upload-back');
+const uploadForwardBtn = document.getElementById('upload-forward');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
@@ -344,11 +346,26 @@ function enforceUploadScroll() {
     .catch(err => logUpload('scroll CSS failed', err));
 }
 
+function updateUploadNavButtons() {
+  uploadBackBtn.disabled = !uploadFrame.canGoBack();
+  uploadForwardBtn.disabled = !uploadFrame.canGoForward();
+}
+
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
     uploadFrame.stop();
   } else {
     uploadFrame.reload();
+  }
+});
+uploadBackBtn.addEventListener('click', () => {
+  if (uploadFrame.canGoBack()) {
+    uploadFrame.goBack();
+  }
+});
+uploadForwardBtn.addEventListener('click', () => {
+  if (uploadFrame.canGoForward()) {
+    uploadFrame.goForward();
   }
 });
 uploadHomeBtn.addEventListener('click', () => {
@@ -380,6 +397,7 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadLoading.classList.add('active');
   uploadFrame.style.opacity = '0';
   uploadFrame.style.pointerEvents = 'none';
+  updateUploadNavButtons();
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
   logUpload('did-stop-loading');
@@ -388,6 +406,7 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadLoading.classList.remove('active');
   uploadFrame.style.opacity = '1';
   uploadFrame.style.pointerEvents = 'auto';
+  updateUploadNavButtons();
   enforceUploadScroll();
   focusUploadFrame('did-stop-loading');
 });
@@ -965,6 +984,8 @@ function openUploadWindow(url, payload) {
   uploadLoading.classList.add('active');
   uploadFrame.style.opacity = '0';
   uploadFrame.style.pointerEvents = 'none';
+  uploadBackBtn.disabled = true;
+  uploadForwardBtn.disabled = true;
   logUpload('openUploadWindow', url, 'payload length', payload.length);
   let dropScript;
   if (payload.length) {
@@ -1007,6 +1028,7 @@ function openUploadWindow(url, payload) {
     uploadUrlBar.value = e.url;
     logUpload('navigated', e.url);
     enforceUploadScroll();
+    updateUploadNavButtons();
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
@@ -1033,6 +1055,8 @@ function closeUploadWindow() {
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
     uploadNavHandler = null;
   }
+  uploadBackBtn.disabled = true;
+  uploadForwardBtn.disabled = true;
   previousWindow = null;
 }
 

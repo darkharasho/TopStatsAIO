@@ -182,7 +182,7 @@
       #upload-refresh { font-size:20px; cursor:pointer; }
       #upload-url-display { flex:1; }
       #upload-close { margin-left:auto; }
-      #upload-frame { flex:1; border:none; width:100%; }
+      #upload-frame { flex:1; border:none; width:100%; overflow:auto; }
       #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
       #upload-loading.active { display:block; }
       #upload-status { text-align:center; padding:4px 8px; font-size:12px; color:var(--label-color); }
@@ -274,6 +274,8 @@
     </div>
     <div id="upload-window">
       <div id="upload-actions">
+        <button id="upload-back" class="action-icon" aria-label="Back" title="Back" type="button">&#x2190;</button>
+        <button id="upload-forward" class="action-icon" aria-label="Forward" title="Forward" type="button">&#x2192;</button>
         <button id="upload-home" class="action-icon" aria-label="Home" title="Home" type="button">&#x2302;</button>
         <button id="upload-refresh" class="action-icon" aria-label="Refresh" title="Refresh" type="button">&#x21bb;</button>
         <input id="upload-url-display" class="folder-label" type="url" autocomplete="off" />
