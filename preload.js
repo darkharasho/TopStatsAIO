@@ -25,7 +25,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cancelParse: () => ipcRenderer.send('cancel-parse'),
   openParserFolder: (which) => ipcRenderer.invoke('open-parser-folder', which),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
-  copyText: (text) => ipcRenderer.invoke('copy-text', text),
   showUpdatePrompt: () => ipcRenderer.invoke('show-update-prompt'),
   onShowUpdateNotice: (cb) => ipcRenderer.on('show-update-notice', () => cb()),
   onHideUpdateNotice: (cb) => ipcRenderer.on('hide-update-notice', () => cb()),
