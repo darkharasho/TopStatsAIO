@@ -270,15 +270,33 @@ parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
   window.electronAPI.cancelParse();
 });
+
+const debugUpload = localStorage.getItem('debugUploadScroll') === 'true';
+function logUpload(...args) {
+  if (debugUpload) console.log('[upload]', ...args);
+}
+
+function focusUploadFrame(reason) {
+  const rect = uploadFrame.getBoundingClientRect();
+  const x = Math.min(10, rect.width - 1);
+  const y = Math.min(10, rect.height - 1);
+  uploadFrame.focus();
+  uploadFrame.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, x, y });
+  uploadFrame.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, x, y });
+  logUpload('focusUploadFrame', reason, 'activeElement', document.activeElement?.tagName);
+}
+
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
-  uploadFrame.focus();
+  focusUploadFrame('mouseenter');
 });
 
 window.addEventListener('wheel', e => {
   if (!uploadWindow.classList.contains('active')) return;
   const rect = uploadFrame.getBoundingClientRect();
-  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+  const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+  logUpload('wheel', { deltaX: e.deltaX, deltaY: e.deltaY, inside });
+  if (!inside) return;
   const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width - 1));
   const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height - 1));
   uploadFrame.sendInputEvent({ type: 'mouseWheel', deltaX: e.deltaX, deltaY: e.deltaY, x, y });
@@ -286,7 +304,10 @@ window.addEventListener('wheel', e => {
 }, { passive: false, capture: true });
 
 function enforceUploadScroll() {
-  uploadFrame.insertCSS('html, body { overflow-y: auto !important; }').catch(() => {});
+  logUpload('inject scroll CSS');
+  uploadFrame.insertCSS('html, body { overflow-y: auto !important; }')
+    .then(() => logUpload('scroll CSS injected'))
+    .catch(err => logUpload('scroll CSS failed', err));
 }
 
 uploadRefreshBtn.addEventListener('click', () => {
@@ -317,6 +338,7 @@ uploadUrlBar.addEventListener('keydown', e => {
   }
 });
 uploadFrame.addEventListener('did-start-loading', () => {
+  logUpload('did-start-loading');
   uploadIsLoading = true;
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadStatus.textContent = '';
@@ -325,16 +347,19 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadFrame.style.visibility = 'hidden';
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
+  logUpload('did-stop-loading');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
 });
 uploadFrame.addEventListener('dom-ready', () => {
+  logUpload('dom-ready');
   enforceUploadScroll();
-  uploadFrame.focus();
+  focusUploadFrame('dom-ready');
 });
 uploadFrame.addEventListener('did-fail-load', e => {
+  logUpload('did-fail-load', e.errorCode, e.errorDescription);
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
@@ -345,8 +370,9 @@ uploadFrame.addEventListener('did-fail-load', e => {
   }
 });
 uploadFrame.addEventListener('did-finish-load', () => {
+  logUpload('did-finish-load');
   enforceUploadScroll();
-  uploadFrame.focus();
+  focusUploadFrame('did-finish-load');
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -896,6 +922,7 @@ function openUploadWindow(url, payload) {
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
+  logUpload('openUploadWindow', url, 'payload length', payload.length);
   let dropScript;
   if (payload.length) {
     dropScript = `(() => {
@@ -929,12 +956,13 @@ function openUploadWindow(url, payload) {
   }
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
-    uploadFrame.focus();
+    focusUploadFrame('initial load');
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
   uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
+    logUpload('navigated', e.url);
     enforceUploadScroll();
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
