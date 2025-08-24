@@ -53,6 +53,8 @@ const uploadWindow = document.getElementById('upload-window');
 const uploadUrlBar = document.getElementById('upload-url-display');
 const uploadCloseBtn = document.getElementById('upload-close');
 const uploadRefreshBtn = document.getElementById('upload-refresh');
+const uploadHomeBtn = document.getElementById('upload-home');
+const uploadCopyBtn = document.getElementById('upload-copy');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
@@ -278,6 +280,17 @@ uploadRefreshBtn.addEventListener('click', () => {
   } else {
     uploadFrame.reload();
   }
+});
+uploadHomeBtn.addEventListener('click', () => {
+  let url = localStorage.getItem('uploadUrl') || '';
+  url = normalizeUrl(url);
+  if (url) {
+    uploadFrame.src = url;
+    uploadUrlBar.value = url;
+  }
+});
+uploadCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(uploadUrlBar.value).catch(() => {});
 });
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {

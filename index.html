@@ -171,9 +171,9 @@
       #parse-window.active { opacity:1; pointer-events:auto; }
       #upload-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
       #upload-window.active { opacity:1; pointer-events:auto; }
-      #upload-actions { display:flex; align-items:center; gap:10px; margin:12px; }
+      #upload-actions { display:flex; align-items:center; gap:10px; padding:12px; border-bottom:1px solid var(--label-border); }
       #upload-refresh { font-size:20px; cursor:pointer; }
-      #upload-url-display { width:75%; }
+      #upload-url-display { flex:1; }
       #upload-close { margin-left:auto; }
       #upload-frame { flex:1; border:none; width:100%; }
       #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
@@ -267,8 +267,10 @@
     </div>
     <div id="upload-window">
       <div id="upload-actions">
-        <span id="upload-refresh" class="action-icon">&#x21bb;</span>
+        <span id="upload-home" class="action-icon" aria-label="Home">&#x2302;</span>
+        <span id="upload-refresh" class="action-icon" aria-label="Refresh">&#x21bb;</span>
         <input id="upload-url-display" class="folder-label" />
+        <span id="upload-copy" class="action-icon" aria-label="Copy URL">&#x2398;</span>
         <button id="upload-close">Close</button>
       </div>
       <div id="upload-loading"></div>
