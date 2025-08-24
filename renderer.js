@@ -33,6 +33,7 @@ const parserCombinerRadio = document.getElementById('parser-combiner');
 const openParserFolderBtn = document.getElementById('open-parser-folder');
 const dpsUserTokenInput = document.getElementById('dps-user-token');
 const uploadUrlInput = document.getElementById('upload-url');
+const uploadLoginBtn = document.getElementById('upload-login');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
@@ -55,10 +56,6 @@ const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
-const logUpload = (...args) => {
-  console.log('[upload]', ...args);
-  window.electronAPI.logUpload(...args);
-};
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const selected = new Map();
 let currentFolder = '';
@@ -69,6 +66,7 @@ let currentStepId = null;
 let lastSelectedItem = null;
 let uploadNavHandler = null;
 let uploadIsLoading = false;
+let previousWindow = null;
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -222,6 +220,16 @@ dpsUserTokenInput.addEventListener('input', () => {
 uploadUrlInput.addEventListener('input', () => {
   localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
 });
+uploadLoginBtn.addEventListener('click', () => {
+  let url = normalizeUrl(uploadUrlInput.value);
+  if (!url) {
+    alert('Upload URL is invalid.');
+    return;
+  }
+  localStorage.setItem('uploadUrl', url);
+  uploadUrlInput.value = url;
+  openUploadWindow(url, []);
+});
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
 });
@@ -252,7 +260,6 @@ parseUploadBtn.addEventListener('click', async () => {
     alert('Upload URL is invalid.');
     return;
   }
-  logUpload('opening viewer for', url, 'with', files.length, 'files');
   localStorage.setItem('uploadUrl', url);
   const payload = await window.electronAPI.uploadParsedFiles(files);
   openUploadWindow(url, payload);
@@ -267,10 +274,8 @@ uploadWindow.addEventListener('mouseenter', () => {
 });
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
-    logUpload('stop requested');
     uploadFrame.stop();
   } else {
-    logUpload('reload requested');
     uploadFrame.reload();
   }
 });
@@ -278,7 +283,6 @@ uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     let url = normalizeUrl(uploadUrlBar.value);
     if (url) {
-      logUpload('navigating to', url);
       uploadLoading.classList.add('active');
       uploadFrame.style.visibility = 'hidden';
       uploadFrame.src = url;
@@ -291,7 +295,6 @@ uploadUrlBar.addEventListener('keydown', e => {
   }
 });
 uploadFrame.addEventListener('did-start-loading', () => {
-  logUpload('did-start-loading', uploadFrame.getURL());
   uploadIsLoading = true;
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadStatus.textContent = '';
@@ -300,7 +303,6 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadFrame.style.visibility = 'hidden';
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
-  logUpload('did-stop-loading', uploadFrame.getURL());
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
@@ -310,7 +312,6 @@ uploadFrame.addEventListener('dom-ready', () => {
   uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
-  logUpload('did-fail-load', e.errorCode, e.errorDescription, e.validatedURL);
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
@@ -321,11 +322,7 @@ uploadFrame.addEventListener('did-fail-load', e => {
   }
 });
 uploadFrame.addEventListener('did-finish-load', () => {
-  logUpload('did-finish-load', uploadFrame.getURL());
   uploadFrame.focus();
-});
-uploadFrame.addEventListener('console-message', e => {
-  logUpload('console', e.level, e.message);
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -859,7 +856,12 @@ function closeParseWindow() {
 }
 
 function openUploadWindow(url, payload) {
-  parseWindow.classList.remove('active');
+  previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
+  if (previousWindow === 'settings') {
+    settingsWindow.classList.remove('active');
+  } else {
+    parseWindow.classList.remove('active');
+  }
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
@@ -870,8 +872,9 @@ function openUploadWindow(url, payload) {
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
-  logUpload('opening upload window for', url, 'with', payload.length, 'files');
-  const dropScript = `(() => {
+  let dropScript;
+  if (payload.length) {
+    dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
     function doDrop(){
@@ -879,10 +882,8 @@ function openUploadWindow(url, payload) {
       const y = window.innerHeight/2;
       const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
       if(!target) return;
-      console.log('dropping', files.length, 'files onto', target.tagName);
       const dt=new DataTransfer();
       files.forEach(f=>{
-        console.log('adding', f.name);
         const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
         dt.items.add(file);
       });
@@ -901,40 +902,43 @@ function openUploadWindow(url, payload) {
       window.addEventListener('load',fire);
     }
   })();`;
+  }
   const handleFinish = () => {
-    logUpload('injecting drop script');
-    uploadFrame.executeJavaScript(dropScript).catch(()=>{});
+    if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
   uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
-    logUpload('navigated to', e.url);
     uploadUrlBar.value = e.url;
     localStorage.setItem('uploadUrl', e.url);
     uploadUrlInput.value = e.url;
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
-  logUpload('initial load', url);
   uploadFrame.src = url;
 }
 
 function closeUploadWindow() {
   uploadWindow.classList.remove('active');
-  parseWindow.classList.add('active');
-  document.getElementById('title-text').textContent = 'Parse';
+  if (previousWindow === 'settings') {
+    settingsWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Settings';
+  } else {
+    parseWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Parse';
+  }
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadFrame.style.visibility = 'visible';
-  logUpload('closing upload window');
   if (uploadNavHandler) {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
     uploadNavHandler = null;
   }
+  previousWindow = null;
 }
 
 async function startParse() {
