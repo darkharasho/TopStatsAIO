@@ -11,6 +11,8 @@ Your one stop shop for generating top stats. This program uses both Elite Insigh
 
 <img width="750" alt="image" src="https://github.com/user-attachments/assets/38195b55-af42-419d-8b53-51554faa0006" />
 
+<img width="750" alt="image" src="https://github.com/user-attachments/assets/a1389ad3-1803-46aa-a49c-784fdf4064eb" />
+
 ---
 
 The primary directive of this application is to increase the user friendliness of these tools. Key features:
