@@ -272,16 +272,19 @@ parseCancelBtn.addEventListener('click', () => {
 });
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
-  if (!uploadIsLoading) uploadFrame.focus();
+  uploadFrame.focus();
 });
 window.addEventListener('wheel', e => {
-  if (!uploadWindow.classList.contains('active') || uploadIsLoading) return;
+  if (!uploadWindow.classList.contains('active')) return;
   const rect = uploadFrame.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+  const x = Math.min(Math.max(0, e.clientX - rect.left), rect.width - 1);
+  const y = Math.min(Math.max(0, e.clientY - rect.top), rect.height - 1);
   uploadFrame.focus();
   uploadFrame.sendInputEvent({
     type: 'mouseWheel',
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top,
+    x,
+    y,
     deltaX: e.deltaX,
     deltaY: e.deltaY
   });
