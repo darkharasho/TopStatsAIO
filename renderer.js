@@ -317,33 +317,36 @@ uploadWindow.addEventListener(
 );
 
 function enforceUploadScroll() {
-  logUpload('inject scroll CSS');
+  logUpload('enforce scroll');
   uploadFrame
-    .insertCSS('html, body { overflow: auto !important; }')
-    .then(() =>
-      uploadFrame
-        .executeJavaScript(
-          `(() => {
-            const info = {
-              htmlOverflow: getComputedStyle(document.documentElement).overflow,
-              bodyOverflow: getComputedStyle(document.body).overflow
-            };
-            if (!window.__uploadScrollDebug) {
-              window.__uploadScrollDebug = true;
-              window.addEventListener('scroll', () => console.log('[upload] scroll', { x: window.scrollX, y: window.scrollY }));
-              window.addEventListener(
-                'wheel',
-                e => console.log('[upload] inner wheel', { deltaX: e.deltaX, deltaY: e.deltaY }),
-                { passive: true }
-              );
-              console.log('[upload] scroll debug injected');
-            }
-            return info;
-          })()`
-        )
-        .then(styles => logUpload('overflow styles', styles))
+    .executeJavaScript(
+      `(() => {
+        const force = () => {
+          document.documentElement.style.overflow = 'auto';
+          document.body.style.overflow = 'auto';
+          document.documentElement.style.height = 'auto';
+          document.body.style.height = 'auto';
+        };
+        force();
+        new MutationObserver(force).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] });
+        if (!window.__uploadScrollDebug) {
+          window.__uploadScrollDebug = true;
+          window.addEventListener('scroll', () => console.log('[upload] scroll', { x: window.scrollX, y: window.scrollY }));
+          window.addEventListener(
+            'wheel',
+            e => console.log('[upload] inner wheel', { deltaX: e.deltaX, deltaY: e.deltaY }),
+            { passive: true }
+          );
+          console.log('[upload] scroll debug injected');
+        }
+        return {
+          htmlOverflow: getComputedStyle(document.documentElement).overflow,
+          bodyOverflow: getComputedStyle(document.body).overflow
+        };
+      })()`
     )
-    .catch(err => logUpload('scroll CSS failed', err));
+    .then(styles => logUpload('overflow styles', styles))
+    .catch(err => logUpload('scroll enforce failed', err));
 }
 
 function updateUploadNavButtons() {
