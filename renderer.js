@@ -53,6 +53,8 @@ const uploadWindow = document.getElementById('upload-window');
 const uploadUrlBar = document.getElementById('upload-url-display');
 const uploadCloseBtn = document.getElementById('upload-close');
 const uploadRefreshBtn = document.getElementById('upload-refresh');
+const uploadHomeBtn = document.getElementById('upload-home');
+const uploadCopyBtn = document.getElementById('upload-copy');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
@@ -268,10 +270,52 @@ parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
   window.electronAPI.cancelParse();
 });
+
+function logUpload(...args) {
+  console.log('[upload]', ...args);
+}
+
+function focusUploadFrame(reason) {
+  const rect = uploadFrame.getBoundingClientRect();
+  const x = Math.min(10, rect.width - 1);
+  const y = Math.min(10, rect.height - 1);
+  uploadFrame.focus();
+  uploadFrame.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, x, y });
+  uploadFrame.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, x, y });
+  logUpload('focusUploadFrame', reason, 'activeElement', document.activeElement?.tagName);
+}
+
 uploadCloseBtn.addEventListener('click', closeUploadWindow);
 uploadWindow.addEventListener('mouseenter', () => {
-  if (!uploadIsLoading) uploadFrame.focus();
+  focusUploadFrame('mouseenter');
 });
+
+window.addEventListener('wheel', e => {
+  if (!uploadWindow.classList.contains('active')) return;
+  const rect = uploadFrame.getBoundingClientRect();
+  const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+  logUpload('wheel', { deltaX: e.deltaX, deltaY: e.deltaY, inside });
+  if (!inside) return;
+  const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width - 1));
+  const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height - 1));
+  uploadFrame.sendInputEvent({ type: 'mouseWheel', deltaX: e.deltaX, deltaY: e.deltaY, x, y });
+  e.preventDefault();
+}, { passive: false, capture: true });
+
+function enforceUploadScroll() {
+  logUpload('inject scroll CSS');
+  uploadFrame
+    .insertCSS('html, body { overflow: auto !important; }')
+    .then(() =>
+      uploadFrame
+        .executeJavaScript(
+          `({ htmlOverflow: getComputedStyle(document.documentElement).overflow, bodyOverflow: getComputedStyle(document.body).overflow })`
+        )
+        .then(styles => logUpload('overflow styles', styles))
+    )
+    .catch(err => logUpload('scroll CSS failed', err));
+}
+
 uploadRefreshBtn.addEventListener('click', () => {
   if (uploadIsLoading) {
     uploadFrame.stop();
@@ -279,20 +323,28 @@ uploadRefreshBtn.addEventListener('click', () => {
     uploadFrame.reload();
   }
 });
+uploadHomeBtn.addEventListener('click', () => {
+  let url = localStorage.getItem('uploadUrl') || '';
+  url = normalizeUrl(url);
+  if (url) {
+    uploadFrame.src = url;
+    uploadUrlBar.value = url;
+  }
+});
+uploadCopyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(uploadUrlBar.value).catch(() => {});
+});
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
-    let url = normalizeUrl(uploadUrlBar.value);
+    const url = normalizeUrl(uploadUrlBar.value);
     if (url) {
-      uploadLoading.classList.add('active');
-      uploadFrame.style.visibility = 'hidden';
       uploadFrame.src = url;
       uploadUrlBar.value = url;
-    } else {
-      alert('URL is invalid.');
     }
   }
 });
 uploadFrame.addEventListener('did-start-loading', () => {
+  logUpload('did-start-loading');
   uploadIsLoading = true;
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadStatus.textContent = '';
@@ -301,15 +353,21 @@ uploadFrame.addEventListener('did-start-loading', () => {
   uploadFrame.style.visibility = 'hidden';
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
+  logUpload('did-stop-loading');
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
+  enforceUploadScroll();
+  focusUploadFrame('did-stop-loading');
 });
 uploadFrame.addEventListener('dom-ready', () => {
-  uploadFrame.focus();
+  logUpload('dom-ready');
+  enforceUploadScroll();
+  focusUploadFrame('dom-ready');
 });
 uploadFrame.addEventListener('did-fail-load', e => {
+  logUpload('did-fail-load', e.errorCode, e.errorDescription);
   uploadIsLoading = false;
   uploadRefreshBtn.innerHTML = '&#x21bb;';
   uploadLoading.classList.remove('active');
@@ -320,7 +378,9 @@ uploadFrame.addEventListener('did-fail-load', e => {
   }
 });
 uploadFrame.addEventListener('did-finish-load', () => {
-  uploadFrame.focus();
+  logUpload('did-finish-load');
+  enforceUploadScroll();
+  focusUploadFrame('did-finish-load');
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -870,6 +930,7 @@ function openUploadWindow(url, payload) {
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
+  logUpload('openUploadWindow', url, 'payload length', payload.length);
   let dropScript;
   if (payload.length) {
     dropScript = `(() => {
@@ -903,12 +964,14 @@ function openUploadWindow(url, payload) {
   }
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
-    uploadFrame.focus();
+    focusUploadFrame('initial load');
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
   uploadFrame.addEventListener('did-stop-loading', handleFinish);
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
+    logUpload('navigated', e.url);
+    enforceUploadScroll();
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
