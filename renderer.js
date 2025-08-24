@@ -319,7 +319,23 @@ function enforceUploadScroll() {
     .then(() =>
       uploadFrame
         .executeJavaScript(
-          `({ htmlOverflow: getComputedStyle(document.documentElement).overflow, bodyOverflow: getComputedStyle(document.body).overflow })`
+          `(() => {
+            const info = {
+              htmlOverflow: getComputedStyle(document.documentElement).overflow,
+              bodyOverflow: getComputedStyle(document.body).overflow
+            };
+            if (!window.__uploadScrollDebug) {
+              window.__uploadScrollDebug = true;
+              window.addEventListener('scroll', () => console.log('[upload] scroll', { x: window.scrollX, y: window.scrollY }));
+              window.addEventListener(
+                'wheel',
+                e => console.log('[upload] inner wheel', { deltaX: e.deltaX, deltaY: e.deltaY }),
+                { passive: true }
+              );
+              console.log('[upload] scroll debug injected');
+            }
+            return info;
+          })()`
         )
         .then(styles => logUpload('overflow styles', styles))
     )
@@ -391,6 +407,9 @@ uploadFrame.addEventListener('did-finish-load', () => {
   logUpload('did-finish-load');
   enforceUploadScroll();
   focusUploadFrame('did-finish-load');
+});
+uploadFrame.addEventListener('console-message', e => {
+  logUpload('webview', e.message);
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
