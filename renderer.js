@@ -221,6 +221,12 @@ parseViewBtn.addEventListener('click', () => {
     alert('Viewer URL not configured in settings.');
     return;
   }
+  try {
+    new URL(url);
+  } catch {
+    alert('Viewer URL is invalid.');
+    return;
+  }
   window.electronAPI.viewParsedFiles({ url, files });
 });
 parseCancelBtn.addEventListener('click', () => {

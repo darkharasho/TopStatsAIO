@@ -401,6 +401,12 @@ ipcMain.handle('open-parsed-folder', async () => {
 ipcMain.handle('view-parsed-files', async (event, { url, files }) => {
   try {
     if (!url) return;
+    try {
+      new URL(url);
+    } catch {
+      logError('Invalid viewer URL');
+      return;
+    }
     const payload = [];
     for (const f of files || []) {
       try {
