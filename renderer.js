@@ -60,6 +60,7 @@ let folderLists = new Map();
 let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
+let uploadNavHandler = null;
 
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
@@ -775,32 +776,44 @@ function openUploadWindow(url, payload) {
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlDisplay.textContent = url;
-  uploadFrame.src = url;
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
-    function b64ToUint8(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return bytes;}
-    files.forEach(f => {
-      const bytes=b64ToUint8(f.data);
-      const file=new File([bytes], f.name, {type:'application/json'});
+    function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
+    const target=document.body;
+    if(!target) return;
+    files.forEach(f=>{
+      const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
       const dt=new DataTransfer();
       dt.items.add(file);
-      const enterEvt=new DragEvent('dragenter',{dataTransfer:dt});
-      document.body.dispatchEvent(enterEvt);
-      const dropEvt=new DragEvent('drop',{dataTransfer:dt});
-      document.body.dispatchEvent(dropEvt);
+      const enterEvt=new DragEvent('dragenter',{dataTransfer:dt,bubbles:true,cancelable:true});
+      target.dispatchEvent(enterEvt);
+      const overEvt=new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true});
+      target.dispatchEvent(overEvt);
+      const dropEvt=new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true});
+      target.dispatchEvent(dropEvt);
     });
   })();`;
-  const inject = () => uploadFrame.executeJavaScript(dropScript);
+  const inject = () => uploadFrame.executeJavaScript(dropScript).catch(()=>{});
   uploadFrame.addEventListener('dom-ready', inject, { once: true });
-  const updateUrl = e => { uploadUrlDisplay.textContent = e.url; };
-  uploadFrame.addEventListener('did-navigate', updateUrl);
-  uploadFrame.addEventListener('did-navigate-in-page', updateUrl);
+  uploadNavHandler = e => {
+    uploadUrlDisplay.textContent = e.url;
+    localStorage.setItem('uploadUrl', e.url);
+    uploadUrlInput.value = e.url;
+  };
+  uploadFrame.addEventListener('did-navigate', uploadNavHandler);
+  uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
+  uploadFrame.src = url;
 }
 
 function closeUploadWindow() {
   uploadWindow.classList.remove('active');
   parseWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Parse';
+  if (uploadNavHandler) {
+    uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
+    uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
+    uploadNavHandler = null;
+  }
 }
 
 async function startParse() {
