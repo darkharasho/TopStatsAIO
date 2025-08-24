@@ -260,6 +260,8 @@ uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     let url = normalizeUrl(uploadUrlBar.value);
     if (url) {
+      uploadLoading.classList.add('active');
+      uploadFrame.classList.add('hidden');
       uploadFrame.loadURL(url);
       localStorage.setItem('uploadUrl', url);
       uploadUrlBar.value = url;
@@ -269,9 +271,18 @@ uploadUrlBar.addEventListener('keydown', e => {
     }
   }
 });
-uploadFrame.addEventListener('did-start-loading', () => uploadLoading.classList.add('active'));
-uploadFrame.addEventListener('did-stop-loading', () => uploadLoading.classList.remove('active'));
-uploadFrame.addEventListener('did-fail-load', () => uploadLoading.classList.remove('active'));
+uploadFrame.addEventListener('did-start-loading', () => {
+  uploadLoading.classList.add('active');
+  uploadFrame.classList.add('hidden');
+});
+uploadFrame.addEventListener('did-stop-loading', () => {
+  uploadLoading.classList.remove('active');
+  uploadFrame.classList.remove('hidden');
+});
+uploadFrame.addEventListener('did-fail-load', () => {
+  uploadLoading.classList.remove('active');
+  uploadFrame.classList.remove('hidden');
+});
 uploadFrame.addEventListener('did-finish-load', () => uploadFrame.focus());
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -810,6 +821,8 @@ function openUploadWindow(url, payload) {
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
   uploadUrlInput.value = url;
+  uploadLoading.classList.add('active');
+  uploadFrame.classList.add('hidden');
   const dropScript = `(() => {
     const files = ${JSON.stringify(payload)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
