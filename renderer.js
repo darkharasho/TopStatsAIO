@@ -57,17 +57,17 @@ const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
-window.addEventListener('load', () => {
-  const uploadWindowEl = document.getElementById('upload-window');
-  if (uploadWindowEl) {
-    console.log('upload window display hack start');
-    uploadWindowEl.style.display = 'none';
-    setTimeout(() => {
-      uploadWindowEl.style.display = 'flex';
-      console.log('upload window display hack applied');
-    }, 100);
-  }
-});
+let uploadDisplayHackRan = false;
+function runUploadDisplayHack() {
+  if (uploadDisplayHackRan) return;
+  console.log('upload window display hack start');
+  uploadWindow.style.display = 'none';
+  setTimeout(() => {
+    uploadWindow.style.display = 'flex';
+    console.log('upload window display hack applied');
+  }, 0);
+  uploadDisplayHackRan = true;
+}
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -872,6 +872,7 @@ function openUploadWindow(url, payload) {
     parseWindow.classList.remove('active');
   }
   uploadWindow.classList.add('active');
+  runUploadDisplayHack();
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
   uploadUrlInput.value = url;
