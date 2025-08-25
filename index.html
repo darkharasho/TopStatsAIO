@@ -147,6 +147,8 @@
 
       .config-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
       .config-input { background:var(--bg-btn); color:var(--text-color); border:1px solid var(--label-border); padding:6px 12px; border-radius:4px; flex:1; }
+      #gradient-options { display:flex; flex-direction:column; gap:4px; margin-top:8px; }
+      #gradient-options label { display:flex; align-items:center; gap:8px; }
 
       #settings-grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; align-items:flex-start; }
       #settings-left, #settings-right { display:flex; flex-direction:column; gap:20px; }
@@ -352,25 +354,79 @@
             <button id="theme-light" class="theme-btn">Light</button>
           </div>
           <div class="dep-row">
-            <select id="gradient-theme" class="config-input gradient-text gradient-default">
-              <option value="default" class="gradient-text gradient-default">Blue/Purple</option>
-              <option value="grey" class="gradient-text gradient-grey">Grey</option>
-              <option value="sunset" class="gradient-text gradient-sunset">Sunset</option>
-              <option value="forest" class="gradient-text gradient-forest">Forest</option>
-              <option value="ocean" class="gradient-text gradient-ocean">Ocean</option>
-              <option value="rose" class="gradient-text gradient-rose">Rose</option>
-              <option value="peach" class="gradient-text gradient-peach">Peach</option>
-              <option value="lavender" class="gradient-text gradient-lavender">Lavender</option>
-              <option value="midnight" class="gradient-text gradient-midnight">Midnight</option>
-              <option value="mint" class="gradient-text gradient-mint">Mint</option>
-              <option value="sky" class="gradient-text gradient-sky">Sky</option>
-              <option value="blush" class="gradient-text gradient-blush">Blush</option>
-              <option value="sand" class="gradient-text gradient-sand">Sand</option>
-              <option value="melon" class="gradient-text gradient-melon">Melon</option>
-              <option value="coral" class="gradient-text gradient-coral">Coral</option>
-              <option value="berry" class="gradient-text gradient-berry">Berry</option>
-              <option value="lagoon" class="gradient-text gradient-lagoon">Lagoon</option>
-            </select>
+            <details id="gradient-drawer">
+              <summary id="gradient-summary" class="gradient-text gradient-default">Blue/Purple</summary>
+              <div id="gradient-options">
+                <label>
+                  <input type="radio" name="gradient-theme" value="default" checked />
+                  <span class="gradient-text gradient-default">Blue/Purple</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="grey" />
+                  <span class="gradient-text gradient-grey">Grey</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="sunset" />
+                  <span class="gradient-text gradient-sunset">Sunset</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="forest" />
+                  <span class="gradient-text gradient-forest">Forest</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="ocean" />
+                  <span class="gradient-text gradient-ocean">Ocean</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="rose" />
+                  <span class="gradient-text gradient-rose">Rose</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="peach" />
+                  <span class="gradient-text gradient-peach">Peach</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="lavender" />
+                  <span class="gradient-text gradient-lavender">Lavender</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="midnight" />
+                  <span class="gradient-text gradient-midnight">Midnight</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="mint" />
+                  <span class="gradient-text gradient-mint">Mint</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="sky" />
+                  <span class="gradient-text gradient-sky">Sky</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="blush" />
+                  <span class="gradient-text gradient-blush">Blush</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="sand" />
+                  <span class="gradient-text gradient-sand">Sand</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="melon" />
+                  <span class="gradient-text gradient-melon">Melon</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="coral" />
+                  <span class="gradient-text gradient-coral">Coral</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="berry" />
+                  <span class="gradient-text gradient-berry">Berry</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="lagoon" />
+                  <span class="gradient-text gradient-lagoon">Lagoon</span>
+                </label>
+              </div>
+            </details>
           </div>
         </div>
         <div class="card" id="parser-selection-card">

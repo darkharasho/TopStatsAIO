@@ -56,7 +56,8 @@ const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
-const gradientSelect = document.getElementById('gradient-theme');
+const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
+const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -173,8 +174,16 @@ function updateDescriptionVisibility() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-gradientSelect.addEventListener('change', () => {
-  applyGradient(gradientSelect.value);
+gradientRadios.forEach(radio => {
+  radio.addEventListener('change', () => {
+    if (radio.checked) {
+      applyGradient(radio.value);
+      const span = radio.nextElementSibling;
+      if (gradientSummary && span) {
+        gradientSummary.textContent = span.textContent;
+      }
+    }
+  });
 });
 downloadCliBtn.addEventListener('click', async () => {
   downloadCliBtn.disabled = true;
@@ -412,7 +421,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(theme);
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
-  if (gradientSelect) gradientSelect.value = grad;
+  const savedRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
+  if (savedRadio) {
+    savedRadio.checked = true;
+    const span = savedRadio.nextElementSibling;
+    if (gradientSummary && span) {
+      gradientSummary.textContent = span.textContent;
+    }
+  }
   const ver = await window.electronAPI.getAppVersion();
   versionText.textContent = `v${ver}`;
   const saved = localStorage.getItem('lastFolder');
@@ -1039,11 +1055,11 @@ function applyGradient(name) {
   document.documentElement.style.setProperty('--card-border', grad);
   document.documentElement.style.setProperty('--btn-border', c1);
   document.documentElement.style.setProperty('--btn-border-hover', c2);
-  if (gradientSelect) {
-    gradientSelect.classList.remove(
-      ...Array.from(gradientSelect.classList).filter(c => c.startsWith('gradient-') && c !== 'gradient-text')
+  if (gradientSummary) {
+    gradientSummary.classList.remove(
+      ...Array.from(gradientSummary.classList).filter(c => c.startsWith('gradient-') && c !== 'gradient-text')
     );
-    gradientSelect.classList.add('gradient-text', `gradient-${name}`);
+    gradientSummary.classList.add('gradient-text', `gradient-${name}`);
   }
   localStorage.setItem('gradientTheme', name);
 }
