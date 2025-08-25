@@ -974,7 +974,7 @@ function closeParseWindow() {
   document.getElementById('title-text').textContent = 'Top Stats AIO';
 }
 
-function makeDropScript(files) {
+function makeDropScript(files, corner) {
   return `(() => {
     const files = ${JSON.stringify(files)};
     function b64ToBlob(b64){
@@ -997,11 +997,12 @@ function makeDropScript(files) {
         });
         dt.effectAllowed='copy';
         dt.dropEffect='copy';
-        const x=window.innerWidth-10;
-        const y=window.innerHeight-10;
-        const corner=document.elementFromPoint(x,y);
+        const useCorner=${corner ? 'true' : 'false'};
+        const x=useCorner?window.innerWidth-10:window.innerWidth/2;
+        const y=useCorner?window.innerHeight-10:window.innerHeight/2;
+        const el=document.elementFromPoint(x,y);
         const targets=[document.body,document.documentElement];
-        if(corner && !targets.includes(corner)) targets.push(corner);
+        if(el && !targets.includes(el)) targets.push(el);
         targets.forEach(target=>{
           ['dragenter','dragover','drop'].forEach(type=>{
             const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
@@ -1095,7 +1096,12 @@ function openUploadWindow(url, payload) {
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
-  const dropScript = payload.length ? makeDropScript(payload) : null;
+  if (!tiddlyMode) {
+    tiddlyGuide.classList.add('hidden');
+    tiddlySetupBtn.classList.add('hidden');
+    tiddlyRefreshBtn.classList.add('hidden');
+  }
+  const dropScript = payload.length ? makeDropScript(payload, tiddlyMode) : null;
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(()=>{});
     uploadFrame.focus();
