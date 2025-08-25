@@ -1002,8 +1002,7 @@ function makeDropScript(files) {
               }
             }
           });
-          console.log('Imported files via TiddlyWiki API');
-          return;
+          console.log('Imported files via TiddlyWiki API, dispatching drop events');
         }
         const x=window.innerWidth/2;
         const y=window.innerHeight/2;
