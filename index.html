@@ -238,10 +238,12 @@
         right:0;
         width:32px;
         height:100%;
-        margin:0;
-        border-top-left-radius:0;
-        border-bottom-left-radius:0;
-        border-left:none;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        cursor:pointer;
+        color:#fff;
+        font-size:16px;
       }
       #upload-frame { flex:1; border:none; width:100%; }
       #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
@@ -359,7 +361,7 @@
         <button id="upload-refresh" class="nav-btn" aria-label="Refresh" title="Refresh">&#x21bb;</button>
         <div id="upload-url-wrapper">
           <input id="upload-url-display" class="folder-label" />
-          <button id="upload-copy" class="nav-btn" aria-label="Copy Link" title="Copy Link">🔗</button>
+          <span id="upload-copy" aria-label="Copy Link" title="Copy Link">🔗</span>
         </div>
         <button id="upload-close" class="nav-btn" aria-label="Close" title="Close">&#x2715;</button>
       </div>
