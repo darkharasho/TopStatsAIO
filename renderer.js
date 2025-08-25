@@ -37,6 +37,7 @@ const uploadUrlInput = document.getElementById('upload-url');
 const uploadLoginBtn = document.getElementById('upload-login');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
+const combinerGuildLookupBtn = document.getElementById('combiner-guild-lookup');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
 const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
@@ -102,6 +103,7 @@ dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
+combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
@@ -287,9 +289,34 @@ setupTiddlyhostBtn.addEventListener('click', () => {
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
+  combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
 });
 combinerGuildIdInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildId', combinerGuildIdInput.value);
+});
+combinerGuildLookupBtn.addEventListener('click', async () => {
+  const name = combinerGuildNameInput.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch(`https://api.guildwars2.com/v2/guild/search?name=${encodeURIComponent(name)}`);
+    if (!res.ok) {
+      if (res.status === 404) {
+        alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
+      } else {
+        alert('Error looking up guild.');
+      }
+      return;
+    }
+    const ids = await res.json();
+    if (!Array.isArray(ids) || ids.length === 0) {
+      alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
+      return;
+    }
+    combinerGuildIdInput.value = ids[0];
+    localStorage.setItem('combinerGuildId', ids[0]);
+  } catch (err) {
+    alert('Error looking up guild.');
+  }
 });
 combinerApiKeyInput.addEventListener('input', () => {
   localStorage.setItem('combinerApiKey', combinerApiKeyInput.value);
