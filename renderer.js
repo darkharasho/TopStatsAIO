@@ -361,6 +361,17 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadFrame.style.visibility = 'visible';
   updateUploadNav();
 });
+// Redirect attempts to open a new window into the current frame
+uploadFrame.addEventListener('new-window', e => {
+  e.preventDefault();
+  const url = e.url;
+  if (url) {
+    uploadFrame.loadURL(url);
+    uploadUrlBar.value = url;
+    updateUploadNav();
+    if (tiddlyMode) updateTiddlyGuide(url);
+  }
+});
 uploadFrame.addEventListener('dom-ready', () => {
   setTimeout(() => {
     uploadFrame
