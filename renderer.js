@@ -62,6 +62,10 @@ const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const copyToast = document.getElementById('copy-toast');
+const setupTiddlyhostBtn = document.getElementById('setup-tiddlyhost');
+const tiddlyGuide = document.getElementById('tiddly-guide');
+const tiddlyGuideText = document.getElementById('tiddly-guide-text');
+const tiddlySetupBtn = document.getElementById('tiddly-setup');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
@@ -74,6 +78,7 @@ let lastSelectedItem = null;
 let uploadNavHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
+let tiddlyMode = false;
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -241,6 +246,18 @@ uploadLoginBtn.addEventListener('click', () => {
   localStorage.setItem('uploadUrl', url);
   uploadUrlInput.value = url;
   openUploadWindow(url, []);
+});
+setupTiddlyhostBtn.addEventListener('click', () => {
+  tiddlyMode = true;
+  openUploadWindow('https://tiddlyhost.com/', []);
+  updateTiddlyGuide('https://tiddlyhost.com/');
+});
+tiddlySetupBtn.addEventListener('click', async () => {
+  const sel = localStorage.getItem('parserSelection') || 'combiner';
+  const payload = await window.electronAPI.getExampleOutput(sel);
+  if (payload && payload.length) {
+    uploadFrame.executeJavaScript(makeDropScript(payload)).catch(() => {});
+  }
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
@@ -909,27 +926,9 @@ function closeParseWindow() {
   document.getElementById('title-text').textContent = 'Top Stats AIO';
 }
 
-function openUploadWindow(url, payload) {
-  previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
-  if (previousWindow === 'settings') {
-    settingsWindow.classList.remove('active');
-  } else {
-    parseWindow.classList.remove('active');
-  }
-  uploadWindow.classList.add('active');
-  document.getElementById('title-text').textContent = 'Upload';
-  uploadUrlBar.value = url;
-  uploadUrlInput.value = url;
-  uploadStatus.textContent = '';
-  uploadStatus.classList.remove('error');
-  uploadRefreshBtn.innerHTML = '&#x2715;';
-  uploadIsLoading = true;
-  uploadLoading.classList.add('active');
-  uploadFrame.style.visibility = 'hidden';
-  let dropScript;
-  if (payload.length) {
-    dropScript = `(() => {
-    const files = ${JSON.stringify(payload)};
+function makeDropScript(files) {
+  return `(() => {
+    const files = ${JSON.stringify(files)};
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
     function doDrop(){
       const x = window.innerWidth/2;
@@ -938,7 +937,7 @@ function openUploadWindow(url, payload) {
       if(!target) return;
       const dt=new DataTransfer();
       files.forEach(f=>{
-        const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
+        const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
         dt.items.add(file);
       });
       dt.effectAllowed='copy';
@@ -956,7 +955,45 @@ function openUploadWindow(url, payload) {
       window.addEventListener('load',fire);
     }
   })();`;
+}
+
+function updateTiddlyGuide(url) {
+  if (!tiddlyMode) return;
+  const rootRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/?$/;
+  const sitesRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/?/;
+  const subRe = /^https?:\/\/[^./]+\.tiddlyhost\.com/;
+  tiddlySetupBtn.classList.add('hidden');
+  tiddlyGuide.classList.remove('hidden');
+  if (rootRe.test(url)) {
+    tiddlyGuideText.textContent = 'Log in or sign up for a Tiddlyhost account';
+  } else if (sitesRe.test(url)) {
+    tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+  } else if (subRe.test(url)) {
+    tiddlyGuideText.textContent = 'Click Setup to upload example output';
+    tiddlySetupBtn.classList.remove('hidden');
+  } else {
+    tiddlyGuide.classList.add('hidden');
   }
+}
+
+function openUploadWindow(url, payload) {
+  previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
+  if (previousWindow === 'settings') {
+    settingsWindow.classList.remove('active');
+  } else {
+    parseWindow.classList.remove('active');
+  }
+  uploadWindow.classList.add('active');
+  document.getElementById('title-text').textContent = 'Upload';
+  uploadUrlBar.value = url;
+  uploadUrlInput.value = url;
+  uploadStatus.textContent = '';
+  uploadStatus.classList.remove('error');
+  uploadRefreshBtn.innerHTML = '&#x2715;';
+  uploadIsLoading = true;
+  uploadLoading.classList.add('active');
+  uploadFrame.style.visibility = 'hidden';
+  const dropScript = payload.length ? makeDropScript(payload) : null;
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
     uploadFrame.focus();
@@ -966,10 +1003,12 @@ function openUploadWindow(url, payload) {
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
     updateUploadNav();
+    if (tiddlyMode) updateTiddlyGuide(e.url);
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
   uploadFrame.src = url;
+  if (tiddlyMode) updateTiddlyGuide(url);
   updateUploadNav();
 }
 
@@ -993,6 +1032,11 @@ function closeUploadWindow() {
     uploadNavHandler = null;
   }
   previousWindow = null;
+  if (tiddlyMode) {
+    tiddlyMode = false;
+    tiddlyGuide.classList.add('hidden');
+    tiddlySetupBtn.classList.add('hidden');
+  }
 }
 
 async function startParse() {

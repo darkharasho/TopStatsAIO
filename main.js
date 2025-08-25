@@ -418,6 +418,44 @@ ipcMain.handle('upload-parsed-files', async (event, files) => {
   }
 });
 
+ipcMain.handle('get-example-output', async (event, which) => {
+  try {
+    ensureDeps(depsDir);
+    const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
+    const ex1 = path.join(dir, 'example_output');
+    const ex2 = path.join(dir, 'Example_Output');
+    const target = fs.existsSync(ex1) ? ex1 : fs.existsSync(ex2) ? ex2 : null;
+    if (!target) return [];
+    async function gather(p) {
+      const entries = await fs.promises.readdir(p, { withFileTypes: true });
+      const results = [];
+      for (const entry of entries) {
+        const res = path.join(p, entry.name);
+        if (entry.isDirectory()) {
+          results.push(...await gather(res));
+        } else {
+          results.push(res);
+        }
+      }
+      return results;
+    }
+    const files = await gather(target);
+    const payload = [];
+    for (const f of files) {
+      try {
+        const data = await fs.promises.readFile(f);
+        payload.push({ name: path.basename(f), data: data.toString('base64') });
+      } catch (e) {
+        logError('Failed to read example output file', e);
+      }
+    }
+    return payload;
+  } catch (e) {
+    logError('Failed to get example output', e);
+    return [];
+  }
+});
+
 ipcMain.handle('open-parser-folder', async (event, which) => {
   ensureDeps(depsDir);
   const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
