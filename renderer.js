@@ -1093,7 +1093,9 @@ function openUploadWindow(url, payload, isSetup) {
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
-  uploadUrlInput.value = url;
+  if (!tiddlyMode) {
+    uploadUrlInput.value = url;
+  }
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadRefreshBtn.innerHTML = '&#x2715;';
