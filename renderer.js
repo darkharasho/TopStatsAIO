@@ -974,21 +974,25 @@ function makeDropScript(files) {
         });
         dt.effectAllowed='copy';
         dt.dropEffect='copy';
-        const x = window.innerWidth/2;
-        const y = window.innerHeight/2;
-        const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
-        if(!target){console.log('No drop target found');}else{
+        const x=window.innerWidth/2;
+        const y=window.innerHeight/2;
+        const center=document.elementFromPoint(x,y);
+        const targets=[document.body,document.documentElement];
+        if(center && !targets.includes(center)) targets.push(center);
+        targets.forEach(target=>{
           ['dragenter','dragover','drop'].forEach(type=>{
             const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
             if(type!=='drop') ev.preventDefault();
             target.dispatchEvent(ev);
           });
           console.log('Drop events dispatched on', target.tagName);
-        }
-        const input=document.querySelector('input[type="file"]');
-        if(input){
-          input.files=dt.files;
-          input.dispatchEvent(new Event('change',{bubbles:true}));
+        });
+        const inputs=document.querySelectorAll('input[type="file"]');
+        if(inputs.length){
+          inputs.forEach(input=>{
+            input.files=dt.files;
+            input.dispatchEvent(new Event('change',{bubbles:true}));
+          });
           console.log('File input change dispatched');
         }else{
           console.log('No file input found');
