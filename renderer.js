@@ -1039,12 +1039,11 @@ function updateTiddlyGuide(url) {
   tiddlySitePollId++;
   tiddlySetupBtn.classList.add('hidden');
   tiddlyRefreshBtn.classList.add('hidden');
-  tiddlyGuide.classList.remove('hidden');
-  tiddlySetupStage = 0;
+  let message = '';
   if (rootRe.test(url)) {
-    tiddlyGuideText.textContent = 'Log in or sign up for a Tiddlyhost account';
+    message = 'Log in or sign up for a Tiddlyhost account';
   } else if (newSiteRe.test(url)) {
-    tiddlyGuideText.textContent = 'Give your site a name, keep the other settings, and hit Create';
+    message = 'Give your site a name, keep the other settings, and hit Create';
   } else if (sitesListRe.test(url)) {
     const pollId = tiddlySitePollId;
     const checkForNewSite = (attempts = 0) => {
@@ -1067,14 +1066,19 @@ function updateTiddlyGuide(url) {
         }
       });
     };
-    tiddlyGuideText.textContent = 'Looking for your new site...';
+    message = 'Looking for your new site...';
     checkForNewSite();
   } else if (subRe.test(url)) {
-    tiddlyGuideText.textContent = 'Click Setup to upload example output';
+    message = 'Click Setup to upload example output';
     tiddlySetupBtn.classList.remove('hidden');
+  }
+  if (message) {
+    tiddlyGuideText.textContent = message;
+    tiddlyGuide.classList.remove('hidden');
   } else {
     tiddlyGuide.classList.add('hidden');
   }
+  tiddlySetupStage = 0;
 }
 
 function openUploadWindow(url, payload, isSetup) {
