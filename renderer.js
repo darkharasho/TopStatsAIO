@@ -66,6 +66,7 @@ const setupTiddlyhostBtn = document.getElementById('setup-tiddlyhost');
 const tiddlyGuide = document.getElementById('tiddly-guide');
 const tiddlyGuideText = document.getElementById('tiddly-guide-text');
 const tiddlySetupBtn = document.getElementById('tiddly-setup');
+const tiddlyRefreshBtn = document.getElementById('tiddly-refresh');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
@@ -80,6 +81,7 @@ let uploadIsLoading = false;
 let previousWindow = null;
 let tiddlyMode = false;
 let tiddlySitePollId = 0;
+let tiddlySetupStage = 0;
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -258,9 +260,21 @@ tiddlySetupBtn.addEventListener('click', async () => {
   if (payload && payload.length) {
     const dropScript = makeDropScript(payload);
     setTimeout(() => {
-      uploadFrame.executeJavaScript(dropScript, true).catch(() => {});
+      uploadFrame
+        .executeJavaScript(dropScript, true)
+        .then(() => {
+          tiddlyGuideText.textContent = 'Press the Import button, and then the Red save dot on the right, once done hit refresh';
+          tiddlySetupBtn.classList.add('hidden');
+          tiddlyRefreshBtn.classList.remove('hidden');
+          tiddlySetupStage = 1;
+        })
+        .catch(() => {});
     }, 1000);
   }
+});
+tiddlyRefreshBtn.addEventListener('click', () => {
+  tiddlySetupStage = 2;
+  uploadFrame.reload();
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
@@ -363,6 +377,11 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
   updateUploadNav();
+  if (tiddlyMode && tiddlySetupStage === 2) {
+    tiddlyGuideText.textContent = 'Congrats! Tiddlywiki successfully set up, copy the link and put it in your settings to start using it!';
+    tiddlyRefreshBtn.classList.add('hidden');
+    tiddlySetupStage = 3;
+  }
 });
 // Redirect attempts to open a new window into the current frame
 uploadFrame.addEventListener('new-window', e => {
@@ -1019,7 +1038,9 @@ function updateTiddlyGuide(url) {
   const subRe = /^https?:\/\/[^./]+\.tiddlyhost\.com/;
   tiddlySitePollId++;
   tiddlySetupBtn.classList.add('hidden');
+  tiddlyRefreshBtn.classList.add('hidden');
   tiddlyGuide.classList.remove('hidden');
+  tiddlySetupStage = 0;
   if (rootRe.test(url)) {
     tiddlyGuideText.textContent = 'Log in or sign up for a Tiddlyhost account';
   } else if (newSiteRe.test(url)) {
@@ -1116,6 +1137,8 @@ function closeUploadWindow() {
     tiddlyMode = false;
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
+    tiddlyRefreshBtn.classList.add('hidden');
+    tiddlySetupStage = 0;
   }
 }
 
