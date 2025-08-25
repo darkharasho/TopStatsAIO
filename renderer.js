@@ -254,8 +254,7 @@ setupTiddlyhostBtn.addEventListener('click', () => {
   updateTiddlyGuide('https://tiddlyhost.com/');
 });
 tiddlySetupBtn.addEventListener('click', async () => {
-  const sel = localStorage.getItem('parserSelection') || 'combiner';
-  const payload = await window.electronAPI.getExampleOutput(sel);
+  const payload = await window.electronAPI.getExampleOutput('combiner');
   if (payload && payload.length) {
     uploadFrame.executeJavaScript(makeDropScript(payload), true).catch(() => {});
   }

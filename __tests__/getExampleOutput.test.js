@@ -44,16 +44,20 @@ jest.mock('../utils', () => {
   };
 });
 
+beforeAll(() => {
+  const topDir = path.join(mockUserDataDir, 'dependencies', 'topstatsparser', 'Example_Output');
+  fs.mkdirSync(topDir, { recursive: true });
+  fs.writeFileSync(path.join(topDir, 'sample.txt'), 'hello');
+
+  const combDir = path.join(mockUserDataDir, 'dependencies', 'logcombiner', 'Example Output');
+  fs.mkdirSync(combDir, { recursive: true });
+  fs.writeFileSync(path.join(combDir, 'sample2.txt'), 'world');
+
+  require('../main');
+});
+
 describe('get-example-output', () => {
-  test('returns files from Example_Output', async () => {
-    const exDir = path.join(mockUserDataDir, 'dependencies', 'topstatsparser', 'Example_Output');
-    fs.mkdirSync(exDir, { recursive: true });
-    const filePath = path.join(exDir, 'sample.txt');
-    fs.writeFileSync(filePath, 'hello');
-
-    require('../main');
-    await Promise.resolve();
-
+  test('returns files from topstats Example_Output', async () => {
     const handler = handlers['get-example-output'];
     expect(handler).toBeDefined();
 
@@ -63,6 +67,13 @@ describe('get-example-output', () => {
 
     const utils = require('../utils');
     expect(utils.ensureDeps).toHaveBeenCalledWith(path.join(mockUserDataDir, 'dependencies'));
+  });
+
+  test('returns files from combiner Example Output', async () => {
+    const handler = handlers['get-example-output'];
+    const result = await handler({}, 'combiner');
+    const expected = Buffer.from('world').toString('base64');
+    expect(result).toEqual([{ name: 'sample2.txt', data: expected }]);
   });
 });
 

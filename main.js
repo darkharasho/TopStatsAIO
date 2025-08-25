@@ -436,9 +436,12 @@ ipcMain.handle('get-example-output', async (event, which) => {
   try {
     ensureDeps(depsDir);
     const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
-    const ex1 = path.join(dir, 'example_output');
-    const ex2 = path.join(dir, 'Example_Output');
-    const target = fs.existsSync(ex1) ? ex1 : fs.existsSync(ex2) ? ex2 : null;
+    let target = null;
+    try {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      const match = entries.find(e => e.isDirectory() && /example[ _-]*output/i.test(e.name));
+      if (match) target = path.join(dir, match.name);
+    } catch {}
     if (!target) return [];
     async function gather(p) {
       const entries = await fs.promises.readdir(p, { withFileTypes: true });
