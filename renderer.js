@@ -1027,5 +1027,11 @@ function applyGradient(name) {
   document.documentElement.style.setProperty('--card-border', grad);
   document.documentElement.style.setProperty('--btn-border', c1);
   document.documentElement.style.setProperty('--btn-border-hover', c2);
+  if (gradientSelect) {
+    gradientSelect.classList.remove(
+      ...Array.from(gradientSelect.classList).filter(c => c.startsWith('gradient-') && c !== 'gradient-text')
+    );
+    gradientSelect.classList.add('gradient-text', `gradient-${name}`);
+  }
   localStorage.setItem('gradientTheme', name);
 }
