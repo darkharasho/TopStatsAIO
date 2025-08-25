@@ -202,19 +202,70 @@
       #upload-actions {
         display:flex;
         align-items:center;
-        gap:10px;
+        gap:4px;
         padding:12px 12px 32px;
         border-bottom:1px solid transparent;
         border-image:var(--card-border);
       }
-      #upload-refresh { font-size:20px; cursor:pointer; }
-      #upload-url-display { width:75%; }
-      #upload-close { margin-left:auto; }
+      #upload-nav {
+        display:flex;
+        gap:2px;
+      }
+      .nav-btn {
+        width:32px;
+        height:32px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:0;
+        font-size:16px;
+        color:#fff;
+      }
+      #upload-url-wrapper {
+        position:relative;
+        flex:1;
+      }
+      #upload-url-display {
+        width:100%;
+        padding-right:32px;
+        border-top-right-radius:0;
+        border-bottom-right-radius:0;
+        border-right:none;
+      }
+      #upload-copy {
+        position:absolute;
+        top:0;
+        right:0;
+        width:32px;
+        height:100%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        cursor:pointer;
+        color:#fff;
+        font-size:16px;
+      }
       #upload-frame { flex:1; border:none; width:100%; }
       #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
       #upload-loading.active { display:block; }
       #upload-status { text-align:center; padding:4px 8px; font-size:12px; color:var(--label-color); }
       #upload-status.error { color:#e81123; }
+      #copy-toast {
+        position:fixed;
+        bottom:48px;
+        right:16px;
+        background:var(--bg-btn);
+        color:var(--text-color);
+        padding:6px 12px;
+        border:1px solid transparent;
+        border-image:var(--card-border);
+        border-radius:4px;
+        opacity:0;
+        transition:opacity 0.3s;
+        pointer-events:none;
+        z-index:1000;
+      }
+      #copy-toast.show { opacity:1; }
       @keyframes spin { to { transform:rotate(360deg); } }
       .parse-output { background:var(--bg-btn); color:var(--text-color); border:1px solid transparent; border-radius:8px; padding:10px; flex:1; overflow:auto; border-image:var(--card-border); -webkit-user-select:text; user-select:text; font-family:monospace; white-space:pre-wrap; display:flex; flex-direction:column; gap:4px; }
       .parse-line.error { color:#e81123; }
@@ -302,13 +353,22 @@
     </div>
     <div id="upload-window">
       <div id="upload-actions">
-        <span id="upload-refresh" class="action-icon">&#x21bb;</span>
-        <input id="upload-url-display" class="folder-label" />
-        <button id="upload-close">Close</button>
+        <div id="upload-nav">
+          <button id="upload-back" class="nav-btn" aria-label="Back" title="Back">⮜</button>
+          <button id="upload-forward" class="nav-btn" aria-label="Forward" title="Forward">⮞</button>
+        </div>
+        <button id="upload-home" class="nav-btn" aria-label="Home" title="Home">&#x2302;</button>
+        <button id="upload-refresh" class="nav-btn" aria-label="Refresh" title="Refresh">&#x21bb;</button>
+        <div id="upload-url-wrapper">
+          <input id="upload-url-display" class="folder-label" />
+          <span id="upload-copy" aria-label="Copy Link" title="Copy Link">🔗</span>
+        </div>
+        <button id="upload-close" class="nav-btn" aria-label="Close" title="Close">&#x2715;</button>
       </div>
       <div id="upload-loading"></div>
       <webview id="upload-frame" partition="persist:upload"></webview>
       <div id="upload-status"></div>
+      <div id="copy-toast"></div>
     </div>
   <div id="settings-window">
     <button id="close-settings" aria-label="Close">&#x2715;</button>
