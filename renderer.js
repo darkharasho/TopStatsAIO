@@ -67,6 +67,7 @@ const tiddlyGuide = document.getElementById('tiddly-guide');
 const tiddlyGuideText = document.getElementById('tiddly-guide-text');
 const tiddlySetupBtn = document.getElementById('tiddly-setup');
 const tiddlyRefreshBtn = document.getElementById('tiddly-refresh');
+const tiddlyUseUrlBtn = document.getElementById('tiddly-use-url');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
@@ -259,7 +260,17 @@ tiddlySetupBtn.addEventListener('click', async () => {
 });
 tiddlyRefreshBtn.addEventListener('click', () => {
   tiddlySetupStage = 2;
+  tiddlyUseUrlBtn.classList.add('hidden');
   uploadFrame.reload();
+});
+tiddlyUseUrlBtn.addEventListener('click', () => {
+  const url = normalizeUrl(uploadFrame.getURL());
+  if (url) {
+    uploadUrlInput.value = url;
+    localStorage.setItem('uploadUrl', url);
+  }
+  tiddlyGuide.classList.add('hidden');
+  tiddlyUseUrlBtn.classList.add('hidden');
 });
 uploadLoginBtn.addEventListener('click', () => {
   let url = normalizeUrl(uploadUrlInput.value);
@@ -376,8 +387,9 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadFrame.style.visibility = 'visible';
   updateUploadNav();
   if (tiddlyMode && tiddlySetupStage === 2) {
-    tiddlyGuideText.textContent = 'Congrats! Tiddlywiki successfully set up, copy the link and put it in your settings to start using it!';
+    tiddlyGuideText.textContent = 'Congrats! Tiddlywiki successfully set up. Set your upload URL to this page?';
     tiddlyRefreshBtn.classList.add('hidden');
+    tiddlyUseUrlBtn.classList.remove('hidden');
     tiddlySetupStage = 3;
   }
 });
@@ -1039,6 +1051,7 @@ function updateTiddlyGuide(url) {
   tiddlySitePollId++;
   tiddlySetupBtn.classList.add('hidden');
   tiddlyRefreshBtn.classList.add('hidden');
+  tiddlyUseUrlBtn.classList.add('hidden');
   let message = '';
   if (rootRe.test(url)) {
     message = 'Log in or sign up for a Tiddlyhost account';
@@ -1102,6 +1115,7 @@ function openUploadWindow(url, payload, isSetup) {
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
+  tiddlyUseUrlBtn.classList.add('hidden');
   if (!tiddlyMode) {
     tiddlyGuideText.textContent = '';
     tiddlyGuide.classList.add('hidden');
@@ -1154,6 +1168,7 @@ function closeUploadWindow() {
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
     tiddlyRefreshBtn.classList.add('hidden');
+    tiddlyUseUrlBtn.classList.add('hidden');
     tiddlySetupStage = 0;
   }
 }
