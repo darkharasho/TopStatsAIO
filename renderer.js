@@ -256,7 +256,7 @@ tiddlySetupBtn.addEventListener('click', async () => {
   const sel = localStorage.getItem('parserSelection') || 'combiner';
   const payload = await window.electronAPI.getExampleOutput(sel);
   if (payload && payload.length) {
-    uploadFrame.executeJavaScript(makeDropScript(payload)).catch(() => {});
+    uploadFrame.executeJavaScript(makeDropScript(payload), true).catch(() => {});
   }
 });
 combinerGuildNameInput.addEventListener('input', () => {
@@ -1042,7 +1042,7 @@ function openUploadWindow(url, payload) {
   uploadFrame.style.visibility = 'hidden';
   const dropScript = payload.length ? makeDropScript(payload) : null;
   const handleFinish = () => {
-    if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
+    if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(()=>{});
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
