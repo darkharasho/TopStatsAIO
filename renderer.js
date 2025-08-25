@@ -259,6 +259,7 @@ tiddlySetupBtn.addEventListener('click', async () => {
   const payload = await window.electronAPI.getExampleOutput('combiner');
   window.electronAPI.log('Example output payload', payload ? payload.length : 0, 'files');
   if (payload && payload.length) {
+    window.electronAPI.log('Files being dropped', payload.map(f => f.name));
     const dropScript = makeDropScript(payload);
     const handleLoad = () => {
       uploadFrame.removeEventListener('did-stop-loading', handleLoad);
@@ -972,6 +973,7 @@ function makeDropScript(files) {
   return `(() => {
     const files = ${JSON.stringify(files)};
     console.log('Drop script injected with', files.length, 'files');
+    console.log('Files:', files.map(f => f.name));
     function b64ToBlob(b64){
       const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);
       for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);
@@ -986,6 +988,7 @@ function makeDropScript(files) {
       try{
         const dt=new DataTransfer();
         files.forEach(f=>{
+          console.log('Preparing drop for', f.name);
           const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
           dt.items.add(file);
         });

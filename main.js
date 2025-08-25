@@ -466,6 +466,7 @@ ipcMain.handle('get-example-output', async (event, which) => {
     }
     const files = await gather(target);
     console.log('Gathered', files.length, 'files for example output');
+    files.forEach(f => console.log('Example output file:', f));
     const payload = [];
     for (const f of files) {
       try {
