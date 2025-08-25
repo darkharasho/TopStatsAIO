@@ -259,10 +259,16 @@ tiddlySetupBtn.addEventListener('click', async () => {
   const payload = await window.electronAPI.getExampleOutput('combiner');
   window.electronAPI.log('Example output payload', payload ? payload.length : 0, 'files');
   if (payload && payload.length) {
-    uploadFrame
-      .executeJavaScript(makeDropScript(payload), true)
-      .then(() => window.electronAPI.log('Drop script executed'))
-      .catch(err => window.electronAPI.log('Drop script failed', err));
+    const dropScript = makeDropScript(payload);
+    const handleLoad = () => {
+      uploadFrame
+        .executeJavaScript(dropScript, true)
+        .then(() => window.electronAPI.log('Drop script executed'))
+        .catch(err => window.electronAPI.log('Drop script failed', err));
+      uploadFrame.removeEventListener('did-stop-loading', handleLoad);
+    };
+    uploadFrame.addEventListener('did-stop-loading', handleLoad);
+    uploadFrame.reload();
   } else {
     window.electronAPI.log('No example output found to drop');
   }
