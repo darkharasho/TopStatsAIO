@@ -384,6 +384,10 @@ ipcMain.on('window-control', (event, action) => {
   }
 });
 
+ipcMain.on('log', (event, args) => {
+  log(...args);
+});
+
 ipcMain.handle('download-dependency', async (event, which) => {
   try {
     await downloadDependency(which);

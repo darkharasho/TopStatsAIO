@@ -76,6 +76,7 @@ let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
 let uploadNavHandler = null;
+let uploadConsoleHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
 let tiddlyMode = false;
@@ -254,16 +255,16 @@ setupTiddlyhostBtn.addEventListener('click', () => {
   updateTiddlyGuide('https://tiddlyhost.com/');
 });
 tiddlySetupBtn.addEventListener('click', async () => {
-  console.log('Tiddlyhost setup button clicked');
+  window.electronAPI.log('Tiddlyhost setup button clicked');
   const payload = await window.electronAPI.getExampleOutput('combiner');
-  console.log('Example output payload', payload ? payload.length : 0, 'files');
+  window.electronAPI.log('Example output payload', payload ? payload.length : 0, 'files');
   if (payload && payload.length) {
     uploadFrame
       .executeJavaScript(makeDropScript(payload), true)
-      .then(() => console.log('Drop script executed'))
-      .catch(err => console.error('Drop script failed', err));
+      .then(() => window.electronAPI.log('Drop script executed'))
+      .catch(err => window.electronAPI.log('Drop script failed', err));
   } else {
-    console.warn('No example output found to drop');
+    window.electronAPI.log('No example output found to drop');
   }
 });
 combinerGuildNameInput.addEventListener('input', () => {
@@ -965,23 +966,25 @@ function makeDropScript(files) {
     console.log('Drop script injected with', files.length, 'files');
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
     function doDrop(){
-      const x = window.innerWidth/2;
-      const y = window.innerHeight/2;
-      const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
-      if(!target){console.log('No drop target found');return;}
-      const dt=new DataTransfer();
-      files.forEach(f=>{
-        const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
-        dt.items.add(file);
-      });
-      dt.effectAllowed='copy';
-      dt.dropEffect='copy';
-      ['dragenter','dragover','drop'].forEach(type=>{
-        const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
-        if(type!=='drop') ev.preventDefault();
-        target.dispatchEvent(ev);
-      });
-      console.log('Drop events dispatched');
+      try{
+        const x = window.innerWidth/2;
+        const y = window.innerHeight/2;
+        const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
+        if(!target){console.log('No drop target found');return;}
+        const dt=new DataTransfer();
+        files.forEach(f=>{
+          const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
+          dt.items.add(file);
+        });
+        dt.effectAllowed='copy';
+        dt.dropEffect='copy';
+        ['dragenter','dragover','drop'].forEach(type=>{
+          const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
+          if(type!=='drop') ev.preventDefault();
+          target.dispatchEvent(ev);
+        });
+        console.log('Drop events dispatched');
+      }catch(err){console.error('Drop script error', err);}
     }
     const fire=()=>setTimeout(doDrop,1000);
     if(document.readyState==='complete'){
@@ -1068,6 +1071,10 @@ function openUploadWindow(url, payload) {
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
+  uploadConsoleHandler = e => {
+    if (tiddlyMode) window.electronAPI.log('Tiddlyhost frame:', e.message);
+  };
+  uploadFrame.addEventListener('console-message', uploadConsoleHandler);
   uploadFrame.src = url;
   if (tiddlyMode) updateTiddlyGuide(url);
   updateUploadNav();
@@ -1091,6 +1098,10 @@ function closeUploadWindow() {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
     uploadNavHandler = null;
+  }
+  if (uploadConsoleHandler) {
+    uploadFrame.removeEventListener('console-message', uploadConsoleHandler);
+    uploadConsoleHandler = null;
   }
   previousWindow = null;
   if (tiddlyMode) {
