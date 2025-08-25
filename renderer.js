@@ -994,16 +994,7 @@ function makeDropScript(files) {
         });
         dt.effectAllowed='copy';
         dt.dropEffect='copy';
-        if(window.$tw && $tw.wiki && $tw.rootWidget){
-          $tw.wiki.readFiles(dt.files,{
-            callback:function(tiddlerFieldsArray){
-              if(tiddlerFieldsArray.length){
-                $tw.rootWidget.dispatchEvent({type:'tm-import-tiddlers',param:JSON.stringify(tiddlerFieldsArray)});
-              }
-            }
-          });
-          console.log('Imported files via TiddlyWiki API, dispatching drop events');
-        }
+        console.log('Dispatching manual drop events');
         const x=window.innerWidth/2;
         const y=window.innerHeight/2;
         const center=document.elementFromPoint(x,y);
