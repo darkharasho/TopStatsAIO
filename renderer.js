@@ -261,11 +261,13 @@ tiddlySetupBtn.addEventListener('click', async () => {
   if (payload && payload.length) {
     const dropScript = makeDropScript(payload);
     const handleLoad = () => {
-      uploadFrame
-        .executeJavaScript(dropScript, true)
-        .then(() => window.electronAPI.log('Drop script executed'))
-        .catch(err => window.electronAPI.log('Drop script failed', err));
       uploadFrame.removeEventListener('did-stop-loading', handleLoad);
+      setTimeout(() => {
+        uploadFrame
+          .executeJavaScript(dropScript, true)
+          .then(() => window.electronAPI.log('Drop script executed'))
+          .catch(err => window.electronAPI.log('Drop script failed', err));
+      }, 1000);
     };
     uploadFrame.addEventListener('did-stop-loading', handleLoad);
     uploadFrame.reload();
