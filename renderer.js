@@ -1072,10 +1072,11 @@ function updateTiddlyGuide(url) {
     message = 'Click Setup to upload example output';
     tiddlySetupBtn.classList.remove('hidden');
   }
-  if (message) {
+  if (message.trim()) {
     tiddlyGuideText.textContent = message;
     tiddlyGuide.classList.remove('hidden');
   } else {
+    tiddlyGuideText.textContent = '';
     tiddlyGuide.classList.add('hidden');
   }
   tiddlySetupStage = 0;
@@ -1100,6 +1101,7 @@ function openUploadWindow(url, payload, isSetup) {
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
   if (!tiddlyMode) {
+    tiddlyGuideText.textContent = '';
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
     tiddlyRefreshBtn.classList.add('hidden');
@@ -1146,6 +1148,7 @@ function closeUploadWindow() {
   previousWindow = null;
   if (tiddlyMode) {
     tiddlyMode = false;
+    tiddlyGuideText.textContent = '';
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
     tiddlyRefreshBtn.classList.add('hidden');
