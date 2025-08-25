@@ -971,7 +971,9 @@ function makeDropScript(files) {
       try{
         const dt=new DataTransfer();
         files.forEach(f=>{
-          const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
+          const ext=f.name.split('.').pop().toLowerCase();
+          const mime={html:'text/html',htm:'text/html',json:'application/json',txt:'text/plain',tid:'text/vnd.tiddlywiki'}[ext]||'application/octet-stream';
+          const file=new File([b64ToBlob(f.data)], f.name, {type:mime});
           dt.items.add(file);
         });
         dt.effectAllowed='copy';
