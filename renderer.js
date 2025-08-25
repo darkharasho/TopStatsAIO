@@ -56,7 +56,7 @@ const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
-const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
+const gradientSelect = document.getElementById('gradient-theme');
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -173,12 +173,8 @@ function updateDescriptionVisibility() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-gradientRadios.forEach(r => {
-  r.addEventListener('change', () => {
-    if (r.checked) {
-      applyGradient(r.value);
-    }
-  });
+gradientSelect.addEventListener('change', () => {
+  applyGradient(gradientSelect.value);
 });
 downloadCliBtn.addEventListener('click', async () => {
   downloadCliBtn.disabled = true;
@@ -416,8 +412,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(theme);
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
-  const gradRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
-  if (gradRadio) gradRadio.checked = true;
+  if (gradientSelect) gradientSelect.value = grad;
   const ver = await window.electronAPI.getAppVersion();
   versionText.textContent = `v${ver}`;
   const saved = localStorage.getItem('lastFolder');
@@ -1003,6 +998,26 @@ function applyGradient(name) {
     case 'midnight':
       c1 = '#000428';
       c2 = '#004e92';
+      break;
+    case 'mint':
+      c1 = '#a8ff78';
+      c2 = '#78ffd6';
+      break;
+    case 'sky':
+      c1 = '#cfd9df';
+      c2 = '#e2ebf0';
+      break;
+    case 'blush':
+      c1 = '#fbc2eb';
+      c2 = '#a6c1ee';
+      break;
+    case 'sand':
+      c1 = '#fdfbfb';
+      c2 = '#ebedee';
+      break;
+    case 'melon':
+      c1 = '#ffecd2';
+      c2 = '#fcb69f';
       break;
     default:
       c1 = '#6ec1e4';

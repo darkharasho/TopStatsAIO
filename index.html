@@ -128,6 +128,11 @@
       .gradient-peach { background-image:linear-gradient(to right, #f6d365, #fda085); }
       .gradient-lavender { background-image:linear-gradient(to right, #e0c3fc, #8ec5fc); }
       .gradient-midnight { background-image:linear-gradient(to right, #000428, #004e92); }
+      .gradient-mint { background-image:linear-gradient(to right, #a8ff78, #78ffd6); }
+      .gradient-sky { background-image:linear-gradient(to right, #cfd9df, #e2ebf0); }
+      .gradient-blush { background-image:linear-gradient(to right, #fbc2eb, #a6c1ee); }
+      .gradient-sand { background-image:linear-gradient(to right, #fdfbfb, #ebedee); }
+      .gradient-melon { background-image:linear-gradient(to right, #ffecd2, #fcb69f); }
 
       .card { background:var(--card-bg); border:1px solid transparent; border-radius:8px; padding:16px; border-image:var(--card-border); }
       .card-title { margin:0 0 8px; font-size:14px; font-weight:600; color:var(--label-color); }
@@ -342,33 +347,24 @@
           <div class="dep-row">
             <button id="theme-dark" class="theme-btn">Dark</button>
             <button id="theme-light" class="theme-btn">Light</button>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="default" /> <span class="gradient-text gradient-default">Blue/Purple</span></label>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="grey" /> <span class="gradient-text gradient-grey">Grey</span></label>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="sunset" /> <span class="gradient-text gradient-sunset">Sunset</span></label>
-            </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="forest" /> <span class="gradient-text gradient-forest">Forest</span></label>
           </div>
           <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="ocean" /> <span class="gradient-text gradient-ocean">Ocean</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="rose" /> <span class="gradient-text gradient-rose">Rose</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="peach" /> <span class="gradient-text gradient-peach">Peach</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="lavender" /> <span class="gradient-text gradient-lavender">Lavender</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="midnight" /> <span class="gradient-text gradient-midnight">Midnight</span></label>
+            <select id="gradient-theme" class="config-input">
+              <option value="default">Blue/Purple</option>
+              <option value="grey">Grey</option>
+              <option value="sunset">Sunset</option>
+              <option value="forest">Forest</option>
+              <option value="ocean">Ocean</option>
+              <option value="rose">Rose</option>
+              <option value="peach">Peach</option>
+              <option value="lavender">Lavender</option>
+              <option value="midnight">Midnight</option>
+              <option value="mint">Mint</option>
+              <option value="sky">Sky</option>
+              <option value="blush">Blush</option>
+              <option value="sand">Sand</option>
+              <option value="melon">Melon</option>
+            </select>
           </div>
         </div>
         <div class="card" id="parser-selection-card">
