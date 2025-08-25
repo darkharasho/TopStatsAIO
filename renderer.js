@@ -22,6 +22,7 @@ const settingsWindow = document.getElementById('settings-window');
 const closeSettingsBtn = document.getElementById('close-settings');
 const darkBtn = document.getElementById('theme-dark');
 const lightBtn = document.getElementById('theme-light');
+const acrylicBtn = document.getElementById('theme-acrylic');
 const downloadCliBtn = document.getElementById('download-cli');
 const downloadCombinerBtn = document.getElementById('download-combiner');
 const downloadParserBtn = document.getElementById('download-parser');
@@ -174,6 +175,7 @@ function updateDescriptionVisibility() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
+acrylicBtn.addEventListener('click', () => window.electronAPI.setTheme('acrylic'));
 gradientRadios.forEach(radio => {
   radio.addEventListener('change', () => {
     if (radio.checked) {
@@ -414,11 +416,12 @@ window.electronAPI.onLoadProgress(data => {
 
 document.addEventListener('DOMContentLoaded', async () => {
   const savedTheme = localStorage.getItem('theme');
-  let theme = savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : await window.electronAPI.getTheme();
-  if (theme !== 'light' && theme !== 'dark') {
+  let theme = ['light', 'dark', 'acrylic'].includes(savedTheme) ? savedTheme : await window.electronAPI.getTheme();
+  if (!['light', 'dark', 'acrylic'].includes(theme)) {
     theme = 'dark';
   }
   applyTheme(theme);
+  window.electronAPI.setTheme(theme);
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
   const savedRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
@@ -970,12 +973,19 @@ async function startParse() {
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
+  document.body.classList.toggle('acrylic', theme === 'acrylic');
   if (theme === 'light') {
     lightBtn.classList.add('selected');
     darkBtn.classList.remove('selected');
+    acrylicBtn.classList.remove('selected');
+  } else if (theme === 'acrylic') {
+    acrylicBtn.classList.add('selected');
+    darkBtn.classList.remove('selected');
+    lightBtn.classList.remove('selected');
   } else {
     darkBtn.classList.add('selected');
     lightBtn.classList.remove('selected');
+    acrylicBtn.classList.remove('selected');
   }
   localStorage.setItem('theme', theme);
 }

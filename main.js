@@ -176,7 +176,7 @@ function createWindow() {
     width: 1100,
     height: 800,
     backgroundColor: useMica ? '#00000000' : '#2d2d2d',
-    ...(useMica ? { backgroundMaterial: 'mica', visualEffectState: 'active' } : {}),
+    ...(useMica ? { backgroundMaterial: appTheme === 'acrylic' ? 'acrylic' : 'mica', visualEffectState: 'active' } : {}),
     titleBarStyle: 'hidden',
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
@@ -207,7 +207,7 @@ function showUpdatePrompt(parent) {
     resizable: false,
     frame: false,
     backgroundColor: useMica ? '#00000000' : '#2d2d2d',
-    ...(useMica ? { backgroundMaterial: 'mica', visualEffectState: 'active' } : {}),
+    ...(useMica ? { backgroundMaterial: appTheme === 'acrylic' ? 'acrylic' : 'mica', visualEffectState: 'active' } : {}),
     titleBarStyle: 'hidden',
     show: false,
     webPreferences: {
@@ -351,8 +351,9 @@ ipcMain.handle('get-version', () => app.getVersion());
 
 ipcMain.on('set-theme', (event, theme) => {
   appTheme = theme;
-  nativeTheme.themeSource = theme;
+  nativeTheme.themeSource = theme === 'light' ? 'light' : 'dark';
   BrowserWindow.getAllWindows().forEach(w => {
+    if (useMica) w.setBackgroundMaterial(theme === 'acrylic' ? 'acrylic' : 'mica');
     w.webContents.send('theme-changed', theme);
   });
 });
