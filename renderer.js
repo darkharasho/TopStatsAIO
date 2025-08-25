@@ -57,6 +57,7 @@ const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
+const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -173,10 +174,14 @@ function updateDescriptionVisibility() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-gradientRadios.forEach(r => {
-  r.addEventListener('change', () => {
-    if (r.checked) {
-      applyGradient(r.value);
+gradientRadios.forEach(radio => {
+  radio.addEventListener('change', () => {
+    if (radio.checked) {
+      applyGradient(radio.value);
+      const span = radio.nextElementSibling;
+      if (gradientSummary && span) {
+        gradientSummary.textContent = span.textContent;
+      }
     }
   });
 });
@@ -416,8 +421,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(theme);
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
-  const gradRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
-  if (gradRadio) gradRadio.checked = true;
+  const savedRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
+  if (savedRadio) {
+    savedRadio.checked = true;
+    const span = savedRadio.nextElementSibling;
+    if (gradientSummary && span) {
+      gradientSummary.textContent = span.textContent;
+    }
+  }
   const ver = await window.electronAPI.getAppVersion();
   versionText.textContent = `v${ver}`;
   const saved = localStorage.getItem('lastFolder');
@@ -1004,6 +1015,38 @@ function applyGradient(name) {
       c1 = '#000428';
       c2 = '#004e92';
       break;
+    case 'mint':
+      c1 = '#a8ff78';
+      c2 = '#78ffd6';
+      break;
+    case 'sky':
+      c1 = '#a1c4fd';
+      c2 = '#c2e9fb';
+      break;
+    case 'blush':
+      c1 = '#ff9a9e';
+      c2 = '#fecfef';
+      break;
+    case 'sand':
+      c1 = '#eacda3';
+      c2 = '#d6ae7b';
+      break;
+    case 'melon':
+      c1 = '#ffe29f';
+      c2 = '#ffa99f';
+      break;
+    case 'coral':
+      c1 = '#ff9966';
+      c2 = '#ff5e62';
+      break;
+    case 'berry':
+      c1 = '#a18cd1';
+      c2 = '#fbc2eb';
+      break;
+    case 'lagoon':
+      c1 = '#64b3f4';
+      c2 = '#c2e59c';
+      break;
     default:
       c1 = '#6ec1e4';
       c2 = '#8e44ad';
@@ -1012,5 +1055,11 @@ function applyGradient(name) {
   document.documentElement.style.setProperty('--card-border', grad);
   document.documentElement.style.setProperty('--btn-border', c1);
   document.documentElement.style.setProperty('--btn-border-hover', c2);
+  if (gradientSummary) {
+    gradientSummary.classList.remove(
+      ...Array.from(gradientSummary.classList).filter(c => c.startsWith('gradient-') && c !== 'gradient-text')
+    );
+    gradientSummary.classList.add('gradient-text', `gradient-${name}`);
+  }
   localStorage.setItem('gradientTheme', name);
 }

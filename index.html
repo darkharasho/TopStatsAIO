@@ -128,6 +128,14 @@
       .gradient-peach { background-image:linear-gradient(to right, #f6d365, #fda085); }
       .gradient-lavender { background-image:linear-gradient(to right, #e0c3fc, #8ec5fc); }
       .gradient-midnight { background-image:linear-gradient(to right, #000428, #004e92); }
+      .gradient-mint { background-image:linear-gradient(to right, #a8ff78, #78ffd6); }
+      .gradient-sky { background-image:linear-gradient(to right, #a1c4fd, #c2e9fb); }
+      .gradient-blush { background-image:linear-gradient(to right, #ff9a9e, #fecfef); }
+      .gradient-sand { background-image:linear-gradient(to right, #eacda3, #d6ae7b); }
+      .gradient-melon { background-image:linear-gradient(to right, #ffe29f, #ffa99f); }
+      .gradient-coral { background-image:linear-gradient(to right, #ff9966, #ff5e62); }
+      .gradient-berry { background-image:linear-gradient(to right, #a18cd1, #fbc2eb); }
+      .gradient-lagoon { background-image:linear-gradient(to right, #64b3f4, #c2e59c); }
 
       .card { background:var(--card-bg); border:1px solid transparent; border-radius:8px; padding:16px; border-image:var(--card-border); }
       .card-title { margin:0 0 8px; font-size:14px; font-weight:600; color:var(--label-color); }
@@ -139,6 +147,16 @@
 
       .config-row { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
       .config-input { background:var(--bg-btn); color:var(--text-color); border:1px solid var(--label-border); padding:6px 12px; border-radius:4px; flex:1; }
+      #gradient-drawer { flex:1; border:1px solid var(--label-border); border-radius:4px; overflow:hidden; }
+      #gradient-drawer > summary { list-style:none; padding:6px 12px; cursor:pointer; background-color:var(--bg-btn); display:flex; align-items:center; justify-content:space-between; }
+      #gradient-drawer > summary::-webkit-details-marker { display:none; }
+      #gradient-drawer > summary::after { content:'\25BC'; font-size:12px; color:var(--label-color); margin-left:8px; transition:transform 0.2s; }
+      #gradient-drawer[open] > summary { border-bottom:1px solid var(--label-border); }
+      #gradient-drawer[open] > summary::after { transform:rotate(180deg); }
+      #gradient-options { display:flex; flex-direction:column; gap:4px; padding:8px 12px; margin:0; }
+      #gradient-options label { display:flex; align-items:center; gap:8px; }
+      #gradient-options label span { display:flex; flex-direction:column; }
+      #gradient-options input[type="radio"]:checked + span::after { content:''; display:block; height:2px; margin-top:2px; width:100%; background-image:inherit; background-clip:border-box; -webkit-background-clip:border-box; border-radius:1px; }
 
       #settings-grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; align-items:flex-start; }
       #settings-left, #settings-right { display:flex; flex-direction:column; gap:20px; }
@@ -171,7 +189,14 @@
       #parse-window.active { opacity:1; pointer-events:auto; }
       #upload-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
       #upload-window.active { opacity:1; pointer-events:auto; }
-      #upload-actions { display:flex; align-items:center; gap:10px; margin:12px; }
+      #upload-actions {
+        display:flex;
+        align-items:center;
+        gap:10px;
+        padding:12px 12px 32px;
+        border-bottom:1px solid transparent;
+        border-image:var(--card-border);
+      }
       #upload-refresh { font-size:20px; cursor:pointer; }
       #upload-url-display { width:75%; }
       #upload-close { margin-left:auto; }
@@ -335,33 +360,81 @@
           <div class="dep-row">
             <button id="theme-dark" class="theme-btn">Dark</button>
             <button id="theme-light" class="theme-btn">Light</button>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="default" /> <span class="gradient-text gradient-default">Blue/Purple</span></label>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="grey" /> <span class="gradient-text gradient-grey">Grey</span></label>
-            </div>
-            <div class="dep-row">
-              <label><input type="radio" name="gradient-theme" value="sunset" /> <span class="gradient-text gradient-sunset">Sunset</span></label>
-            </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="forest" /> <span class="gradient-text gradient-forest">Forest</span></label>
           </div>
           <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="ocean" /> <span class="gradient-text gradient-ocean">Ocean</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="rose" /> <span class="gradient-text gradient-rose">Rose</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="peach" /> <span class="gradient-text gradient-peach">Peach</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="lavender" /> <span class="gradient-text gradient-lavender">Lavender</span></label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="gradient-theme" value="midnight" /> <span class="gradient-text gradient-midnight">Midnight</span></label>
+            <details id="gradient-drawer">
+              <summary id="gradient-summary" class="gradient-text gradient-default">Blue/Purple</summary>
+              <div id="gradient-options">
+                <label>
+                  <input type="radio" name="gradient-theme" value="default" checked />
+                  <span class="gradient-text gradient-default">Blue/Purple</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="grey" />
+                  <span class="gradient-text gradient-grey">Grey</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="sunset" />
+                  <span class="gradient-text gradient-sunset">Sunset</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="forest" />
+                  <span class="gradient-text gradient-forest">Forest</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="ocean" />
+                  <span class="gradient-text gradient-ocean">Ocean</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="rose" />
+                  <span class="gradient-text gradient-rose">Rose</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="peach" />
+                  <span class="gradient-text gradient-peach">Peach</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="lavender" />
+                  <span class="gradient-text gradient-lavender">Lavender</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="midnight" />
+                  <span class="gradient-text gradient-midnight">Midnight</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="mint" />
+                  <span class="gradient-text gradient-mint">Mint</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="sky" />
+                  <span class="gradient-text gradient-sky">Sky</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="blush" />
+                  <span class="gradient-text gradient-blush">Blush</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="sand" />
+                  <span class="gradient-text gradient-sand">Sand</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="melon" />
+                  <span class="gradient-text gradient-melon">Melon</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="coral" />
+                  <span class="gradient-text gradient-coral">Coral</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="berry" />
+                  <span class="gradient-text gradient-berry">Berry</span>
+                </label>
+                <label>
+                  <input type="radio" name="gradient-theme" value="lagoon" />
+                  <span class="gradient-text gradient-lagoon">Lagoon</span>
+                </label>
+              </div>
+            </details>
           </div>
         </div>
         <div class="card" id="parser-selection-card">
