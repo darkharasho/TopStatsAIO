@@ -79,6 +79,7 @@ let uploadNavHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
 let tiddlyMode = false;
+let tiddlySiteName = '';
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -960,14 +961,35 @@ function makeDropScript(files) {
 function updateTiddlyGuide(url) {
   if (!tiddlyMode) return;
   const rootRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/?$/;
-  const sitesRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/?/;
+  const sitesListRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/?$/;
+  const newSiteRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/new\/?$/;
   const subRe = /^https?:\/\/[^./]+\.tiddlyhost\.com/;
   tiddlySetupBtn.classList.add('hidden');
   tiddlyGuide.classList.remove('hidden');
   if (rootRe.test(url)) {
     tiddlyGuideText.textContent = 'Log in or sign up for a Tiddlyhost account';
-  } else if (sitesRe.test(url)) {
+  } else if (newSiteRe.test(url)) {
+    tiddlyGuideText.textContent = 'Give your site a name, keep the other settings, and hit Create';
+    uploadFrame.executeJavaScript(`(() => {
+      const input = document.querySelector('input[name="subdomain"]');
+      if (input && !input.dataset.tsaioBound) {
+        const handler = () => localStorage.setItem('tsaioSiteName', input.value);
+        input.addEventListener('input', handler);
+        handler();
+        input.dataset.tsaioBound = '1';
+      }
+    })();`).catch(() => {});
+  } else if (sitesListRe.test(url)) {
     tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+    uploadFrame.executeJavaScript('localStorage.getItem("tsaioSiteName")').then(name => {
+      if (!name) return;
+      tiddlySiteName = name;
+      uploadFrame.executeJavaScript('document.body.innerText').then(text => {
+        if (text.includes(name)) {
+          tiddlyGuideText.textContent = `Navigate to your new site "${name}".`;
+        }
+      }).catch(() => {});
+    }).catch(() => {});
   } else if (subRe.test(url)) {
     tiddlyGuideText.textContent = 'Click Setup to upload example output';
     tiddlySetupBtn.classList.remove('hidden');
@@ -1036,6 +1058,7 @@ function closeUploadWindow() {
     tiddlyMode = false;
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
+    tiddlySiteName = '';
   }
 }
 
