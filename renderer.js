@@ -367,6 +367,21 @@ uploadFrame.addEventListener('dom-ready', () => {
       .insertCSS('html, body { height: auto !important; overflow: auto !important; }')
       .catch(() => {});
   }, 100);
+
+  // Capture attempts to open a new window and redirect within the current frame
+  try {
+    const wc = uploadFrame.getWebContents();
+    if (wc && wc.setWindowOpenHandler) {
+      wc.setWindowOpenHandler(({ url }) => {
+        uploadFrame.loadURL(url);
+        uploadUrlBar.value = url;
+        updateUploadNav();
+        if (tiddlyMode) updateTiddlyGuide(url);
+        return { action: 'deny' };
+      });
+    }
+  } catch {}
+
   uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
@@ -382,16 +397,6 @@ uploadFrame.addEventListener('did-fail-load', e => {
 });
 uploadFrame.addEventListener('did-finish-load', () => {
   uploadFrame.focus();
-});
-
-// Redirect attempts to open new windows into the current frame
-uploadFrame.addEventListener('new-window', e => {
-  e.preventDefault();
-  const url = e.url;
-  uploadFrame.loadURL(url);
-  uploadUrlBar.value = url;
-  updateUploadNav();
-  if (tiddlyMode) updateTiddlyGuide(url);
 });
 
 function updateUploadNav() {
