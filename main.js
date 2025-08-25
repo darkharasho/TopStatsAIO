@@ -37,6 +37,20 @@ function log(...args) {
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
+// Redirect any popup attempts from webviews into the same view instead of
+// spawning a separate BrowserWindow. This ensures navigation happens within the
+// app's existing window and keeps the URL bar in sync.
+app.on('web-contents-created', (event, contents) => {
+  if (contents.getType && contents.getType() === 'webview') {
+    contents.setWindowOpenHandler(({ url }) => {
+      if (url) {
+        contents.loadURL(url);
+      }
+      return { action: 'deny' };
+    });
+  }
+});
+
 async function fetchJson(url) {
   try {
     const res = await fetch(url, {
