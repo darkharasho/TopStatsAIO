@@ -384,6 +384,16 @@ uploadFrame.addEventListener('did-finish-load', () => {
   uploadFrame.focus();
 });
 
+// Redirect attempts to open new windows into the current frame
+uploadFrame.addEventListener('new-window', e => {
+  e.preventDefault();
+  const url = e.url;
+  uploadFrame.loadURL(url);
+  uploadUrlBar.value = url;
+  updateUploadNav();
+  if (tiddlyMode) updateTiddlyGuide(url);
+});
+
 function updateUploadNav() {
   uploadBackBtn.disabled = !uploadFrame.canGoBack();
   uploadForwardBtn.disabled = !uploadFrame.canGoForward();
