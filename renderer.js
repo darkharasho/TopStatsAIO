@@ -1004,20 +1004,32 @@ function applyGradient(name) {
       c2 = '#78ffd6';
       break;
     case 'sky':
-      c1 = '#cfd9df';
-      c2 = '#e2ebf0';
+      c1 = '#a1c4fd';
+      c2 = '#c2e9fb';
       break;
     case 'blush':
-      c1 = '#fbc2eb';
-      c2 = '#a6c1ee';
+      c1 = '#ff9a9e';
+      c2 = '#fecfef';
       break;
     case 'sand':
-      c1 = '#fdfbfb';
-      c2 = '#ebedee';
+      c1 = '#eacda3';
+      c2 = '#d6ae7b';
       break;
     case 'melon':
-      c1 = '#ffecd2';
-      c2 = '#fcb69f';
+      c1 = '#ffe29f';
+      c2 = '#ffa99f';
+      break;
+    case 'coral':
+      c1 = '#ff9966';
+      c2 = '#ff5e62';
+      break;
+    case 'berry':
+      c1 = '#a18cd1';
+      c2 = '#fbc2eb';
+      break;
+    case 'lagoon':
+      c1 = '#64b3f4';
+      c2 = '#c2e59c';
       break;
     default:
       c1 = '#6ec1e4';
