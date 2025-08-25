@@ -976,11 +976,11 @@ function makeDropScript(files) {
         });
         dt.effectAllowed='copy';
         dt.dropEffect='copy';
-        const x=window.innerWidth/2;
-        const y=window.innerHeight/2;
-        const center=document.elementFromPoint(x,y);
+        const x=window.innerWidth-10;
+        const y=window.innerHeight-10;
+        const corner=document.elementFromPoint(x,y);
         const targets=[document.body,document.documentElement];
-        if(center && !targets.includes(center)) targets.push(center);
+        if(corner && !targets.includes(corner)) targets.push(corner);
         targets.forEach(target=>{
           ['dragenter','dragover','drop'].forEach(type=>{
             const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
