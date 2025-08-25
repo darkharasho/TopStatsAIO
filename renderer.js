@@ -967,10 +967,6 @@ function makeDropScript(files) {
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
     function doDrop(){
       try{
-        const x = window.innerWidth/2;
-        const y = window.innerHeight/2;
-        const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
-        if(!target){console.log('No drop target found');return;}
         const dt=new DataTransfer();
         files.forEach(f=>{
           const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
@@ -978,12 +974,25 @@ function makeDropScript(files) {
         });
         dt.effectAllowed='copy';
         dt.dropEffect='copy';
-        ['dragenter','dragover','drop'].forEach(type=>{
-          const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
-          if(type!=='drop') ev.preventDefault();
-          target.dispatchEvent(ev);
-        });
-        console.log('Drop events dispatched');
+        const x = window.innerWidth/2;
+        const y = window.innerHeight/2;
+        const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
+        if(!target){console.log('No drop target found');}else{
+          ['dragenter','dragover','drop'].forEach(type=>{
+            const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
+            if(type!=='drop') ev.preventDefault();
+            target.dispatchEvent(ev);
+          });
+          console.log('Drop events dispatched on', target.tagName);
+        }
+        const input=document.querySelector('input[type="file"]');
+        if(input){
+          input.files=dt.files;
+          input.dispatchEvent(new Event('change',{bubbles:true}));
+          console.log('File input change dispatched');
+        }else{
+          console.log('No file input found');
+        }
       }catch(err){console.error('Drop script error', err);}
     }
     const fire=()=>setTimeout(doDrop,1000);
