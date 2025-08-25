@@ -980,24 +980,39 @@ function updateTiddlyGuide(url) {
       }
     })();`).catch(() => {});
   } else if (sitesListRe.test(url)) {
-    tiddlyGuideText.textContent = 'Click the "+ Create" button.';
     uploadFrame.executeJavaScript('localStorage.getItem("tsaioSiteName")').then(name => {
-      if (!name) return;
+      if (!name) {
+        tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+        return;
+      }
       tiddlySiteName = name;
-      const checkForSite = () => {
+      const checkForSite = (attempts = 0) => {
         uploadFrame.executeJavaScript('document.body.innerText').then(text => {
           if (text.includes(name)) {
             tiddlyGuideText.textContent = `Navigate to your new site "${name}".`;
+          } else if (attempts >= 5) {
+            tiddlyGuideText.textContent = 'Click the "+ Create" button.';
           } else {
-            setTimeout(checkForSite, 1000);
+            setTimeout(() => checkForSite(attempts + 1), 1000);
           }
-        }).catch(() => {});
+        }).catch(() => {
+          if (attempts >= 5) {
+            tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+          } else {
+            setTimeout(() => checkForSite(attempts + 1), 1000);
+          }
+        });
       };
+      tiddlyGuideText.textContent = 'Looking for your new site...';
       checkForSite();
-    }).catch(() => {});
+    }).catch(() => {
+      tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+    });
   } else if (subRe.test(url)) {
     tiddlyGuideText.textContent = 'Click Setup to upload example output';
     tiddlySetupBtn.classList.remove('hidden');
+    uploadFrame.executeJavaScript('localStorage.removeItem("tsaioSiteName")').catch(() => {});
+    tiddlySiteName = '';
   } else {
     tiddlyGuide.classList.add('hidden');
   }
