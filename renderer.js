@@ -58,13 +58,13 @@ const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 window.addEventListener('load', () => {
-  const uploadActions = document.getElementById('upload-actions');
-  if (uploadActions) {
-    console.log('upload actions display hack start');
-    uploadActions.style.display = 'none';
+  const uploadWindowEl = document.getElementById('upload-window');
+  if (uploadWindowEl) {
+    console.log('upload window display hack start');
+    uploadWindowEl.style.display = 'none';
     setTimeout(() => {
-      uploadActions.style.display = 'flex';
-      console.log('upload actions display hack applied');
+      uploadWindowEl.style.display = 'flex';
+      console.log('upload window display hack applied');
     }, 100);
   }
 });
