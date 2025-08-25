@@ -248,6 +248,9 @@
       #upload-frame { flex:1; border:none; width:100%; height:100%; overflow:auto; }
       #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
       #upload-loading.active { display:block; }
+      #tiddly-guide { position:absolute; top:100px; left:50%; transform:translateX(-50%); background:var(--bg-btn); color:var(--text-color); padding:12px 16px; border:2px solid var(--btn-border); border-radius:8px; display:flex; align-items:center; gap:10px; z-index:3; pointer-events:none; }
+      #tiddly-guide.hidden { display:none; }
+      #tiddly-setup, #tiddly-refresh, #tiddly-use-url { pointer-events:auto; font-size:16px; font-weight:bold; padding:8px 16px; }
       #upload-status { text-align:center; padding:4px 8px; font-size:12px; color:var(--label-color); }
       #upload-status.error { color:#e81123; }
       #copy-toast {
@@ -366,7 +369,13 @@
         <button id="upload-close" class="nav-btn" aria-label="Close" title="Close">&#x2715;</button>
       </div>
       <div id="upload-loading"></div>
-      <webview id="upload-frame" partition="persist:upload"></webview>
+      <webview id="upload-frame" partition="persist:upload" allowpopups></webview>
+      <div id="tiddly-guide" class="hidden">
+        <span id="tiddly-guide-text"></span>
+        <button id="tiddly-setup" class="hidden">Setup</button>
+        <button id="tiddly-refresh" class="hidden">Refresh</button>
+        <button id="tiddly-use-url" class="hidden">Use URL</button>
+      </div>
       <div id="upload-status"></div>
       <div id="copy-toast"></div>
     </div>
@@ -518,6 +527,12 @@
           </div>
           <div class="dep-row">
             <button id="open-parser-folder">Open Parser Folder</button>
+          </div>
+        </div>
+        <div class="card" id="site-setup-card">
+          <h3 class="card-title">Site Setup</h3>
+          <div class="config-row">
+            <button id="setup-tiddlyhost">Set up Tiddlyhost</button>
           </div>
         </div>
       </div>

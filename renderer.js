@@ -62,6 +62,12 @@ const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const copyToast = document.getElementById('copy-toast');
+const setupTiddlyhostBtn = document.getElementById('setup-tiddlyhost');
+const tiddlyGuide = document.getElementById('tiddly-guide');
+const tiddlyGuideText = document.getElementById('tiddly-guide-text');
+const tiddlySetupBtn = document.getElementById('tiddly-setup');
+const tiddlyRefreshBtn = document.getElementById('tiddly-refresh');
+const tiddlyUseUrlBtn = document.getElementById('tiddly-use-url');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
@@ -74,6 +80,9 @@ let lastSelectedItem = null;
 let uploadNavHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
+let tiddlyMode = false;
+let tiddlySitePollId = 0;
+let tiddlySetupStage = 0;
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -232,6 +241,37 @@ dpsUserTokenInput.addEventListener('input', () => {
 uploadUrlInput.addEventListener('input', () => {
   localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
 });
+tiddlySetupBtn.addEventListener('click', async () => {
+  const payload = await window.electronAPI.getExampleOutput('combiner');
+  if (payload && payload.length) {
+    const dropScript = makeDropScript(payload, true);
+    setTimeout(() => {
+      uploadFrame
+        .executeJavaScript(dropScript, true)
+        .then(() => {
+          tiddlyGuideText.textContent = 'Press the Import button, and then the Red save dot on the right, once done hit refresh';
+          tiddlySetupBtn.classList.add('hidden');
+          tiddlyRefreshBtn.classList.remove('hidden');
+          tiddlySetupStage = 1;
+        })
+        .catch(() => {});
+    }, 1000);
+  }
+});
+tiddlyRefreshBtn.addEventListener('click', () => {
+  tiddlySetupStage = 2;
+  tiddlyUseUrlBtn.classList.add('hidden');
+  uploadFrame.reload();
+});
+tiddlyUseUrlBtn.addEventListener('click', () => {
+  const url = normalizeUrl(uploadFrame.getURL());
+  if (url) {
+    uploadUrlInput.value = url;
+    localStorage.setItem('uploadUrl', url);
+  }
+  tiddlyGuide.classList.add('hidden');
+  tiddlyUseUrlBtn.classList.add('hidden');
+});
 uploadLoginBtn.addEventListener('click', () => {
   let url = normalizeUrl(uploadUrlInput.value);
   if (!url) {
@@ -240,7 +280,10 @@ uploadLoginBtn.addEventListener('click', () => {
   }
   localStorage.setItem('uploadUrl', url);
   uploadUrlInput.value = url;
-  openUploadWindow(url, []);
+  openUploadWindow(url, [], false);
+});
+setupTiddlyhostBtn.addEventListener('click', () => {
+  openUploadWindow('https://tiddlyhost.com/', [], true);
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
@@ -274,7 +317,7 @@ parseUploadBtn.addEventListener('click', async () => {
   }
   localStorage.setItem('uploadUrl', url);
   const payload = await window.electronAPI.uploadParsedFiles(files);
-  openUploadWindow(url, payload);
+  openUploadWindow(url, payload, false);
 });
 parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
@@ -343,6 +386,23 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
   updateUploadNav();
+  if (tiddlyMode && tiddlySetupStage === 2) {
+    tiddlyGuideText.textContent = 'Congrats! Tiddlywiki successfully set up. Set your upload URL to this page?';
+    tiddlyRefreshBtn.classList.add('hidden');
+    tiddlyUseUrlBtn.classList.remove('hidden');
+    tiddlySetupStage = 3;
+  }
+});
+// Redirect attempts to open a new window into the current frame
+uploadFrame.addEventListener('new-window', e => {
+  e.preventDefault();
+  const url = e.url;
+  if (url) {
+    uploadFrame.loadURL(url);
+    uploadUrlBar.value = url;
+    updateUploadNav();
+    if (tiddlyMode) updateTiddlyGuide(url);
+  }
 });
 uploadFrame.addEventListener('dom-ready', () => {
   setTimeout(() => {
@@ -350,6 +410,21 @@ uploadFrame.addEventListener('dom-ready', () => {
       .insertCSS('html, body { height: auto !important; overflow: auto !important; }')
       .catch(() => {});
   }, 100);
+
+  // Capture attempts to open a new window and redirect within the current frame
+  try {
+    const wc = uploadFrame.getWebContents();
+    if (wc && wc.setWindowOpenHandler) {
+      wc.setWindowOpenHandler(({ url }) => {
+        uploadFrame.loadURL(url);
+        uploadUrlBar.value = url;
+        updateUploadNav();
+        if (tiddlyMode) updateTiddlyGuide(url);
+        return { action: 'deny' };
+      });
+    }
+  } catch {}
+
   uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
@@ -909,7 +984,119 @@ function closeParseWindow() {
   document.getElementById('title-text').textContent = 'Top Stats AIO';
 }
 
-function openUploadWindow(url, payload) {
+function makeDropScript(files, corner) {
+  return `(() => {
+    const files = ${JSON.stringify(files)};
+    function b64ToBlob(b64){
+      const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);
+      for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);
+    }
+    function applyFiles(input, dt){
+      const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'files').set;
+      setter.call(input, dt.files);
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+    function doDrop(){
+      try{
+        const dt=new DataTransfer();
+        files.forEach(f=>{
+          const ext=f.name.split('.').pop().toLowerCase();
+          const mime={html:'text/html',htm:'text/html',json:'application/json',txt:'text/plain',tid:'text/vnd.tiddlywiki'}[ext]||'application/octet-stream';
+          const file=new File([b64ToBlob(f.data)], f.name, {type:mime});
+          dt.items.add(file);
+        });
+        dt.effectAllowed='copy';
+        dt.dropEffect='copy';
+        const useCorner=${corner ? 'true' : 'false'};
+        const x=useCorner?window.innerWidth-10:window.innerWidth/2;
+        const y=useCorner?window.innerHeight-10:window.innerHeight/2;
+        const el=document.elementFromPoint(x,y);
+        const targets=[document.body,document.documentElement];
+        if(el && !targets.includes(el)) targets.push(el);
+        targets.forEach(target=>{
+          ['dragenter','dragover','drop'].forEach(type=>{
+            const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
+            if(type!=='drop') ev.preventDefault();
+            target.dispatchEvent(ev);
+          });
+        });
+        const inputs=document.querySelectorAll('input[type="file"]');
+        if(inputs.length){
+          inputs.forEach(input=>applyFiles(input,dt));
+        }else{
+          const input=document.createElement('input');
+          input.type='file';
+          input.multiple=true;
+          input.style.display='none';
+          document.body.appendChild(input);
+          applyFiles(input,dt);
+        }
+      }catch(err){}
+    }
+    if(document.readyState==='loading'){
+      window.addEventListener('DOMContentLoaded',()=>{doDrop();});
+    }else{
+      doDrop();
+    }
+  })();`;
+}
+
+function updateTiddlyGuide(url) {
+  if (!tiddlyMode) return;
+  if (tiddlySetupStage >= 2) return;
+  const rootRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/?$/;
+  const sitesListRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/?$/;
+  const newSiteRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/new\/?$/;
+  const subRe = /^https?:\/\/[^./]+\.tiddlyhost\.com/;
+  tiddlySitePollId++;
+  tiddlySetupBtn.classList.add('hidden');
+  tiddlyRefreshBtn.classList.add('hidden');
+  tiddlyUseUrlBtn.classList.add('hidden');
+  let message = '';
+  if (rootRe.test(url)) {
+    message = 'Log in or sign up for a Tiddlyhost account';
+  } else if (newSiteRe.test(url)) {
+    message = 'Give your site a name, keep the other settings, and hit Create';
+  } else if (sitesListRe.test(url)) {
+    const pollId = tiddlySitePollId;
+    const checkForNewSite = (attempts = 0) => {
+      if (pollId !== tiddlySitePollId) return;
+      uploadFrame.executeJavaScript('document.body.innerText').then(text => {
+        if (pollId !== tiddlySitePollId) return;
+        if (text.includes('less than a minute ago')) {
+          tiddlyGuideText.textContent = 'Navigate to your new site.';
+        } else if (attempts >= 5) {
+          tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+        } else {
+          setTimeout(() => checkForNewSite(attempts + 1), 1000);
+        }
+      }).catch(() => {
+        if (pollId !== tiddlySitePollId) return;
+        if (attempts >= 5) {
+          tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+        } else {
+          setTimeout(() => checkForNewSite(attempts + 1), 1000);
+        }
+      });
+    };
+    message = 'Looking for your new site...';
+    checkForNewSite();
+  } else if (subRe.test(url)) {
+    message = 'Click Setup to upload example output';
+    tiddlySetupBtn.classList.remove('hidden');
+  }
+  if (message.trim()) {
+    tiddlyGuideText.textContent = message;
+    tiddlyGuide.classList.remove('hidden');
+  } else {
+    tiddlyGuideText.textContent = '';
+    tiddlyGuide.classList.add('hidden');
+  }
+  tiddlySetupStage = 0;
+}
+
+function openUploadWindow(url, payload, isSetup) {
+  tiddlyMode = !!isSetup;
   previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
   if (previousWindow === 'settings') {
     settingsWindow.classList.remove('active');
@@ -919,46 +1106,26 @@ function openUploadWindow(url, payload) {
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
-  uploadUrlInput.value = url;
+  if (!tiddlyMode) {
+    uploadUrlInput.value = url;
+  }
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadRefreshBtn.innerHTML = '&#x2715;';
   uploadIsLoading = true;
   uploadLoading.classList.add('active');
   uploadFrame.style.visibility = 'hidden';
-  let dropScript;
-  if (payload.length) {
-    dropScript = `(() => {
-    const files = ${JSON.stringify(payload)};
-    function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
-    function doDrop(){
-      const x = window.innerWidth/2;
-      const y = window.innerHeight/2;
-      const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
-      if(!target) return;
-      const dt=new DataTransfer();
-      files.forEach(f=>{
-        const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
-        dt.items.add(file);
-      });
-      dt.effectAllowed='copy';
-      dt.dropEffect='copy';
-      ['dragenter','dragover','drop'].forEach(type=>{
-        const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
-        if(type!=='drop') ev.preventDefault();
-        target.dispatchEvent(ev);
-      });
-    }
-    const fire=()=>setTimeout(doDrop,1000);
-    if(document.readyState==='complete'){
-      fire();
-    }else{
-      window.addEventListener('load',fire);
-    }
-  })();`;
+  tiddlyUseUrlBtn.classList.add('hidden');
+  if (!tiddlyMode) {
+    tiddlyGuideText.textContent = '';
+    tiddlyGuide.classList.add('hidden');
+    tiddlySetupBtn.classList.add('hidden');
+    tiddlyRefreshBtn.classList.add('hidden');
+    tiddlySetupStage = 0;
   }
+  const dropScript = payload.length ? makeDropScript(payload, isSetup) : null;
   const handleFinish = () => {
-    if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
+    if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(()=>{});
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
@@ -966,10 +1133,12 @@ function openUploadWindow(url, payload) {
   uploadNavHandler = e => {
     uploadUrlBar.value = e.url;
     updateUploadNav();
+    if (tiddlyMode) updateTiddlyGuide(e.url);
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
   uploadFrame.src = url;
+  if (tiddlyMode) updateTiddlyGuide(url);
   updateUploadNav();
 }
 
@@ -993,6 +1162,15 @@ function closeUploadWindow() {
     uploadNavHandler = null;
   }
   previousWindow = null;
+  if (tiddlyMode) {
+    tiddlyMode = false;
+    tiddlyGuideText.textContent = '';
+    tiddlyGuide.classList.add('hidden');
+    tiddlySetupBtn.classList.add('hidden');
+    tiddlyRefreshBtn.classList.add('hidden');
+    tiddlyUseUrlBtn.classList.add('hidden');
+    tiddlySetupStage = 0;
+  }
 }
 
 async function startParse() {

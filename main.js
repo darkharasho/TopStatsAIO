@@ -37,6 +37,20 @@ function log(...args) {
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
+// Redirect any popup attempts from webviews into the same view instead of
+// spawning a separate BrowserWindow. This ensures navigation happens within the
+// app's existing window and keeps the URL bar in sync.
+app.on('web-contents-created', (event, contents) => {
+  if (contents.getType && contents.getType() === 'webview') {
+    contents.setWindowOpenHandler(({ url }) => {
+      if (url) {
+        contents.loadURL(url);
+      }
+      return { action: 'deny' };
+    });
+  }
+});
+
 async function fetchJson(url) {
   try {
     const res = await fetch(url, {
@@ -287,8 +301,6 @@ app.whenReady().then(() => {
     win.webContents.once('did-finish-load', () => {
       checkForAppUpdates(win);
     });
-  } else {
-    console.log('Skipping update check; app not packaged');
   }
 
   app.on('activate', () => {
@@ -414,6 +426,50 @@ ipcMain.handle('upload-parsed-files', async (event, files) => {
     return payload;
   } catch (e) {
     logError('Failed to prepare upload', e);
+    return [];
+  }
+});
+
+ipcMain.handle('get-example-output', async (event, which) => {
+  try {
+    ensureDeps(depsDir);
+    const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
+    let target = null;
+    try {
+      const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+      const match = entries.find(e => e.isDirectory() && /example[ _-]*output/i.test(e.name));
+      if (match) target = path.join(dir, match.name);
+    } catch {}
+    if (!target) {
+      console.warn('Example output directory not found');
+      return [];
+    }
+    async function gather(p) {
+      const entries = await fs.promises.readdir(p, { withFileTypes: true });
+      const results = [];
+      for (const entry of entries) {
+        const res = path.join(p, entry.name);
+        if (entry.isDirectory()) {
+          results.push(...await gather(res));
+        } else {
+          results.push(res);
+        }
+      }
+      return results;
+    }
+    const files = await gather(target);
+    const payload = [];
+    for (const f of files) {
+      try {
+        const data = await fs.promises.readFile(f);
+        payload.push({ name: path.basename(f), data: data.toString('base64') });
+      } catch (e) {
+        logError('Failed to read example output file', e);
+      }
+    }
+    return payload;
+  } catch (e) {
+    logError('Failed to get example output', e);
     return [];
   }
 });
