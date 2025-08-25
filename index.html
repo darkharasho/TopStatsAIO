@@ -207,14 +207,18 @@
         border-bottom:1px solid transparent;
         border-image:var(--card-border);
       }
+      #upload-nav {
+        display:flex;
+        gap:4px;
+      }
       .nav-btn {
-        width:24px;
-        height:24px;
+        width:32px;
+        height:32px;
         display:flex;
         align-items:center;
         justify-content:center;
         padding:0;
-        font-size:14px;
+        font-size:16px;
         color:#fff;
       }
       #upload-url-display { flex:1; }
@@ -311,8 +315,11 @@
     </div>
     <div id="upload-window">
       <div id="upload-actions">
-        <button id="upload-back" class="nav-btn" aria-label="Back">&#x2190;</button>
-        <button id="upload-forward" class="nav-btn" aria-label="Forward">&#x2192;</button>
+        <div id="upload-nav">
+          <button id="upload-back" class="nav-btn" aria-label="Back">⮜</button>
+          <button id="upload-forward" class="nav-btn" aria-label="Forward">⮞</button>
+        </div>
+        <button id="upload-home" class="nav-btn" aria-label="Home">&#x2302;</button>
         <button id="upload-refresh" class="nav-btn" aria-label="Refresh">&#x21bb;</button>
         <input id="upload-url-display" class="folder-label" />
         <button id="upload-copy" class="nav-btn" aria-label="Copy Link">&#x2398;</button>

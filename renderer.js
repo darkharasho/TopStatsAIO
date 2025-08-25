@@ -56,6 +56,7 @@ const uploadCloseBtn = document.getElementById('upload-close');
 const uploadRefreshBtn = document.getElementById('upload-refresh');
 const uploadBackBtn = document.getElementById('upload-back');
 const uploadForwardBtn = document.getElementById('upload-forward');
+const uploadHomeBtn = document.getElementById('upload-home');
 const uploadCopyBtn = document.getElementById('upload-copy');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
@@ -294,6 +295,15 @@ uploadBackBtn.addEventListener('click', () => {
 });
 uploadForwardBtn.addEventListener('click', () => {
   if (uploadFrame.canGoForward()) uploadFrame.goForward();
+});
+uploadHomeBtn.addEventListener('click', () => {
+  const url = normalizeUrl(localStorage.getItem('uploadUrl') || uploadUrlInput.value);
+  if (url) {
+    uploadLoading.classList.add('active');
+    uploadFrame.style.visibility = 'hidden';
+    uploadFrame.src = url;
+    uploadUrlBar.value = url;
+  }
 });
 uploadCopyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(uploadUrlBar.value).catch(()=>{});
