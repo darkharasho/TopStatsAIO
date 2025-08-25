@@ -984,11 +984,16 @@ function updateTiddlyGuide(url) {
     uploadFrame.executeJavaScript('localStorage.getItem("tsaioSiteName")').then(name => {
       if (!name) return;
       tiddlySiteName = name;
-      uploadFrame.executeJavaScript('document.body.innerText').then(text => {
-        if (text.includes(name)) {
-          tiddlyGuideText.textContent = `Navigate to your new site "${name}".`;
-        }
-      }).catch(() => {});
+      const checkForSite = () => {
+        uploadFrame.executeJavaScript('document.body.innerText').then(text => {
+          if (text.includes(name)) {
+            tiddlyGuideText.textContent = `Navigate to your new site "${name}".`;
+          } else {
+            setTimeout(checkForSite, 1000);
+          }
+        }).catch(() => {});
+      };
+      checkForSite();
     }).catch(() => {});
   } else if (subRe.test(url)) {
     tiddlyGuideText.textContent = 'Click Setup to upload example output';
