@@ -240,25 +240,10 @@ dpsUserTokenInput.addEventListener('input', () => {
 uploadUrlInput.addEventListener('input', () => {
   localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
 });
-uploadLoginBtn.addEventListener('click', () => {
-  let url = normalizeUrl(uploadUrlInput.value);
-  if (!url) {
-    alert('Upload URL is invalid.');
-    return;
-  }
-  localStorage.setItem('uploadUrl', url);
-  uploadUrlInput.value = url;
-  openUploadWindow(url, []);
-});
-setupTiddlyhostBtn.addEventListener('click', () => {
-  tiddlyMode = true;
-  openUploadWindow('https://tiddlyhost.com/', []);
-  updateTiddlyGuide('https://tiddlyhost.com/');
-});
 tiddlySetupBtn.addEventListener('click', async () => {
   const payload = await window.electronAPI.getExampleOutput('combiner');
   if (payload && payload.length) {
-    const dropScript = makeDropScript(payload);
+    const dropScript = makeDropScript(payload, true);
     setTimeout(() => {
       uploadFrame
         .executeJavaScript(dropScript, true)
@@ -275,6 +260,19 @@ tiddlySetupBtn.addEventListener('click', async () => {
 tiddlyRefreshBtn.addEventListener('click', () => {
   tiddlySetupStage = 2;
   uploadFrame.reload();
+});
+uploadLoginBtn.addEventListener('click', () => {
+  let url = normalizeUrl(uploadUrlInput.value);
+  if (!url) {
+    alert('Upload URL is invalid.');
+    return;
+  }
+  localStorage.setItem('uploadUrl', url);
+  uploadUrlInput.value = url;
+  openUploadWindow(url, [], false);
+});
+setupTiddlyhostBtn.addEventListener('click', () => {
+  openUploadWindow('https://tiddlyhost.com/', [], true);
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
@@ -308,7 +306,7 @@ parseUploadBtn.addEventListener('click', async () => {
   }
   localStorage.setItem('uploadUrl', url);
   const payload = await window.electronAPI.uploadParsedFiles(files);
-  openUploadWindow(url, payload);
+  openUploadWindow(url, payload, false);
 });
 parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
@@ -1079,7 +1077,8 @@ function updateTiddlyGuide(url) {
   }
 }
 
-function openUploadWindow(url, payload) {
+function openUploadWindow(url, payload, isSetup) {
+  tiddlyMode = !!isSetup;
   previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
   if (previousWindow === 'settings') {
     settingsWindow.classList.remove('active');
@@ -1100,8 +1099,9 @@ function openUploadWindow(url, payload) {
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
     tiddlyRefreshBtn.classList.add('hidden');
+    tiddlySetupStage = 0;
   }
-  const dropScript = payload.length ? makeDropScript(payload, tiddlyMode) : null;
+  const dropScript = payload.length ? makeDropScript(payload, isSetup) : null;
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(()=>{});
     uploadFrame.focus();
