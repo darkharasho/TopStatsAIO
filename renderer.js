@@ -79,7 +79,6 @@ let uploadNavHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
 let tiddlyMode = false;
-let tiddlySiteName = '';
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -970,49 +969,29 @@ function updateTiddlyGuide(url) {
     tiddlyGuideText.textContent = 'Log in or sign up for a Tiddlyhost account';
   } else if (newSiteRe.test(url)) {
     tiddlyGuideText.textContent = 'Give your site a name, keep the other settings, and hit Create';
-    uploadFrame.executeJavaScript(`(() => {
-      const input = document.querySelector('input[name="subdomain"]');
-      if (input && !input.dataset.tsaioBound) {
-        const handler = () => localStorage.setItem('tsaioSiteName', input.value);
-        input.addEventListener('input', handler);
-        handler();
-        input.dataset.tsaioBound = '1';
-      }
-    })();`).catch(() => {});
   } else if (sitesListRe.test(url)) {
-    uploadFrame.executeJavaScript('localStorage.getItem("tsaioSiteName")').then(name => {
-      if (!name) {
-        tiddlyGuideText.textContent = 'Click the "+ Create" button.';
-        return;
-      }
-      tiddlySiteName = name;
-      const checkForSite = (attempts = 0) => {
-        uploadFrame.executeJavaScript('document.body.innerText').then(text => {
-          if (text.includes(name)) {
-            tiddlyGuideText.textContent = `Navigate to your new site "${name}".`;
-          } else if (attempts >= 5) {
-            tiddlyGuideText.textContent = 'Click the "+ Create" button.';
-          } else {
-            setTimeout(() => checkForSite(attempts + 1), 1000);
-          }
-        }).catch(() => {
-          if (attempts >= 5) {
-            tiddlyGuideText.textContent = 'Click the "+ Create" button.';
-          } else {
-            setTimeout(() => checkForSite(attempts + 1), 1000);
-          }
-        });
-      };
-      tiddlyGuideText.textContent = 'Looking for your new site...';
-      checkForSite();
-    }).catch(() => {
-      tiddlyGuideText.textContent = 'Click the "+ Create" button.';
-    });
+    const checkForNewSite = (attempts = 0) => {
+      uploadFrame.executeJavaScript('document.body.innerText').then(text => {
+        if (text.includes('less than a minute ago')) {
+          tiddlyGuideText.textContent = 'Navigate to your new site.';
+        } else if (attempts >= 5) {
+          tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+        } else {
+          setTimeout(() => checkForNewSite(attempts + 1), 1000);
+        }
+      }).catch(() => {
+        if (attempts >= 5) {
+          tiddlyGuideText.textContent = 'Click the "+ Create" button.';
+        } else {
+          setTimeout(() => checkForNewSite(attempts + 1), 1000);
+        }
+      });
+    };
+    tiddlyGuideText.textContent = 'Looking for your new site...';
+    checkForNewSite();
   } else if (subRe.test(url)) {
     tiddlyGuideText.textContent = 'Click Setup to upload example output';
     tiddlySetupBtn.classList.remove('hidden');
-    uploadFrame.executeJavaScript('localStorage.removeItem("tsaioSiteName")').catch(() => {});
-    tiddlySiteName = '';
   } else {
     tiddlyGuide.classList.add('hidden');
   }
@@ -1078,7 +1057,6 @@ function closeUploadWindow() {
     tiddlyMode = false;
     tiddlyGuide.classList.add('hidden');
     tiddlySetupBtn.classList.add('hidden');
-    tiddlySiteName = '';
   }
 }
 
