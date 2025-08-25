@@ -32,8 +32,6 @@ const parserTopStatsRadio = document.getElementById('parser-topstats');
 const parserCombinerRadio = document.getElementById('parser-combiner');
 const openParserFolderBtn = document.getElementById('open-parser-folder');
 const dpsUserTokenInput = document.getElementById('dps-user-token');
-const uploadUrlInput = document.getElementById('upload-url');
-const uploadLoginBtn = document.getElementById('upload-login');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
@@ -45,29 +43,10 @@ const parseWindow = document.getElementById('parse-window');
 const parseOutput = document.getElementById('parse-output');
 const parseSteps = document.getElementById('parse-steps');
 const parseOpenFolderBtn = document.getElementById('parse-open-folder');
-const parseUploadBtn = document.getElementById('parse-upload');
 const parseCloseBtn = document.getElementById('parse-close');
 const parseCancelBtn = document.getElementById('parse-cancel');
 const versionText = document.getElementById('version-text');
-const uploadWindow = document.getElementById('upload-window');
-const uploadUrlBar = document.getElementById('upload-url-display');
-const uploadCloseBtn = document.getElementById('upload-close');
-const uploadRefreshBtn = document.getElementById('upload-refresh');
-const uploadFrame = document.getElementById('upload-frame');
-const uploadLoading = document.getElementById('upload-loading');
-const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
-let uploadDisplayHackRan = false;
-window.addEventListener('load', () => {
-  if (uploadDisplayHackRan) return;
-  console.log('upload window display hack start');
-  uploadWindow.style.display = 'none';
-  setTimeout(() => {
-    uploadWindow.style.display = 'flex';
-    console.log('upload window display hack applied');
-  }, 0);
-  uploadDisplayHackRan = true;
-});
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -75,26 +54,9 @@ let folderLists = new Map();
 let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
-let uploadNavHandler = null;
-let uploadIsLoading = false;
-let previousWindow = null;
-
-function normalizeUrl(url) {
-  const trimmed = (url || '').trim();
-  try {
-    return new URL(trimmed).toString();
-  } catch {
-    try {
-      return new URL(`https://${trimmed}`).toString();
-    } catch {
-      return null;
-    }
-  }
-}
 
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
-uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
@@ -228,19 +190,6 @@ openParserFolderBtn.addEventListener('click', () => {
 dpsUserTokenInput.addEventListener('input', () => {
   localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
 });
-uploadUrlInput.addEventListener('input', () => {
-  localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
-});
-uploadLoginBtn.addEventListener('click', () => {
-  let url = normalizeUrl(uploadUrlInput.value);
-  if (!url) {
-    alert('Upload URL is invalid.');
-    return;
-  }
-  localStorage.setItem('uploadUrl', url);
-  uploadUrlInput.value = url;
-  openUploadWindow(url, []);
-});
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
 });
@@ -259,79 +208,9 @@ combinerFightChartsCheckbox.addEventListener('change', () => {
 parseBtn.addEventListener('click', startParse);
 parseCloseBtn.addEventListener('click', closeParseWindow);
 parseOpenFolderBtn.addEventListener('click', () => window.electronAPI.openParsedFolder());
-parseUploadBtn.addEventListener('click', async () => {
-  const files = parseUploadBtn.dataset.files ? JSON.parse(parseUploadBtn.dataset.files) : [];
-  let url = localStorage.getItem('uploadUrl') || '';
-  if (!url) {
-    alert('Upload URL not configured in settings.');
-    return;
-  }
-  url = normalizeUrl(url);
-  if (!url) {
-    alert('Upload URL is invalid.');
-    return;
-  }
-  localStorage.setItem('uploadUrl', url);
-  const payload = await window.electronAPI.uploadParsedFiles(files);
-  openUploadWindow(url, payload);
-});
 parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
   window.electronAPI.cancelParse();
-});
-uploadCloseBtn.addEventListener('click', closeUploadWindow);
-uploadWindow.addEventListener('mouseenter', () => {
-  if (!uploadIsLoading) uploadFrame.focus();
-});
-uploadRefreshBtn.addEventListener('click', () => {
-  if (uploadIsLoading) {
-    uploadFrame.stop();
-  } else {
-    uploadFrame.reload();
-  }
-});
-uploadUrlBar.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    let url = normalizeUrl(uploadUrlBar.value);
-    if (url) {
-      uploadLoading.classList.add('active');
-      uploadFrame.style.visibility = 'hidden';
-      uploadFrame.src = url;
-      uploadUrlBar.value = url;
-    } else {
-      alert('URL is invalid.');
-    }
-  }
-});
-uploadFrame.addEventListener('did-start-loading', () => {
-  uploadIsLoading = true;
-  uploadRefreshBtn.innerHTML = '&#x2715;';
-  uploadStatus.textContent = '';
-  uploadStatus.classList.remove('error');
-  uploadLoading.classList.add('active');
-  uploadFrame.style.visibility = 'hidden';
-});
-uploadFrame.addEventListener('did-stop-loading', () => {
-  uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
-  uploadLoading.classList.remove('active');
-  uploadFrame.style.visibility = 'visible';
-});
-uploadFrame.addEventListener('dom-ready', () => {
-  uploadFrame.focus();
-});
-uploadFrame.addEventListener('did-fail-load', e => {
-  uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
-  uploadLoading.classList.remove('active');
-  uploadFrame.style.visibility = 'visible';
-  if (e.errorCode !== -3) {
-    uploadStatus.textContent = `Failed to load: ${e.errorDescription}`;
-    uploadStatus.classList.add('error');
-  }
-});
-uploadFrame.addEventListener('did-finish-load', () => {
-  uploadFrame.focus();
 });
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -344,11 +223,8 @@ window.electronAPI.onParseProgress(msg => {
   parseOutput.scrollTop = parseOutput.scrollHeight;
 });
 window.electronAPI.onParseStep(data => updateStep(data));
-window.electronAPI.onParseComplete(result => {
-  const { success, files = [] } = typeof result === 'object' ? result : { success: !!result, files: [] };
+window.electronAPI.onParseComplete(success => {
   parseOpenFolderBtn.disabled = !success;
-  parseUploadBtn.disabled = !success;
-  parseUploadBtn.dataset.files = JSON.stringify(files);
   parseCloseBtn.disabled = false;
   parseCancelBtn.disabled = true;
   updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
@@ -852,8 +728,6 @@ function openParseWindow() {
   parseSteps.innerHTML = '';
   currentStepId = null;
   parseOpenFolderBtn.disabled = true;
-  parseUploadBtn.disabled = true;
-  parseUploadBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
 }
@@ -862,90 +736,6 @@ function closeParseWindow() {
   parseWindow.classList.remove('active');
   mainWindowEl.classList.remove('fade-out');
   document.getElementById('title-text').textContent = 'Top Stats AIO';
-}
-
-function openUploadWindow(url, payload) {
-  previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
-  if (previousWindow === 'settings') {
-    settingsWindow.classList.remove('active');
-  } else {
-    parseWindow.classList.remove('active');
-  }
-  uploadWindow.classList.add('active');
-  document.getElementById('title-text').textContent = 'Upload';
-  uploadUrlBar.value = url;
-  uploadUrlInput.value = url;
-  uploadStatus.textContent = '';
-  uploadStatus.classList.remove('error');
-  uploadRefreshBtn.innerHTML = '&#x2715;';
-  uploadIsLoading = true;
-  uploadLoading.classList.add('active');
-  uploadFrame.style.visibility = 'hidden';
-  let dropScript;
-  if (payload.length) {
-    dropScript = `(() => {
-    const files = ${JSON.stringify(payload)};
-    function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
-    function doDrop(){
-      const x = window.innerWidth/2;
-      const y = window.innerHeight/2;
-      const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
-      if(!target) return;
-      const dt=new DataTransfer();
-      files.forEach(f=>{
-        const file=new File([b64ToBlob(f.data)], f.name, {type:'application/json'});
-        dt.items.add(file);
-      });
-      dt.effectAllowed='copy';
-      dt.dropEffect='copy';
-      ['dragenter','dragover','drop'].forEach(type=>{
-        const ev=new DragEvent(type,{dataTransfer:dt,bubbles:true,cancelable:true,clientX:x,clientY:y});
-        if(type!=='drop') ev.preventDefault();
-        target.dispatchEvent(ev);
-      });
-    }
-    const fire=()=>setTimeout(doDrop,1000);
-    if(document.readyState==='complete'){
-      fire();
-    }else{
-      window.addEventListener('load',fire);
-    }
-  })();`;
-  }
-  const handleFinish = () => {
-    if (dropScript) uploadFrame.executeJavaScript(dropScript).catch(()=>{});
-    uploadFrame.focus();
-    uploadFrame.removeEventListener('did-stop-loading', handleFinish);
-  };
-  uploadFrame.addEventListener('did-stop-loading', handleFinish);
-  uploadNavHandler = e => {
-    uploadUrlBar.value = e.url;
-  };
-  uploadFrame.addEventListener('did-navigate', uploadNavHandler);
-  uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
-  uploadFrame.src = url;
-}
-
-function closeUploadWindow() {
-  uploadWindow.classList.remove('active');
-  if (previousWindow === 'settings') {
-    settingsWindow.classList.add('active');
-    document.getElementById('title-text').textContent = 'Settings';
-  } else {
-    parseWindow.classList.add('active');
-    document.getElementById('title-text').textContent = 'Parse';
-  }
-  uploadStatus.textContent = '';
-  uploadStatus.classList.remove('error');
-  uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
-  uploadFrame.style.visibility = 'visible';
-  if (uploadNavHandler) {
-    uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
-    uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
-    uploadNavHandler = null;
-  }
-  previousWindow = null;
 }
 
 async function startParse() {

@@ -169,22 +169,9 @@
 
       #parse-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; padding:40px; display:flex; flex-direction:column; gap:20px; overflow:auto; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
       #parse-window.active { opacity:1; pointer-events:auto; }
-      #upload-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
-      #upload-window.active { opacity:1; pointer-events:auto; }
-      #upload-actions { display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:0 12px 8px; border-bottom:1px solid transparent; border-image:var(--card-border); border-image-slice:1; }
-      #upload-refresh { font-size:20px; cursor:pointer; }
-      #upload-url-display { width:75%; }
-      #upload-close { margin-left:auto; }
-      #upload-frame { flex:1; border:none; width:100%; height:100%; }
-      #upload-loading { position:absolute; top:50%; left:50%; width:40px; height:40px; margin:-20px 0 0 -20px; border:4px solid var(--progress-track); border-top-color:var(--progress-bar); border-radius:50%; animation:spin 1s linear infinite; display:none; z-index:2; pointer-events:none; }
-      #upload-loading.active { display:block; }
-      #upload-status { position:absolute; bottom:0; left:0; right:0; text-align:center; padding:4px 8px; font-size:12px; color:var(--label-color); pointer-events:none; }
-      #upload-status.error { color:#e81123; }
-      @keyframes spin { to { transform:rotate(360deg); } }
       .parse-output { background:var(--bg-btn); color:var(--text-color); border:1px solid transparent; border-radius:8px; padding:10px; flex:1; overflow:auto; border-image:var(--card-border); -webkit-user-select:text; user-select:text; font-family:monospace; white-space:pre-wrap; display:flex; flex-direction:column; gap:4px; }
       .parse-line.error { color:#e81123; }
       .parse-actions { display:flex; gap:10px; }
-      #parse-open-folder { margin-left:auto; }
 
       #parse-steps { display:flex; flex-direction:column; gap:10px; }
       .parse-step { }
@@ -254,27 +241,16 @@
       <button id="parse-btn" class="parse-btn">Parse</button>
     </div>
   </div>
-    <div id="parse-window">
-      <h2 class="parse-header">Parsing Logs</h2>
-      <div id="parse-steps"></div>
-      <div id="parse-output" class="parse-output"></div>
-      <div class="parse-actions">
-        <button id="parse-cancel">Cancel</button>
-        <button id="parse-close" disabled>Back</button>
-        <button id="parse-open-folder" disabled>Open Folder</button>
-        <button id="parse-upload" disabled>Upload</button>
-      </div>
+  <div id="parse-window">
+    <h2 class="parse-header">Parsing Logs</h2>
+    <div id="parse-steps"></div>
+    <div id="parse-output" class="parse-output"></div>
+    <div class="parse-actions">
+      <button id="parse-cancel">Cancel</button>
+      <button id="parse-open-folder" disabled>Open Folder</button>
+      <button id="parse-close" disabled>Back</button>
     </div>
-    <div id="upload-window">
-      <div id="upload-actions">
-        <span id="upload-refresh" class="action-icon">&#x21bb;</span>
-        <input id="upload-url-display" class="folder-label" />
-        <button id="upload-close">Close</button>
-      </div>
-      <div id="upload-loading"></div>
-      <webview id="upload-frame" partition="persist:upload"></webview>
-      <div id="upload-status"></div>
-    </div>
+  </div>
   <div id="settings-window">
     <button id="close-settings" aria-label="Close">&#x2715;</button>
     <h2 class="settings-header">Settings</h2>
@@ -300,11 +276,6 @@
           <div class="config-row">
             <label for="dps-user-token">DPSReportUserToken</label>
             <input type="text" id="dps-user-token" class="config-input" />
-          </div>
-          <div class="config-row">
-            <label for="upload-url">Upload URL</label>
-            <input type="text" id="upload-url" class="config-input" />
-            <button id="upload-login" class="small-btn" style="margin-left:auto;">Login</button>
           </div>
         </div>
         <div class="card" id="combiner-config-card">

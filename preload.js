@@ -19,9 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startParse: (data) => ipcRenderer.invoke('start-parse', data),
   onParseProgress: (cb) => ipcRenderer.on('parse-progress', (e, msg) => cb(msg)),
   onParseStep: (cb) => ipcRenderer.on('parse-step', (e, data) => cb(data)),
-    onParseComplete: (cb) => ipcRenderer.on('parse-complete', (e, data) => cb(data)),
-    openParsedFolder: () => ipcRenderer.invoke('open-parsed-folder'),
-    uploadParsedFiles: (files) => ipcRenderer.invoke('upload-parsed-files', files),
+  onParseComplete: (cb) => ipcRenderer.on('parse-complete', (e, success) => cb(success)),
+  openParsedFolder: () => ipcRenderer.invoke('open-parsed-folder'),
   cancelParse: () => ipcRenderer.send('cancel-parse'),
   openParserFolder: (which) => ipcRenderer.invoke('open-parser-folder', which),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
@@ -31,5 +30,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   performUpdate: () => ipcRenderer.invoke('perform-update'),
   updateLater: () => ipcRenderer.send('update-later'),
   updateDownloaded: () => ipcRenderer.send('update-downloaded'),
-  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (e, data) => cb(data)),
+  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (e, data) => cb(data))
 });
