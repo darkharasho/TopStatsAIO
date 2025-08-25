@@ -65,7 +65,7 @@ window.addEventListener('load', () => {
     setTimeout(() => {
       uploadActions.style.display = 'flex';
       console.log('upload actions display hack applied');
-    }, 0);
+    }, 100);
   }
 });
 const selected = new Map();
