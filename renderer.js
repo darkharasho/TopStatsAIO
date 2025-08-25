@@ -79,6 +79,7 @@ let uploadNavHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
 let tiddlyMode = false;
+let tiddlySitePollId = 0;
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -989,6 +990,7 @@ function updateTiddlyGuide(url) {
   const sitesListRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/?$/;
   const newSiteRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/new\/?$/;
   const subRe = /^https?:\/\/[^./]+\.tiddlyhost\.com/;
+  tiddlySitePollId++;
   tiddlySetupBtn.classList.add('hidden');
   tiddlyGuide.classList.remove('hidden');
   if (rootRe.test(url)) {
@@ -996,8 +998,11 @@ function updateTiddlyGuide(url) {
   } else if (newSiteRe.test(url)) {
     tiddlyGuideText.textContent = 'Give your site a name, keep the other settings, and hit Create';
   } else if (sitesListRe.test(url)) {
+    const pollId = tiddlySitePollId;
     const checkForNewSite = (attempts = 0) => {
+      if (pollId !== tiddlySitePollId) return;
       uploadFrame.executeJavaScript('document.body.innerText').then(text => {
+        if (pollId !== tiddlySitePollId) return;
         if (text.includes('less than a minute ago')) {
           tiddlyGuideText.textContent = 'Navigate to your new site.';
         } else if (attempts >= 5) {
@@ -1006,6 +1011,7 @@ function updateTiddlyGuide(url) {
           setTimeout(() => checkForNewSite(attempts + 1), 1000);
         }
       }).catch(() => {
+        if (pollId !== tiddlySitePollId) return;
         if (attempts >= 5) {
           tiddlyGuideText.textContent = 'Click the "+ Create" button.';
         } else {
