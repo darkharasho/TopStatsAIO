@@ -61,6 +61,7 @@ const uploadCopyBtn = document.getElementById('upload-copy');
 const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
+const copyToast = document.getElementById('copy-toast');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const selected = new Map();
@@ -305,8 +306,15 @@ uploadHomeBtn.addEventListener('click', () => {
     uploadUrlBar.value = url;
   }
 });
+function showCopyToast() {
+  copyToast.textContent = 'Address Copied to Clipboard';
+  copyToast.classList.add('show');
+  setTimeout(() => copyToast.classList.remove('show'), 2000);
+}
 uploadCopyBtn.addEventListener('click', () => {
-  navigator.clipboard.writeText(uploadUrlBar.value).catch(()=>{});
+  navigator.clipboard.writeText(uploadUrlBar.value)
+    .then(showCopyToast)
+    .catch(() => {});
 });
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
