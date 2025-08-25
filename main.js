@@ -436,13 +436,17 @@ ipcMain.handle('get-example-output', async (event, which) => {
   try {
     ensureDeps(depsDir);
     const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
+    console.log('Looking for example output in', dir);
     let target = null;
     try {
       const entries = await fs.promises.readdir(dir, { withFileTypes: true });
       const match = entries.find(e => e.isDirectory() && /example[ _-]*output/i.test(e.name));
       if (match) target = path.join(dir, match.name);
     } catch {}
-    if (!target) return [];
+    if (!target) {
+      console.warn('Example output directory not found');
+      return [];
+    }
     async function gather(p) {
       const entries = await fs.promises.readdir(p, { withFileTypes: true });
       const results = [];
@@ -457,6 +461,7 @@ ipcMain.handle('get-example-output', async (event, which) => {
       return results;
     }
     const files = await gather(target);
+    console.log('Gathered', files.length, 'files for example output');
     const payload = [];
     for (const f of files) {
       try {
@@ -466,6 +471,7 @@ ipcMain.handle('get-example-output', async (event, which) => {
         logError('Failed to read example output file', e);
       }
     }
+    console.log('Prepared example output payload with', payload.length, 'files');
     return payload;
   } catch (e) {
     logError('Failed to get example output', e);

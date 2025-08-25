@@ -254,9 +254,16 @@ setupTiddlyhostBtn.addEventListener('click', () => {
   updateTiddlyGuide('https://tiddlyhost.com/');
 });
 tiddlySetupBtn.addEventListener('click', async () => {
+  console.log('Tiddlyhost setup button clicked');
   const payload = await window.electronAPI.getExampleOutput('combiner');
+  console.log('Example output payload', payload ? payload.length : 0, 'files');
   if (payload && payload.length) {
-    uploadFrame.executeJavaScript(makeDropScript(payload), true).catch(() => {});
+    uploadFrame
+      .executeJavaScript(makeDropScript(payload), true)
+      .then(() => console.log('Drop script executed'))
+      .catch(err => console.error('Drop script failed', err));
+  } else {
+    console.warn('No example output found to drop');
   }
 });
 combinerGuildNameInput.addEventListener('input', () => {
@@ -955,12 +962,13 @@ function closeParseWindow() {
 function makeDropScript(files) {
   return `(() => {
     const files = ${JSON.stringify(files)};
+    console.log('Drop script injected with', files.length, 'files');
     function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
     function doDrop(){
       const x = window.innerWidth/2;
       const y = window.innerHeight/2;
       const target=document.elementFromPoint(x,y)||document.body||document.documentElement;
-      if(!target) return;
+      if(!target){console.log('No drop target found');return;}
       const dt=new DataTransfer();
       files.forEach(f=>{
         const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
@@ -973,6 +981,7 @@ function makeDropScript(files) {
         if(type!=='drop') ev.preventDefault();
         target.dispatchEvent(ev);
       });
+      console.log('Drop events dispatched');
     }
     const fire=()=>setTimeout(doDrop,1000);
     if(document.readyState==='complete'){
