@@ -964,7 +964,16 @@ function makeDropScript(files) {
   return `(() => {
     const files = ${JSON.stringify(files)};
     console.log('Drop script injected with', files.length, 'files');
-    function b64ToBlob(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);}
+    function b64ToBlob(b64){
+      const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);
+      for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);
+    }
+    function applyFiles(input, dt){
+      const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'files').set;
+      setter.call(input, dt.files);
+      input.dispatchEvent(new Event('change',{bubbles:true}));
+      console.log('Input now has', input.files.length, 'files');
+    }
     function doDrop(){
       try{
         const dt=new DataTransfer();
@@ -989,28 +998,22 @@ function makeDropScript(files) {
         });
         const inputs=document.querySelectorAll('input[type="file"]');
         if(inputs.length){
-          inputs.forEach(input=>{
-            input.files=dt.files;
-            input.dispatchEvent(new Event('change',{bubbles:true}));
-          });
-          console.log('File input change dispatched');
+          inputs.forEach(input=>applyFiles(input,dt));
         }else{
           const input=document.createElement('input');
           input.type='file';
           input.multiple=true;
           input.style.display='none';
           document.body.appendChild(input);
-          input.files=dt.files;
-          input.dispatchEvent(new Event('change',{bubbles:true}));
+          applyFiles(input,dt);
           console.log('Synthetic file input created');
         }
       }catch(err){console.error('Drop script error', err);}
     }
-    const fire=()=>setTimeout(doDrop,1000);
-    if(document.readyState==='complete'){
-      fire();
+    if(document.readyState==='loading'){
+      window.addEventListener('DOMContentLoaded',()=>{doDrop();});
     }else{
-      window.addEventListener('load',fire);
+      doDrop();
     }
   })();`;
 }
