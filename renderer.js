@@ -1032,6 +1032,7 @@ function makeDropScript(files) {
 
 function updateTiddlyGuide(url) {
   if (!tiddlyMode) return;
+  if (tiddlySetupStage >= 2) return;
   const rootRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/?$/;
   const sitesListRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/?$/;
   const newSiteRe = /^https?:\/\/(www\.)?tiddlyhost\.com\/sites\/new\/?$/;
