@@ -60,9 +60,11 @@ const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]')
 window.addEventListener('load', () => {
   const uploadActions = document.getElementById('upload-actions');
   if (uploadActions) {
+    console.log('upload actions display hack start');
     uploadActions.style.display = 'none';
     setTimeout(() => {
       uploadActions.style.display = 'flex';
+      console.log('upload actions display hack applied');
     }, 0);
   }
 });
