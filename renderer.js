@@ -995,7 +995,14 @@ function makeDropScript(files) {
           });
           console.log('File input change dispatched');
         }else{
-          console.log('No file input found');
+          const input=document.createElement('input');
+          input.type='file';
+          input.multiple=true;
+          input.style.display='none';
+          document.body.appendChild(input);
+          input.files=dt.files;
+          input.dispatchEvent(new Event('change',{bubbles:true}));
+          console.log('Synthetic file input created');
         }
       }catch(err){console.error('Drop script error', err);}
     }
