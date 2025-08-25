@@ -301,8 +301,6 @@ app.whenReady().then(() => {
     win.webContents.once('did-finish-load', () => {
       checkForAppUpdates(win);
     });
-  } else {
-    console.log('Skipping update check; app not packaged');
   }
 
   app.on('activate', () => {
@@ -384,10 +382,6 @@ ipcMain.on('window-control', (event, action) => {
   }
 });
 
-ipcMain.on('log', (event, args) => {
-  log(...args);
-});
-
 ipcMain.handle('download-dependency', async (event, which) => {
   try {
     await downloadDependency(which);
@@ -440,7 +434,6 @@ ipcMain.handle('get-example-output', async (event, which) => {
   try {
     ensureDeps(depsDir);
     const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
-    console.log('Looking for example output in', dir);
     let target = null;
     try {
       const entries = await fs.promises.readdir(dir, { withFileTypes: true });
@@ -465,8 +458,6 @@ ipcMain.handle('get-example-output', async (event, which) => {
       return results;
     }
     const files = await gather(target);
-    console.log('Gathered', files.length, 'files for example output');
-    files.forEach(f => console.log('Example output file:', f));
     const payload = [];
     for (const f of files) {
       try {
@@ -476,7 +467,6 @@ ipcMain.handle('get-example-output', async (event, which) => {
         logError('Failed to read example output file', e);
       }
     }
-    console.log('Prepared example output payload with', payload.length, 'files');
     return payload;
   } catch (e) {
     logError('Failed to get example output', e);

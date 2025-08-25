@@ -33,5 +33,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateLater: () => ipcRenderer.send('update-later'),
   updateDownloaded: () => ipcRenderer.send('update-downloaded'),
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (e, data) => cb(data)),
-  log: (...args) => ipcRenderer.send('log', args),
 });

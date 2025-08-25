@@ -76,7 +76,6 @@ let loadAll = false;
 let currentStepId = null;
 let lastSelectedItem = null;
 let uploadNavHandler = null;
-let uploadConsoleHandler = null;
 let uploadIsLoading = false;
 let previousWindow = null;
 let tiddlyMode = false;
@@ -255,25 +254,12 @@ setupTiddlyhostBtn.addEventListener('click', () => {
   updateTiddlyGuide('https://tiddlyhost.com/');
 });
 tiddlySetupBtn.addEventListener('click', async () => {
-  window.electronAPI.log('Tiddlyhost setup button clicked');
   const payload = await window.electronAPI.getExampleOutput('combiner');
-  window.electronAPI.log('Example output payload', payload ? payload.length : 0, 'files');
   if (payload && payload.length) {
-    window.electronAPI.log('Files being dropped', payload.map(f => f.name));
     const dropScript = makeDropScript(payload);
-    const handleLoad = () => {
-      uploadFrame.removeEventListener('did-stop-loading', handleLoad);
-      setTimeout(() => {
-        uploadFrame
-          .executeJavaScript(dropScript, true)
-          .then(() => window.electronAPI.log('Drop script executed'))
-          .catch(err => window.electronAPI.log('Drop script failed', err));
-      }, 1000);
-    };
-    uploadFrame.addEventListener('did-stop-loading', handleLoad);
-    uploadFrame.reload();
-  } else {
-    window.electronAPI.log('No example output found to drop');
+    setTimeout(() => {
+      uploadFrame.executeJavaScript(dropScript, true).catch(() => {});
+    }, 1000);
   }
 });
 combinerGuildNameInput.addEventListener('input', () => {
@@ -972,8 +958,6 @@ function closeParseWindow() {
 function makeDropScript(files) {
   return `(() => {
     const files = ${JSON.stringify(files)};
-    console.log('Drop script injected with', files.length, 'files');
-    console.log('Files:', files.map(f => f.name));
     function b64ToBlob(b64){
       const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);
       for(let i=0;i<len;i++){bytes[i]=bin.charCodeAt(i);}return new Blob([bytes]);
@@ -982,19 +966,16 @@ function makeDropScript(files) {
       const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'files').set;
       setter.call(input, dt.files);
       input.dispatchEvent(new Event('change',{bubbles:true}));
-      console.log('Input now has', input.files.length, 'files');
     }
     function doDrop(){
       try{
         const dt=new DataTransfer();
         files.forEach(f=>{
-          console.log('Preparing drop for', f.name);
           const file=new File([b64ToBlob(f.data)], f.name, {type:'application/octet-stream'});
           dt.items.add(file);
         });
         dt.effectAllowed='copy';
         dt.dropEffect='copy';
-        console.log('Dispatching manual drop events');
         const x=window.innerWidth/2;
         const y=window.innerHeight/2;
         const center=document.elementFromPoint(x,y);
@@ -1006,7 +987,6 @@ function makeDropScript(files) {
             if(type!=='drop') ev.preventDefault();
             target.dispatchEvent(ev);
           });
-          console.log('Drop events dispatched on', target.tagName);
         });
         const inputs=document.querySelectorAll('input[type="file"]');
         if(inputs.length){
@@ -1018,9 +998,8 @@ function makeDropScript(files) {
           input.style.display='none';
           document.body.appendChild(input);
           applyFiles(input,dt);
-          console.log('Synthetic file input created');
         }
-      }catch(err){console.error('Drop script error', err);}
+      }catch(err){}
     }
     if(document.readyState==='loading'){
       window.addEventListener('DOMContentLoaded',()=>{doDrop();});
@@ -1106,10 +1085,6 @@ function openUploadWindow(url, payload) {
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
-  uploadConsoleHandler = e => {
-    if (tiddlyMode) window.electronAPI.log('Tiddlyhost frame:', e.message);
-  };
-  uploadFrame.addEventListener('console-message', uploadConsoleHandler);
   uploadFrame.src = url;
   if (tiddlyMode) updateTiddlyGuide(url);
   updateUploadNav();
@@ -1133,10 +1108,6 @@ function closeUploadWindow() {
     uploadFrame.removeEventListener('did-navigate', uploadNavHandler);
     uploadFrame.removeEventListener('did-navigate-in-page', uploadNavHandler);
     uploadNavHandler = null;
-  }
-  if (uploadConsoleHandler) {
-    uploadFrame.removeEventListener('console-message', uploadConsoleHandler);
-    uploadConsoleHandler = null;
   }
   previousWindow = null;
   if (tiddlyMode) {
