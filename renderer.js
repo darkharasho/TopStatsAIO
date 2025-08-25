@@ -57,6 +57,15 @@ const uploadFrame = document.getElementById('upload-frame');
 const uploadLoading = document.getElementById('upload-loading');
 const uploadStatus = document.getElementById('upload-status');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
+window.addEventListener('DOMContentLoaded', () => {
+  const uploadActions = document.getElementById('upload-actions');
+  if (uploadActions) {
+    uploadActions.style.display = 'none';
+    setTimeout(() => {
+      uploadActions.style.display = 'flex';
+    }, 0);
+  }
+});
 const selected = new Map();
 let currentFolder = '';
 let rootList;
