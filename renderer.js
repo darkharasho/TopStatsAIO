@@ -345,6 +345,11 @@ uploadFrame.addEventListener('did-stop-loading', () => {
   updateUploadNav();
 });
 uploadFrame.addEventListener('dom-ready', () => {
+  setTimeout(() => {
+    uploadFrame
+      .insertCSS('html, body { height: auto !important; overflow: auto !important; }')
+      .catch(() => {});
+  }, 100);
   uploadFrame.focus();
 });
 uploadFrame.addEventListener('did-fail-load', e => {
