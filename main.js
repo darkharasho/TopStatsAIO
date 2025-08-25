@@ -181,7 +181,8 @@ function createWindow() {
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      webviewTag: true
     }
   });
 
@@ -398,6 +399,24 @@ ipcMain.handle('open-parsed-folder', async () => {
   }
 });
 
+ipcMain.handle('upload-parsed-files', async (event, files) => {
+  try {
+    const payload = [];
+    for (const f of files || []) {
+      try {
+        const data = await fs.promises.readFile(f);
+        payload.push({ name: path.basename(f), data: data.toString('base64') });
+      } catch (e) {
+        logError('Failed to read file for upload', e);
+      }
+    }
+    return payload;
+  } catch (e) {
+    logError('Failed to prepare upload', e);
+    return [];
+  }
+});
+
 ipcMain.handle('open-parser-folder', async (event, which) => {
   ensureDeps(depsDir);
   const dir = path.join(depsDir, which === 'topstats' ? 'topstatsparser' : 'logcombiner');
@@ -452,6 +471,7 @@ ipcMain.handle('start-parse', async (event, data) => {
     wc.send('parse-step', { id, title, progress, error, current, total });
   let cancelled = false;
   let child = null;
+  const outputFiles = [];
   currentParseCancel = () => {
     cancelled = true;
     if (child) child.kill();
@@ -472,7 +492,7 @@ ipcMain.handle('start-parse', async (event, data) => {
       }
       if (cancelled) {
         send('Parsing cancelled.');
-        wc.send('parse-complete', false);
+        wc.send('parse-complete', { success: false, files: [] });
         return;
       }
     }
@@ -493,7 +513,7 @@ ipcMain.handle('start-parse', async (event, data) => {
         cliExe = alt;
       } else {
         send('EI CLI not found.');
-        wc.send('parse-complete', false);
+        wc.send('parse-complete', { success: false, files: [] });
         return;
       }
     }
@@ -513,7 +533,7 @@ ipcMain.handle('start-parse', async (event, data) => {
         }
         if (cancelled) {
           send('Parsing cancelled.');
-          wc.send('parse-complete', false);
+          wc.send('parse-complete', { success: false, files: [] });
           return;
         }
       }
@@ -575,31 +595,33 @@ ipcMain.handle('start-parse', async (event, data) => {
 
     if (cancelled) {
       send('Parsing cancelled.');
-      wc.send('parse-complete', false);
+      wc.send('parse-complete', { success: false, files: [] });
       return;
     }
 
     const outDir = opts.parser === 'combiner' ? processedDir : tempDir;
     if (!fs.existsSync(outDir)) {
       send(`Output directory missing: ${outDir}`);
-      wc.send('parse-complete', false);
+      wc.send('parse-complete', { success: false, files: [] });
       return;
     }
     const outputs = await fs.promises.readdir(outDir);
     for (const file of outputs) {
       if (file.toLowerCase().endsWith('.json') || file.toLowerCase().endsWith('.tid')) {
-        await fs.promises.rename(path.join(outDir, file), path.join(parsedDir, file));
+        const dest = path.join(parsedDir, file);
+        await fs.promises.rename(path.join(outDir, file), dest);
+        outputFiles.push(dest);
         send(`Output: ${file}`);
       }
     }
-    wc.send('parse-complete', true);
+    wc.send('parse-complete', { success: true, files: outputFiles });
   } catch (e) {
     if (cancelled) {
       send('Parsing cancelled.');
     } else {
       send(`Error: ${e.message}`);
     }
-    wc.send('parse-complete', false);
+    wc.send('parse-complete', { success: false, files: [] });
   } finally {
     currentParseCancel = null;
     try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}

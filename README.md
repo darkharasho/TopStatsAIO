@@ -11,6 +11,8 @@ Your one stop shop for generating top stats. This program uses both Elite Insigh
 
 <img width="750" alt="image" src="https://github.com/user-attachments/assets/38195b55-af42-419d-8b53-51554faa0006" />
 
+<img width="750" alt="image" src="https://github.com/user-attachments/assets/a1389ad3-1803-46aa-a49c-784fdf4064eb" />
+
 ---
 
 The primary directive of this application is to increase the user friendliness of these tools. Key features:
@@ -21,6 +23,7 @@ The primary directive of this application is to increase the user friendliness o
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner` (default)
 - Light and dark themes with customizable accent colors, including a subtle grey option
 - Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
+- Open a built-in viewer that loads a configured Upload URL and automatically drops your parsed files for upload
 
 ## Setup
 
@@ -39,6 +42,7 @@ The primary directive of this application is to increase the user friendliness o
 
 ### 3. Optional Settings
 - Configure a `DPSReportUserToken` for authenticated uploads
+- Specify an `Upload URL` used by the in-app viewer for automatic file drops
 - Choose between `GW2_EI_log_combiner` (default) and the legacy `arcdps_top_stats_parser` and supply paths for both
 - Switch between light and dark themes and pick from several accent colors, including a subtle grey
 - Provide guild name, ID and API key for the combiner and optionally enable Glicko DB updates and fight chart generation
@@ -48,8 +52,9 @@ The primary directive of this application is to increase the user friendliness o
 1. Use the file tree on the left to expand folders and select .zetvc
 2. As you select files, they should appear in the `Selected Files` window
 3. After selection, hit the `Parse` button at the bottom right of the window
-4. Let the process run, once complete you will see a button appear to `Open Folder`
-5. Drag & Drop that `.json` file into your TiddlyWiki of choice!
+4. Let the process run; once complete you will see buttons to `Open Folder` or `Upload`
+5. Clicking `Upload` launches the built‑in browser at your configured Upload URL and automatically drops the parsed files for you
+6. Alternatively, use `Open Folder` to manually drag & drop the `.json` file into your TiddlyWiki of choice
 ### Options
 - You can set a description field at the bottom of the window for each log when using the `GW2_EI_log_combiner`; it is hidden when using the legacy `arcdps_top_stats_parser`
 - There is a date/time picker in the bottom left. It will remember your last selected time. Select a date/time and press `Select Since` to select all logs from all subfolders that are created after that date & time
@@ -61,8 +66,6 @@ This generates the `json`/`tid` files necessary to use with TiddlyWiki. To see t
 - Navigate to your `Top Stats Parser` Folder
 - Open the file `/Example_Output/Top_Stats_Index.html` in your browser of choice.
 - Drag and Drop the file `Drag_and_Drop_Log_Summary_for_2024yourdatatime.json` onto the opened `Top_Stats_Index.html` in your browser and click import
-- Open the 1. imported file link to view the summary
-
 
 ## Development
 
