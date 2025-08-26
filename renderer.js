@@ -297,24 +297,33 @@ combinerGuildIdInput.addEventListener('input', () => {
 combinerGuildLookupBtn.addEventListener('click', async () => {
   const name = combinerGuildNameInput.value.trim();
   if (!name) return;
+  const url = `https://api.guildwars2.com/v2/guild/search?name=${encodeURIComponent(name)}`;
+  console.log('[Guild Lookup] URL:', url);
   try {
-    const res = await fetch(`https://api.guildwars2.com/v2/guild/search?name=${encodeURIComponent(name)}`);
+    const res = await fetch(url);
+    console.log('[Guild Lookup] Status:', res.status);
     if (!res.ok) {
       if (res.status === 404) {
+        console.warn('[Guild Lookup] 404 for name:', name);
         alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
       } else {
+        console.error('[Guild Lookup] Error status:', res.status);
         alert('Error looking up guild.');
       }
       return;
     }
     const ids = await res.json();
+    console.log('[Guild Lookup] Response body:', ids);
     if (!Array.isArray(ids) || ids.length === 0) {
+      console.warn('[Guild Lookup] Empty result for name:', name);
       alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
       return;
     }
     combinerGuildIdInput.value = ids[0];
     localStorage.setItem('combinerGuildId', ids[0]);
+    console.log('[Guild Lookup] Guild ID set to:', ids[0]);
   } catch (err) {
+    console.error('[Guild Lookup] Fetch error:', err);
     alert('Error looking up guild.');
   }
 });
