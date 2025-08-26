@@ -260,7 +260,7 @@ body.light #date-filter::-webkit-calendar-picker-indicator { filter: invert(0); 
   opacity:0;
   transition:opacity 0.3s;
   pointer-events:none;
-  z-index:1000;
+  z-index:2000;
 }
 #copy-toast.show { opacity:1; }
 @keyframes spin { to { transform:rotate(360deg); } }
