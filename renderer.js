@@ -298,39 +298,32 @@ combinerGuildIdInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildId', combinerGuildIdInput.value);
 });
 combinerGuildLookupBtn.addEventListener('click', async () => {
-  console.log('[Guild Lookup] Button clicked');
   const name = combinerGuildNameInput.value.trim();
   if (!name) {
     alert('Please enter a guild name.');
     return;
   }
   const url = `https://api.guildwars2.com/v2/guild/search?name=${encodeURIComponent(name)}`;
-  console.log('[Guild Lookup] URL:', url);
   try {
     const res = await fetch(url);
-    console.log('[Guild Lookup] Status:', res.status);
     if (!res.ok) {
       if (res.status === 404) {
-        console.warn('[Guild Lookup] 404 for name:', name);
         alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
       } else {
-        console.error('[Guild Lookup] Error status:', res.status);
         alert('Error looking up guild.');
       }
       return;
     }
     const ids = await res.json();
-    console.log('[Guild Lookup] Response body:', ids);
     if (!Array.isArray(ids) || ids.length === 0) {
-      console.warn('[Guild Lookup] Empty result for name:', name);
       alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
       return;
     }
-    combinerGuildIdInput.value = ids[0];
-    localStorage.setItem('combinerGuildId', ids[0]);
-    console.log('[Guild Lookup] Guild ID set to:', ids[0]);
-  } catch (err) {
-    console.error('[Guild Lookup] Fetch error:', err);
+    const guildId = ids[0];
+    combinerGuildIdInput.value = guildId;
+    localStorage.setItem('combinerGuildId', guildId);
+    showToast('Guild lookup successful');
+  } catch {
     alert('Error looking up guild.');
   }
 });
@@ -392,14 +385,14 @@ uploadHomeBtn.addEventListener('click', () => {
     uploadUrlBar.value = url;
   }
 });
-function showCopyToast() {
-  copyToast.textContent = 'Address Copied to Clipboard';
+function showToast(message) {
+  copyToast.textContent = message;
   copyToast.classList.add('show');
   setTimeout(() => copyToast.classList.remove('show'), 2000);
 }
 uploadCopyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(uploadUrlBar.value)
-    .then(showCopyToast)
+    .then(() => showToast('Address Copied to Clipboard'))
     .catch(() => {});
 });
 uploadUrlBar.addEventListener('keydown', e => {
