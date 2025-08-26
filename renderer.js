@@ -103,7 +103,10 @@ dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
-combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
+function updateGuildLookupState() {
+  combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
+}
+updateGuildLookupState();
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
@@ -289,14 +292,18 @@ setupTiddlyhostBtn.addEventListener('click', () => {
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
-  combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
+  updateGuildLookupState();
 });
 combinerGuildIdInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildId', combinerGuildIdInput.value);
 });
 combinerGuildLookupBtn.addEventListener('click', async () => {
+  console.log('[Guild Lookup] Button clicked');
   const name = combinerGuildNameInput.value.trim();
-  if (!name) return;
+  if (!name) {
+    alert('Please enter a guild name.');
+    return;
+  }
   const url = `https://api.guildwars2.com/v2/guild/search?name=${encodeURIComponent(name)}`;
   console.log('[Guild Lookup] URL:', url);
   try {
