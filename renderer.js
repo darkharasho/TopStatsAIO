@@ -37,6 +37,7 @@ const uploadUrlInput = document.getElementById('upload-url');
 const uploadLoginBtn = document.getElementById('upload-login');
 const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
+const combinerGuildLookupBtn = document.getElementById('combiner-guild-lookup');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
 const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
@@ -102,6 +103,10 @@ dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
 combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
 combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
+function updateGuildLookupState() {
+  combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
+}
+updateGuildLookupState();
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
@@ -287,9 +292,40 @@ setupTiddlyhostBtn.addEventListener('click', () => {
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
+  updateGuildLookupState();
 });
 combinerGuildIdInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildId', combinerGuildIdInput.value);
+});
+combinerGuildLookupBtn.addEventListener('click', async () => {
+  const name = combinerGuildNameInput.value.trim();
+  if (!name) {
+    alert('Please enter a guild name.');
+    return;
+  }
+  const url = `https://api.guildwars2.com/v2/guild/search?name=${encodeURIComponent(name)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      if (res.status === 404) {
+        alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
+      } else {
+        alert('Error looking up guild.');
+      }
+      return;
+    }
+    const ids = await res.json();
+    if (!Array.isArray(ids) || ids.length === 0) {
+      alert('No guild found. Ensure the name is spelled exactly and does not include the guild tag.');
+      return;
+    }
+    const guildId = ids[0];
+    combinerGuildIdInput.value = guildId;
+    localStorage.setItem('combinerGuildId', guildId);
+    showToast('Guild lookup successful');
+  } catch {
+    alert('Error looking up guild.');
+  }
 });
 combinerApiKeyInput.addEventListener('input', () => {
   localStorage.setItem('combinerApiKey', combinerApiKeyInput.value);
@@ -349,14 +385,14 @@ uploadHomeBtn.addEventListener('click', () => {
     uploadUrlBar.value = url;
   }
 });
-function showCopyToast() {
-  copyToast.textContent = 'Address Copied to Clipboard';
+function showToast(message) {
+  copyToast.textContent = message;
   copyToast.classList.add('show');
   setTimeout(() => copyToast.classList.remove('show'), 2000);
 }
 uploadCopyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(uploadUrlBar.value)
-    .then(showCopyToast)
+    .then(() => showToast('Address Copied to Clipboard'))
     .catch(() => {});
 });
 uploadUrlBar.addEventListener('keydown', e => {
