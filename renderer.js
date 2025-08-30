@@ -1323,6 +1323,8 @@ function applyGradient(name) {
   document.documentElement.style.setProperty('--card-border', grad);
   document.documentElement.style.setProperty('--btn-border', c1);
   document.documentElement.style.setProperty('--btn-border-hover', c2);
+  const barGrad = `linear-gradient(to right, ${c1}, ${c2})`;
+  document.documentElement.style.setProperty('--progress-bar', barGrad);
   if (gradientSummary) {
     gradientSummary.classList.remove(
       ...Array.from(gradientSummary.classList).filter(c => c.startsWith('gradient-') && c !== 'gradient-text')
