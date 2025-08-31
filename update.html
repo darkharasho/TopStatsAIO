@@ -5,12 +5,13 @@
   <title>Update Available</title>
   <link rel="stylesheet" href="update.css" />
 </head>
-<body>
-  <h2>Update available</h2>
-  <p id="msg"></p>
-  <div id="buttons">
-    <button id="later">Later</button>
-    <button id="download" autofocus>Update</button>
+  <body>
+    <h2>Update available</h2>
+    <p id="msg"></p>
+    <div id="notes"></div>
+    <div id="buttons">
+      <button id="later">Later</button>
+      <button id="download" autofocus>Update</button>
   </div>
   <div id="progress" style="display:none; margin-top:20px;">
     <progress id="prog" value="0" max="1" style="width:100%"></progress>
@@ -18,10 +19,17 @@
   </div>
   <script>
     const params = new URLSearchParams(location.search);
-    const version = params.get('version');
-    const mode = params.get('mode');
-    const url = params.get('url');
-    document.getElementById('msg').textContent = `Version ${version} is available.`;
+      const version = params.get('version');
+      const mode = params.get('mode');
+      const url = params.get('url');
+      const notes = params.get('notes');
+      document.getElementById('msg').textContent = `Version ${version} is available.`;
+      const notesBox = document.getElementById('notes');
+      if (notes) {
+        notesBox.innerHTML = window.electronAPI.parseMarkdown(notes);
+      } else {
+        notesBox.style.display = 'none';
+      }
     function applyTheme(t){ document.body.classList.toggle('light', t === 'light'); }
     window.electronAPI.getTheme().then(applyTheme);
     window.electronAPI.onThemeChanged(applyTheme);

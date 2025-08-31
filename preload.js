@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const { marked } = require('marked');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
@@ -19,12 +20,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   startParse: (data) => ipcRenderer.invoke('start-parse', data),
   onParseProgress: (cb) => ipcRenderer.on('parse-progress', (e, msg) => cb(msg)),
   onParseStep: (cb) => ipcRenderer.on('parse-step', (e, data) => cb(data)),
-    onParseComplete: (cb) => ipcRenderer.on('parse-complete', (e, data) => cb(data)),
-    openParsedFolder: () => ipcRenderer.invoke('open-parsed-folder'),
-    uploadParsedFiles: (files) => ipcRenderer.invoke('upload-parsed-files', files),
-    getExampleOutput: (which) => ipcRenderer.invoke('get-example-output', which),
-    cancelParse: () => ipcRenderer.send('cancel-parse'),
-    openParserFolder: (which) => ipcRenderer.invoke('open-parser-folder', which),
+  onParseComplete: (cb) => ipcRenderer.on('parse-complete', (e, data) => cb(data)),
+  openParsedFolder: () => ipcRenderer.invoke('open-parsed-folder'),
+  uploadParsedFiles: (files) => ipcRenderer.invoke('upload-parsed-files', files),
+  getExampleOutput: (which) => ipcRenderer.invoke('get-example-output', which),
+  cancelParse: () => ipcRenderer.send('cancel-parse'),
+  openParserFolder: (which) => ipcRenderer.invoke('open-parser-folder', which),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
   showUpdatePrompt: () => ipcRenderer.invoke('show-update-prompt'),
   onShowUpdateNotice: (cb) => ipcRenderer.on('show-update-notice', () => cb()),
@@ -33,4 +34,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateLater: () => ipcRenderer.send('update-later'),
   updateDownloaded: () => ipcRenderer.send('update-downloaded'),
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (e, data) => cb(data)),
-});
+  parseMarkdown: (text) => marked.parse(text),
+  });

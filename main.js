@@ -230,7 +230,12 @@ function showUpdatePrompt(parent) {
   });
   const mode = isInstalled() && pendingUpdate.setupUrl ? 'install' : 'link';
   prompt.loadFile('update.html', {
-    query: { version: pendingUpdate.version, mode, url: pendingUpdate.releaseUrl || '' }
+    query: {
+      version: pendingUpdate.version,
+      mode,
+      url: pendingUpdate.releaseUrl || '',
+      notes: pendingUpdate.notes || ''
+    }
   });
   prompt.once('ready-to-show', () => prompt.show());
 }
@@ -248,7 +253,8 @@ async function checkForAppUpdates(parent) {
         pendingUpdate = {
           version: latest,
           releaseUrl: rel.html_url,
-          setupUrl: setup ? setup.browser_download_url : null
+          setupUrl: setup ? setup.browser_download_url : null,
+          notes: rel.body || ''
         };
         if (parent && parent.webContents) {
           parent.webContents.send('show-update-notice');
