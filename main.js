@@ -617,7 +617,7 @@ ipcMain.handle('start-parse', async (event, data) => {
             if (opts.description) {
               combArgs.push('-d', opts.description);
             }
-            await runProcess(combExe, combArgs, tempDir, wc, false, c => child = c);
+            await runProcess(combExe, combArgs, tempDir, wc, false, c => child = c, '\r\n');
             step('final', 'GW2 EI Log Combiner', 1, null, 1, 1);
           } catch (e) {
             step('final', 'GW2 EI Log Combiner', 1, 'Error', 1, 1);
@@ -685,10 +685,17 @@ ipcMain.handle('start-parse', async (event, data) => {
   }
 });
 
-function runProcess(cmd, args, cwd, wc, useShell = false, registerChild) {
+function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOnSpawn = null) {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd, shell: useShell, windowsHide: true });
     if (registerChild) registerChild(child);
+    if (inputOnSpawn) {
+      child.once('spawn', () => {
+        try {
+          if (child.stdin) child.stdin.write(inputOnSpawn);
+        } catch {}
+      });
+    }
     child.stdout.on('data', d => wc.send('parse-progress', d.toString().trim()));
     child.stderr.on('data', d => wc.send('parse-progress', `Error: ${d.toString().trim()}`));
     child.on('close', code => {
