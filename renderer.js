@@ -315,7 +315,7 @@ uploadLoginBtn.addEventListener('click', () => {
   localStorage.setItem('uploadUrl', url);
   uploadUrlInput.value = url;
   const loginUrl = getLoginTargetUrl(url) || url;
-  openUploadWindow(loginUrl, [], false);
+  openUploadWindow(loginUrl, [], false, { syncInput: false });
 });
 setupTiddlyhostBtn.addEventListener('click', () => {
   openUploadWindow('https://tiddlyhost.com/', [], true);
@@ -1161,7 +1161,8 @@ function updateTiddlyGuide(url) {
   tiddlySetupStage = 0;
 }
 
-function openUploadWindow(url, payload, isSetup) {
+function openUploadWindow(url, payload, isSetup, options = {}) {
+  const { syncInput = true } = options;
   tiddlyMode = !!isSetup;
   previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
   if (previousWindow === 'settings') {
@@ -1172,7 +1173,7 @@ function openUploadWindow(url, payload, isSetup) {
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
-  if (!tiddlyMode) {
+  if (!tiddlyMode && syncInput) {
     uploadUrlInput.value = url;
   }
   uploadStatus.textContent = '';
