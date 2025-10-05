@@ -44,6 +44,7 @@ describe('utils', () => {
       dbPath: 'C:/data',
       dbUpdate: true,
       fightCharts: true,
+      hideColumns: true,
     });
     const content = fs.readFileSync(dest, 'utf8');
     expect(content).toMatch('guild_name = Test');
@@ -53,5 +54,6 @@ describe('utils', () => {
     expect(content).toMatch('db_output_filename = TopStats.db');
     expect(content).toMatch('db_update = true');
     expect(content).toMatch('fight_data_charts = true');
+    expect(content).toMatch('hide_columns = true');
   });
 });

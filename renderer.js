@@ -41,6 +41,7 @@ const combinerGuildLookupBtn = document.getElementById('combiner-guild-lookup');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
 const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
+const combinerHideColumnsCheckbox = document.getElementById('combiner-hide-columns');
 const descriptionInput = document.getElementById('description');
 const parseBtn = document.getElementById('parse-btn');
 const parseWindow = document.getElementById('parse-window');
@@ -139,6 +140,7 @@ updateGuildLookupState();
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
+combinerHideColumnsCheckbox.checked = localStorage.getItem('combinerHideColumns') === 'true';
 
 document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
 document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
@@ -365,6 +367,9 @@ combinerGlickoCheckbox.addEventListener('change', () => {
 });
 combinerFightChartsCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerFightCharts', combinerFightChartsCheckbox.checked ? 'true' : 'false');
+});
+combinerHideColumnsCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerHideColumns', combinerHideColumnsCheckbox.checked ? 'true' : 'false');
 });
 parseBtn.addEventListener('click', startParse);
 parseCloseBtn.addEventListener('click', closeParseWindow);
@@ -1255,6 +1260,7 @@ async function startParse() {
     apiKey: localStorage.getItem('combinerApiKey') || '',
     dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
     fightCharts: localStorage.getItem('combinerFightCharts') === 'true',
+    hideColumns: localStorage.getItem('combinerHideColumns') === 'true',
     description: descriptionInput.value.trim()
   };
   await window.electronAPI.startParse({ files, options });
