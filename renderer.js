@@ -98,6 +98,24 @@ function normalizeUrl(url) {
   }
 }
 
+function getLoginTargetUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host.endsWith('.tiddlyhost.com')) {
+      parsed.hostname = 'tiddlyhost.com';
+    } else if (host.endsWith('.github.io')) {
+      parsed.hostname = 'github.io';
+    }
+    parsed.pathname = '/';
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
@@ -285,7 +303,8 @@ uploadLoginBtn.addEventListener('click', () => {
   }
   localStorage.setItem('uploadUrl', url);
   uploadUrlInput.value = url;
-  openUploadWindow(url, [], false);
+  const loginUrl = getLoginTargetUrl(url) || url;
+  openUploadWindow(loginUrl, [], false);
 });
 setupTiddlyhostBtn.addEventListener('click', () => {
   openUploadWindow('https://tiddlyhost.com/', [], true);
@@ -381,7 +400,7 @@ uploadHomeBtn.addEventListener('click', () => {
   if (url) {
     uploadLoading.classList.add('active');
     uploadFrame.style.visibility = 'hidden';
-    uploadFrame.src = url;
+    uploadFrame.loadURL(url);
     uploadUrlBar.value = url;
   }
 });
@@ -401,7 +420,7 @@ uploadUrlBar.addEventListener('keydown', e => {
     if (url) {
       uploadLoading.classList.add('active');
       uploadFrame.style.visibility = 'hidden';
-      uploadFrame.src = url;
+      uploadFrame.loadURL(url);
       uploadUrlBar.value = url;
     } else {
       alert('URL is invalid.');
@@ -1173,7 +1192,7 @@ function openUploadWindow(url, payload, isSetup) {
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
-  uploadFrame.src = url;
+  uploadFrame.loadURL(url);
   if (tiddlyMode) updateTiddlyGuide(url);
   updateUploadNav();
 }
