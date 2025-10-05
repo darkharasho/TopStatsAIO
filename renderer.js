@@ -98,6 +98,35 @@ function normalizeUrl(url) {
   }
 }
 
+function getLoginTargetUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (host.endsWith('.tiddlyhost.com')) {
+      parsed.hostname = 'tiddlyhost.com';
+    } else if (host.endsWith('.github.io')) {
+      parsed.hostname = 'github.io';
+    }
+    parsed.pathname = '/';
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function navigateUploadFrame(url) {
+  if (!url) return;
+  try {
+    if (typeof uploadFrame.loadURL === 'function') {
+      uploadFrame.loadURL(url);
+      return;
+    }
+  } catch {}
+  uploadFrame.src = url;
+}
+
 
 dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
 uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
@@ -285,7 +314,8 @@ uploadLoginBtn.addEventListener('click', () => {
   }
   localStorage.setItem('uploadUrl', url);
   uploadUrlInput.value = url;
-  openUploadWindow(url, [], false);
+  const loginUrl = getLoginTargetUrl(url) || url;
+  openUploadWindow(loginUrl, [], false, { syncInput: false });
 });
 setupTiddlyhostBtn.addEventListener('click', () => {
   openUploadWindow('https://tiddlyhost.com/', [], true);
@@ -381,7 +411,7 @@ uploadHomeBtn.addEventListener('click', () => {
   if (url) {
     uploadLoading.classList.add('active');
     uploadFrame.style.visibility = 'hidden';
-    uploadFrame.src = url;
+    navigateUploadFrame(url);
     uploadUrlBar.value = url;
   }
 });
@@ -401,7 +431,7 @@ uploadUrlBar.addEventListener('keydown', e => {
     if (url) {
       uploadLoading.classList.add('active');
       uploadFrame.style.visibility = 'hidden';
-      uploadFrame.src = url;
+      navigateUploadFrame(url);
       uploadUrlBar.value = url;
     } else {
       alert('URL is invalid.');
@@ -434,7 +464,7 @@ uploadFrame.addEventListener('new-window', e => {
   e.preventDefault();
   const url = e.url;
   if (url) {
-    uploadFrame.loadURL(url);
+    navigateUploadFrame(url);
     uploadUrlBar.value = url;
     updateUploadNav();
     if (tiddlyMode) updateTiddlyGuide(url);
@@ -452,7 +482,7 @@ uploadFrame.addEventListener('dom-ready', () => {
     const wc = uploadFrame.getWebContents();
     if (wc && wc.setWindowOpenHandler) {
       wc.setWindowOpenHandler(({ url }) => {
-        uploadFrame.loadURL(url);
+        navigateUploadFrame(url);
         uploadUrlBar.value = url;
         updateUploadNav();
         if (tiddlyMode) updateTiddlyGuide(url);
@@ -1131,7 +1161,8 @@ function updateTiddlyGuide(url) {
   tiddlySetupStage = 0;
 }
 
-function openUploadWindow(url, payload, isSetup) {
+function openUploadWindow(url, payload, isSetup, options = {}) {
+  const { syncInput = true } = options;
   tiddlyMode = !!isSetup;
   previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
   if (previousWindow === 'settings') {
@@ -1142,7 +1173,7 @@ function openUploadWindow(url, payload, isSetup) {
   uploadWindow.classList.add('active');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
-  if (!tiddlyMode) {
+  if (!tiddlyMode && syncInput) {
     uploadUrlInput.value = url;
   }
   uploadStatus.textContent = '';
@@ -1173,7 +1204,7 @@ function openUploadWindow(url, payload, isSetup) {
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
-  uploadFrame.src = url;
+  navigateUploadFrame(url);
   if (tiddlyMode) updateTiddlyGuide(url);
   updateUploadNav();
 }
