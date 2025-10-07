@@ -18,11 +18,12 @@ function writeVersions(file, v) {
   fs.writeFileSync(file, JSON.stringify(v));
 }
 
-async function editEIConfig(template, dest, outDir, token) {
+async function editEIConfig(template, dest, outDir, token, opts = {}) {
   const lines = await fs.promises.readFile(template, 'utf8');
   const replaced = lines.split(/\r?\n/).map(l => {
     if (l.startsWith('OutLocation=')) return `OutLocation=${outDir}`;
     if (l.startsWith('DPSReportUserToken=')) return `DPSReportUserToken=${token || ''}`;
+    if (l.startsWith('Anonymous=')) return `Anonymous=${opts.anonymizePlayers ? 'True' : 'False'}`;
     return l;
   }).join('\n');
   await fs.promises.writeFile(dest, replaced, 'utf8');

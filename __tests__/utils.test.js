@@ -28,10 +28,11 @@ describe('utils', () => {
   test('editEIConfig replaces values', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsaio-'));
     const dest = path.join(tempDir, 'out.conf');
-    await editEIConfig(path.join(__dirname, '..', 'EliteInsightsConfigTemplate.conf'), dest, 'C:/out', 'token123');
+    await editEIConfig(path.join(__dirname, '..', 'EliteInsightsConfigTemplate.conf'), dest, 'C:/out', 'token123', { anonymizePlayers: true });
     const content = fs.readFileSync(dest, 'utf8');
     expect(content).toMatch('OutLocation=C:/out');
     expect(content).toMatch('DPSReportUserToken=token123');
+    expect(content).toMatch('Anonymous=True');
   });
 
   test('editTopStatsConfig replaces values', async () => {
