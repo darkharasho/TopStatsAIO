@@ -556,7 +556,7 @@ ipcMain.handle('start-parse', async (event, data) => {
 
     const eiTemplate = path.join(__dirname, 'EliteInsightsConfigTemplate.conf');
     const eiConf = path.join(tempDir, 'EliteInsightConfig.conf');
-    await editEIConfig(eiTemplate, eiConf, tempDir, opts.dpsUserToken);
+    await editEIConfig(eiTemplate, eiConf, tempDir, opts.dpsUserToken, { anonymizePlayers: opts.anonymizePlayers });
     const combTemplate = path.join(__dirname, 'top_stats_config.ini');
     const combConf = path.join(tempDir, 'top_stats_config.ini');
     await editTopStatsConfig(combTemplate, combConf, opts);

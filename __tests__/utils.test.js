@@ -28,10 +28,11 @@ describe('utils', () => {
   test('editEIConfig replaces values', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsaio-'));
     const dest = path.join(tempDir, 'out.conf');
-    await editEIConfig(path.join(__dirname, '..', 'EliteInsightsConfigTemplate.conf'), dest, 'C:/out', 'token123');
+    await editEIConfig(path.join(__dirname, '..', 'EliteInsightsConfigTemplate.conf'), dest, 'C:/out', 'token123', { anonymizePlayers: true });
     const content = fs.readFileSync(dest, 'utf8');
     expect(content).toMatch('OutLocation=C:/out');
     expect(content).toMatch('DPSReportUserToken=token123');
+    expect(content).toMatch('Anonymous=True');
   });
 
   test('editTopStatsConfig replaces values', async () => {
@@ -44,6 +45,7 @@ describe('utils', () => {
       dbPath: 'C:/data',
       dbUpdate: true,
       fightCharts: true,
+      hideColumns: true,
     });
     const content = fs.readFileSync(dest, 'utf8');
     expect(content).toMatch('guild_name = Test');
@@ -53,5 +55,6 @@ describe('utils', () => {
     expect(content).toMatch('db_output_filename = TopStats.db');
     expect(content).toMatch('db_update = true');
     expect(content).toMatch('fight_data_charts = true');
+    expect(content).toMatch('hide_columns = true');
   });
 });

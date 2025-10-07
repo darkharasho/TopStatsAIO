@@ -18,11 +18,12 @@ function writeVersions(file, v) {
   fs.writeFileSync(file, JSON.stringify(v));
 }
 
-async function editEIConfig(template, dest, outDir, token) {
+async function editEIConfig(template, dest, outDir, token, opts = {}) {
   const lines = await fs.promises.readFile(template, 'utf8');
   const replaced = lines.split(/\r?\n/).map(l => {
     if (l.startsWith('OutLocation=')) return `OutLocation=${outDir}`;
     if (l.startsWith('DPSReportUserToken=')) return `DPSReportUserToken=${token || ''}`;
+    if (l.startsWith('Anonymous=')) return `Anonymous=${opts.anonymizePlayers ? 'True' : 'False'}`;
     return l;
   }).join('\n');
   await fs.promises.writeFile(dest, replaced, 'utf8');
@@ -38,6 +39,7 @@ async function editTopStatsConfig(template, dest, opts) {
     if (l.startsWith('db_path = ')) return `db_path = ${opts.dbPath || '.'}`;
     if (l.startsWith('db_update = ')) return `db_update = ${opts.dbUpdate ? 'true' : 'false'}`;
     if (l.startsWith('fight_data_charts = ')) return `fight_data_charts = ${opts.fightCharts ? 'true' : 'false'}`;
+    if (l.startsWith('hide_columns = ')) return `hide_columns = ${opts.hideColumns ? 'true' : 'false'}`;
     return l;
   }).join('\n');
   await fs.promises.writeFile(dest, replaced, 'utf8');
