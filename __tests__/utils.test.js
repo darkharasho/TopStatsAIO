@@ -46,6 +46,11 @@ describe('utils', () => {
       dbUpdate: true,
       fightCharts: true,
       hideColumns: true,
+      boonsDetailed: true,
+      offensiveDetailed: true,
+      defensesDetailed: true,
+      supportDetailed: true,
+      blacklistAccounts: 'user1.1234, user2.5678, user3.9012',
     });
     const content = fs.readFileSync(dest, 'utf8');
     expect(content).toMatch('guild_name = Test');
@@ -56,5 +61,10 @@ describe('utils', () => {
     expect(content).toMatch('db_update = true');
     expect(content).toMatch('fight_data_charts = true');
     expect(content).toMatch('hide_columns = true');
+    expect(content).toMatch('Boons_Detailed = true');
+    expect(content).toMatch('Offensive_Detailed = true');
+    expect(content).toMatch('Defenses_Detailed = true');
+    expect(content).toMatch('Support_Detailed = true');
+    expect(content).toMatch('accounts = user1.1234,\n           user2.5678,\n           user3.9012');
   });
 });

@@ -42,6 +42,11 @@ const combinerApiKeyInput = document.getElementById('combiner-api-key');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
 const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
 const combinerHideColumnsCheckbox = document.getElementById('combiner-hide-columns');
+const combinerBoonsDetailedCheckbox = document.getElementById('combiner-boons-detailed');
+const combinerOffensiveDetailedCheckbox = document.getElementById('combiner-offensive-detailed');
+const combinerDefensesDetailedCheckbox = document.getElementById('combiner-defenses-detailed');
+const combinerSupportDetailedCheckbox = document.getElementById('combiner-support-detailed');
+const combinerBlacklistInput = document.getElementById('combiner-blacklist-accounts');
 const eiAnonymizeCheckbox = document.getElementById('ei-anonymize');
 const descriptionInput = document.getElementById('description');
 const parseBtn = document.getElementById('parse-btn');
@@ -142,6 +147,11 @@ combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
 combinerHideColumnsCheckbox.checked = localStorage.getItem('combinerHideColumns') === 'true';
+combinerBoonsDetailedCheckbox.checked = localStorage.getItem('combinerBoonsDetailed') === 'true';
+combinerOffensiveDetailedCheckbox.checked = localStorage.getItem('combinerOffensiveDetailed') === 'true';
+combinerDefensesDetailedCheckbox.checked = localStorage.getItem('combinerDefensesDetailed') === 'true';
+combinerSupportDetailedCheckbox.checked = localStorage.getItem('combinerSupportDetailed') === 'true';
+combinerBlacklistInput.value = localStorage.getItem('combinerBlacklistAccounts') || '';
 eiAnonymizeCheckbox.checked = localStorage.getItem('eiAnonymizePlayers') === 'true';
 
 document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
@@ -372,6 +382,21 @@ combinerFightChartsCheckbox.addEventListener('change', () => {
 });
 combinerHideColumnsCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerHideColumns', combinerHideColumnsCheckbox.checked ? 'true' : 'false');
+});
+combinerBoonsDetailedCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerBoonsDetailed', combinerBoonsDetailedCheckbox.checked ? 'true' : 'false');
+});
+combinerOffensiveDetailedCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerOffensiveDetailed', combinerOffensiveDetailedCheckbox.checked ? 'true' : 'false');
+});
+combinerDefensesDetailedCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerDefensesDetailed', combinerDefensesDetailedCheckbox.checked ? 'true' : 'false');
+});
+combinerSupportDetailedCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerSupportDetailed', combinerSupportDetailedCheckbox.checked ? 'true' : 'false');
+});
+combinerBlacklistInput.addEventListener('input', () => {
+  localStorage.setItem('combinerBlacklistAccounts', combinerBlacklistInput.value);
 });
 eiAnonymizeCheckbox.addEventListener('change', () => {
   localStorage.setItem('eiAnonymizePlayers', eiAnonymizeCheckbox.checked ? 'true' : 'false');
@@ -1266,6 +1291,11 @@ async function startParse() {
     dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
     fightCharts: localStorage.getItem('combinerFightCharts') === 'true',
     hideColumns: localStorage.getItem('combinerHideColumns') === 'true',
+    boonsDetailed: localStorage.getItem('combinerBoonsDetailed') === 'true',
+    offensiveDetailed: localStorage.getItem('combinerOffensiveDetailed') === 'true',
+    defensesDetailed: localStorage.getItem('combinerDefensesDetailed') === 'true',
+    supportDetailed: localStorage.getItem('combinerSupportDetailed') === 'true',
+    blacklistAccounts: combinerBlacklistInput.value,
     anonymizePlayers: localStorage.getItem('eiAnonymizePlayers') === 'true',
     description: descriptionInput.value.trim()
   };
