@@ -29,8 +29,26 @@ async function editEIConfig(template, dest, outDir, token, opts = {}) {
   await fs.promises.writeFile(dest, replaced, 'utf8');
 }
 
+function formatAccounts(accounts) {
+  const list = (accounts || '')
+    .split(/[,\n]/)
+    .map(a => a.trim())
+    .filter(Boolean);
+  if (list.length === 0) return 'accounts = ';
+  const [first, ...rest] = list;
+  let line = `accounts = ${first}`;
+  if (rest.length) {
+    line += ',\n           ';
+    line += rest
+      .map((acc, idx) => (idx < rest.length - 1 ? `${acc},` : acc))
+      .join('\n           ');
+  }
+  return line;
+}
+
 async function editTopStatsConfig(template, dest, opts) {
   const lines = await fs.promises.readFile(template, 'utf8');
+  const accountsLine = formatAccounts(opts.blacklistAccounts);
   const replaced = lines.split(/\r?\n/).map(l => {
     if (l.startsWith('guild_name = ')) return `guild_name = ${opts.guildName || ''}`;
     if (l.startsWith('guild_id = ')) return `guild_id = ${opts.guildId || ''}`;
@@ -40,6 +58,11 @@ async function editTopStatsConfig(template, dest, opts) {
     if (l.startsWith('db_update = ')) return `db_update = ${opts.dbUpdate ? 'true' : 'false'}`;
     if (l.startsWith('fight_data_charts = ')) return `fight_data_charts = ${opts.fightCharts ? 'true' : 'false'}`;
     if (l.startsWith('hide_columns = ')) return `hide_columns = ${opts.hideColumns ? 'true' : 'false'}`;
+    if (l.startsWith('Boons_Detailed = ')) return `Boons_Detailed = ${opts.boonsDetailed ? 'true' : 'false'}`;
+    if (l.startsWith('Offensive_Detailed = ')) return `Offensive_Detailed = ${opts.offensiveDetailed ? 'true' : 'false'}`;
+    if (l.startsWith('Defenses_Detailed = ')) return `Defenses_Detailed = ${opts.defensesDetailed ? 'true' : 'false'}`;
+    if (l.startsWith('Support_Detailed = ')) return `Support_Detailed = ${opts.supportDetailed ? 'true' : 'false'}`;
+    if (l.startsWith('accounts = ')) return accountsLine;
     return l;
   }).join('\n');
   await fs.promises.writeFile(dest, replaced, 'utf8');
