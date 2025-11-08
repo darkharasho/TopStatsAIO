@@ -50,6 +50,7 @@ describe('utils', () => {
       offensiveDetailed: true,
       defensesDetailed: true,
       supportDetailed: true,
+      webhookUrl: 'https://example.com/webhook',
       blacklistAccounts: 'user1.1234, user2.5678, user3.9012',
     });
     const content = fs.readFileSync(dest, 'utf8');
@@ -65,6 +66,24 @@ describe('utils', () => {
     expect(content).toMatch('Offensive_Detailed = true');
     expect(content).toMatch('Defenses_Detailed = true');
     expect(content).toMatch('Support_Detailed = true');
+    expect(content).toMatch('webhook_url = https://example.com/webhook');
     expect(content).toMatch('accounts = user1.1234,\n           user2.5678,\n           user3.9012');
+  });
+
+  test('editTopStatsConfig enforces webhook_url formatting', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsaio-'));
+    const dest = path.join(tempDir, 'out-invalid.ini');
+    await editTopStatsConfig(path.join(__dirname, '..', 'top_stats_config.ini'), dest, {
+      webhookUrl: 'notaurl',
+    });
+    const content = fs.readFileSync(dest, 'utf8');
+    expect(content).toMatch('webhook_url = false');
+
+    const dest2 = path.join(tempDir, 'out-valid.ini');
+    await editTopStatsConfig(path.join(__dirname, '..', 'top_stats_config.ini'), dest2, {
+      webhookUrl: ' https://discord.com/api/webhooks/123 ',
+    });
+    const content2 = fs.readFileSync(dest2, 'utf8');
+    expect(content2).toMatch('webhook_url = https://discord.com/api/webhooks/123');
   });
 });
