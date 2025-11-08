@@ -39,6 +39,7 @@ const combinerGuildNameInput = document.getElementById('combiner-guild-name');
 const combinerGuildIdInput = document.getElementById('combiner-guild-id');
 const combinerGuildLookupBtn = document.getElementById('combiner-guild-lookup');
 const combinerApiKeyInput = document.getElementById('combiner-api-key');
+const combinerWebhookInput = document.getElementById('combiner-webhook-url');
 const combinerGlickoCheckbox = document.getElementById('combiner-glicko');
 const combinerFightChartsCheckbox = document.getElementById('combiner-fight-charts');
 const combinerHideColumnsCheckbox = document.getElementById('combiner-hide-columns');
@@ -144,6 +145,7 @@ function updateGuildLookupState() {
 }
 updateGuildLookupState();
 combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
+combinerWebhookInput.value = localStorage.getItem('combinerWebhookUrl') || '';
 combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
 combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
 combinerHideColumnsCheckbox.checked = localStorage.getItem('combinerHideColumns') === 'true';
@@ -373,6 +375,9 @@ combinerGuildLookupBtn.addEventListener('click', async () => {
 });
 combinerApiKeyInput.addEventListener('input', () => {
   localStorage.setItem('combinerApiKey', combinerApiKeyInput.value);
+});
+combinerWebhookInput.addEventListener('input', () => {
+  localStorage.setItem('combinerWebhookUrl', combinerWebhookInput.value);
 });
 combinerGlickoCheckbox.addEventListener('change', () => {
   localStorage.setItem('combinerGlickoUpdate', combinerGlickoCheckbox.checked ? 'true' : 'false');
@@ -1295,6 +1300,7 @@ async function startParse() {
     offensiveDetailed: localStorage.getItem('combinerOffensiveDetailed') === 'true',
     defensesDetailed: localStorage.getItem('combinerDefensesDetailed') === 'true',
     supportDetailed: localStorage.getItem('combinerSupportDetailed') === 'true',
+    webhookUrl: combinerWebhookInput.value.trim(),
     blacklistAccounts: combinerBlacklistInput.value,
     anonymizePlayers: localStorage.getItem('eiAnonymizePlayers') === 'true',
     description: descriptionInput.value.trim()
