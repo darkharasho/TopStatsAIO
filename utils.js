@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { URL } = require('url');
 
 function ensureDeps(dir) {
   if (!fs.existsSync(dir)) {
@@ -62,6 +63,24 @@ async function editTopStatsConfig(template, dest, opts) {
     if (l.startsWith('Offensive_Detailed = ')) return `Offensive_Detailed = ${opts.offensiveDetailed ? 'true' : 'false'}`;
     if (l.startsWith('Defenses_Detailed = ')) return `Defenses_Detailed = ${opts.defensesDetailed ? 'true' : 'false'}`;
     if (l.startsWith('Support_Detailed = ')) return `Support_Detailed = ${opts.supportDetailed ? 'true' : 'false'}`;
+    if (l.startsWith('webhook_url = ')) {
+      const hook = opts.webhookUrl;
+      let value = 'false';
+      if (hook instanceof URL) {
+        value = hook.toString();
+      } else if (typeof hook === 'string') {
+        const trimmed = hook.trim();
+        if (trimmed) {
+          try {
+            const parsed = new URL(trimmed);
+            value = parsed.toString();
+          } catch {
+            value = 'false';
+          }
+        }
+      }
+      return `webhook_url = ${value}`;
+    }
     if (l.startsWith('accounts = ')) return accountsLine;
     return l;
   }).join('\n');
