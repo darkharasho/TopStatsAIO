@@ -62,7 +62,7 @@ function formatAccounts(accounts) {
   return line;
 }
 
-function sanitizeSupportedProfs(entries) {
+function sanitizeSupportProfs(entries) {
   if (!Array.isArray(entries)) return [];
   return entries
     .map(entry => {
@@ -122,10 +122,10 @@ async function editTopStatsConfig(template, dest, opts) {
     return l;
   }).join('\n');
 
-  if (Array.isArray(opts.supportedProfs)) {
-    const normalized = sanitizeSupportedProfs(opts.supportedProfs);
-    const startMarker = '# -- TopStatsAIO Supported Professions Start --';
-    const endMarker = '# -- TopStatsAIO Supported Professions End --';
+  if (Array.isArray(opts.supportProfs)) {
+    const normalized = sanitizeSupportProfs(opts.supportProfs);
+    const startMarker = '# -- TopStatsAIO Support Professions Start --';
+    const endMarker = '# -- TopStatsAIO Support Professions End --';
     if (normalized && replaced.includes(startMarker) && replaced.includes(endMarker)) {
       const escape = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const blockPattern = String.raw`[\s\S]*?`;
