@@ -128,7 +128,8 @@ async function editTopStatsConfig(template, dest, opts) {
     const endMarker = '# -- TopStatsAIO Supported Professions End --';
     if (normalized && replaced.includes(startMarker) && replaced.includes(endMarker)) {
       const escape = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const markerRegex = new RegExp(`${escape(startMarker)}[\s\S]*?${escape(endMarker)}`);
+      const blockPattern = String.raw`[\s\S]*?`;
+      const markerRegex = new RegExp(`${escape(startMarker)}${blockPattern}${escape(endMarker)}`);
       const formatted = normalized.map(({ name, boons }) => `${name} = ${boons.join(', ')}`).join('\n');
       const block = formatted ? `${startMarker}\n${formatted}\n${endMarker}` : `${startMarker}\n${endMarker}`;
       replaced = replaced.replace(markerRegex, block);
