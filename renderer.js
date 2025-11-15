@@ -113,45 +113,20 @@ const SUPPORTED_BOONS = [
 ];
 const SUPPORTED_BOON_IDS = new Set(SUPPORTED_BOONS.map(boon => boon.id));
 
-const GW2_PROFESSIONS = [
-  'Guardian',
-  'Dragonhunter',
-  'Firebrand',
-  'Willbender',
-  'Warrior',
-  'Berserker',
-  'Spellbreaker',
-  'Bladesworn',
-  'Revenant',
-  'Herald',
-  'Renegade',
-  'Vindicator',
-  'Engineer',
-  'Scrapper',
-  'Holosmith',
-  'Mechanist',
-  'Ranger',
-  'Druid',
-  'Soulbeast',
-  'Untamed',
-  'Thief',
-  'Daredevil',
-  'Deadeye',
-  'Specter',
-  'Elementalist',
-  'Tempest',
-  'Weaver',
-  'Catalyst',
-  'Mesmer',
-  'Chronomancer',
-  'Mirage',
-  'Virtuoso',
-  'Necromancer',
-  'Reaper',
-  'Scourge',
-  'Harbinger'
+const GW2_PROFESSION_GROUPS = [
+  { label: 'Guardian', options: ['Guardian', 'Dragonhunter', 'Firebrand', 'Willbender'] },
+  { label: 'Warrior', options: ['Warrior', 'Berserker', 'Spellbreaker', 'Bladesworn'] },
+  { label: 'Revenant', options: ['Revenant', 'Herald', 'Renegade', 'Vindicator'] },
+  { label: 'Engineer', options: ['Engineer', 'Scrapper', 'Holosmith', 'Mechanist'] },
+  { label: 'Ranger', options: ['Ranger', 'Druid', 'Soulbeast', 'Untamed'] },
+  { label: 'Thief', options: ['Thief', 'Daredevil', 'Deadeye', 'Specter'] },
+  { label: 'Elementalist', options: ['Elementalist', 'Tempest', 'Weaver', 'Catalyst'] },
+  { label: 'Mesmer', options: ['Mesmer', 'Chronomancer', 'Mirage', 'Virtuoso'] },
+  { label: 'Necromancer', options: ['Necromancer', 'Reaper', 'Scourge', 'Harbinger'] }
 ];
-const GW2_PROFESSION_SET = new Set(GW2_PROFESSIONS);
+const GW2_PROFESSION_SET = new Set(
+  GW2_PROFESSION_GROUPS.flatMap(group => group.options)
+);
 const SUPPORT_PROFS_STORAGE_KEY = 'combinerSupportProfs';
 const LEGACY_SUPPORT_PROFS_STORAGE_KEY = 'combinerSupportedProfs';
 
@@ -296,11 +271,16 @@ function renderSupportProfs() {
     placeholderOption.value = '';
     placeholderOption.textContent = 'Select a profession';
     nameSelect.appendChild(placeholderOption);
-    GW2_PROFESSIONS.forEach(name => {
-      const option = document.createElement('option');
-      option.value = name;
-      option.textContent = name;
-      nameSelect.appendChild(option);
+    GW2_PROFESSION_GROUPS.forEach(group => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.label;
+      group.options.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        optgroup.appendChild(option);
+      });
+      nameSelect.appendChild(optgroup);
     });
     if (prof.name && !GW2_PROFESSION_SET.has(prof.name)) {
       const customOption = document.createElement('option');
