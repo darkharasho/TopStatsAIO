@@ -644,6 +644,11 @@ ipcMain.handle('start-parse', async (event, data) => {
             if (opts.description) {
               combArgs.push('-d', opts.description);
             }
+            const prettyCombCmd = [
+              combExe,
+              ...combArgs.map(arg => (/[\s]/.test(arg) ? `"${arg}"` : arg))
+            ].join(' ');
+            send(`GW2 EI Log Combiner command: ${prettyCombCmd}`);
             await runProcess(combExe, combArgs, tempDir, wc, false, c => child = c, '\r\n');
             step('final', 'GW2 EI Log Combiner', 1, null, 1, 1);
           } catch (e) {
