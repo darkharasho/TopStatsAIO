@@ -579,14 +579,42 @@ ipcMain.handle('start-parse', async (event, data) => {
     const logs = zevtc.filter(f => f.toLowerCase().endsWith('.zevtc'));
     if (logs.length > 0) {
       step('cli', 'EI CLI', 0, null, 0, logs.length);
+      let cliWatcher = null;
+      const seenCliOutputs = new Set();
+      let cliCompleted = 0;
+      const updateCliProgress = () => {
+        const completed = Math.min(cliCompleted, logs.length);
+        const progress = logs.length ? completed / logs.length : 1;
+        step('cli', 'EI CLI', progress, null, completed, logs.length);
+      };
+      const beginWatcher = () => {
+        try {
+          cliWatcher = fs.watch(tempDir, (eventType, filename) => {
+            if (!filename || !filename.toLowerCase().endsWith('.json.gz')) return;
+            const key = filename.toLowerCase();
+            if (seenCliOutputs.has(key)) return;
+            seenCliOutputs.add(key);
+            cliCompleted = Math.min(cliCompleted + 1, logs.length);
+            updateCliProgress();
+          });
+          cliWatcher.on('error', err => logError('EI CLI watcher error', err));
+        } catch (err) {
+          logError('Failed to watch EI CLI outputs', err);
+        }
+      };
+      beginWatcher();
+      updateCliProgress();
       try {
         send(`Running EI CLI on ${logs.length} log${logs.length === 1 ? '' : 's'}`);
         const args = ['-c', eiConf, ...logs.map(f => path.join(tempDir, f))];
         await runProcess(cliExe, args, tempDir, wc, false, c => child = c);
-        step('cli', 'EI CLI', 1, null, logs.length, logs.length);
+        cliCompleted = logs.length;
+        updateCliProgress();
       } catch (e) {
-        step('cli', 'EI CLI', 1, 'Error', logs.length, logs.length);
+        step('cli', 'EI CLI', logs.length ? cliCompleted / logs.length : 1, 'Error', cliCompleted, logs.length);
         throw e;
+      } finally {
+        if (cliWatcher) cliWatcher.close();
       }
       if (cancelled) {
         send('Parsing cancelled.');
