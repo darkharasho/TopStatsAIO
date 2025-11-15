@@ -114,9 +114,9 @@ const SUPPORTED_BOONS = [
 const SUPPORTED_BOON_IDS = new Set(SUPPORTED_BOONS.map(boon => boon.id));
 
 const DEFAULT_SUPPORTED_PROFS = [
-  { name: 'Firebrand', boons: ['b1122', 'b717', 'b26980', 'b740', 'b1187'] },
+  { name: 'Firebrand', boons: ['b1122', 'b717', 'b26980', 'b740'] },
   { name: 'Chronomancer', boons: ['b1122', 'b717', 'b740', 'b725'] },
-  { name: 'Specter', boons: ['b1122', 'b717', 'b740', 'b725', 'b743'] }
+  { name: 'Specter', boons: ['b1122', 'b717', 'b740', 'b725'] }
 ];
 
 let supportedProfs = [];
@@ -139,7 +139,7 @@ function cloneSupportedProfEntry(entry = {}) {
   const seen = new Set();
   if (Array.isArray(entry.boons)) {
     entry.boons.forEach(id => {
-      if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id) || boons.length >= 5) return;
+      if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id) || boons.length >= 4) return;
       seen.add(id);
       boons.push(id);
     });
@@ -192,7 +192,7 @@ function getSupportedProfsForOptions() {
             if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
             seen.add(id);
             return true;
-          }).slice(0, 5)
+          }).slice(0, 4)
         : [];
       if (!boons.length) return null;
       return { name, boons };
@@ -214,9 +214,9 @@ function toggleSupportedProfBoon(index, boonId, checked, checkbox) {
   }
   if (checked) {
     if (prof.boons.includes(boonId)) return;
-    if (prof.boons.length >= 5) {
+    if (prof.boons.length >= 4) {
       if (checkbox) checkbox.checked = false;
-      showSupportedProfsMessage('A profession can only track up to five boons.');
+      showSupportedProfsMessage('A profession can only track up to four boons.');
       return;
     }
     prof.boons.push(boonId);

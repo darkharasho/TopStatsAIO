@@ -76,7 +76,7 @@ function sanitizeSupportedProfs(entries) {
               seen.add(id);
               return true;
             })
-            .slice(0, 5)
+            .slice(0, 4)
         : [];
       if (!boons.length) return null;
       return { name, boons };
