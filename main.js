@@ -7,6 +7,7 @@ const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
+const keepTempDirs = process.argv.includes('--keep-temp');
 
 let depsDir;
 let versionsFile;
@@ -15,6 +16,10 @@ let currentParseCancel = null;
 let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
+
+if (keepTempDirs) {
+  log('Debug flag detected; parser temporary folders will be preserved.');
+}
 
 function logError(...args) {
   console.error(...args);
@@ -535,6 +540,9 @@ ipcMain.handle('start-parse', async (event, data) => {
   };
   try {
     send(`Created temp folder at ${tempDir}`);
+    if (keepTempDirs) {
+      send('Debug mode active: temporary folder will not be deleted automatically.');
+    }
     step('copy', 'Copying files', 0, null, 0, files.length);
     for (let i = 0; i < files.length; i++) {
       const src = files[i];
@@ -644,6 +652,11 @@ ipcMain.handle('start-parse', async (event, data) => {
             if (opts.description) {
               combArgs.push('-d', opts.description);
             }
+            const prettyCombCmd = [
+              combExe,
+              ...combArgs.map(arg => (/[\s]/.test(arg) ? `"${arg}"` : arg))
+            ].join(' ');
+            send(`GW2 EI Log Combiner command: ${prettyCombCmd}`);
             await runProcess(combExe, combArgs, tempDir, wc, false, c => child = c, '\r\n');
             step('final', 'GW2 EI Log Combiner', 1, null, 1, 1);
           } catch (e) {
@@ -708,7 +721,9 @@ ipcMain.handle('start-parse', async (event, data) => {
     wc.send('parse-complete', { success: false, files: [] });
   } finally {
     currentParseCancel = null;
-    try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
+    if (!keepTempDirs && tempDir) {
+      try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
+    }
   }
 });
 

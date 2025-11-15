@@ -48,6 +48,9 @@ const combinerOffensiveDetailedCheckbox = document.getElementById('combiner-offe
 const combinerDefensesDetailedCheckbox = document.getElementById('combiner-defenses-detailed');
 const combinerSupportDetailedCheckbox = document.getElementById('combiner-support-detailed');
 const combinerBlacklistInput = document.getElementById('combiner-blacklist-accounts');
+const supportedProfsContainer = document.getElementById('supported-profs');
+const addSupportedProfBtn = document.getElementById('add-supported-prof');
+const supportedProfsMessage = document.getElementById('supported-profs-message');
 const eiAnonymizeCheckbox = document.getElementById('ei-anonymize');
 const descriptionInput = document.getElementById('description');
 const parseBtn = document.getElementById('parse-btn');
@@ -92,6 +95,31 @@ let previousWindow = null;
 let tiddlyMode = false;
 let tiddlySitePollId = 0;
 let tiddlySetupStage = 0;
+let supportedProfsMessageTimeout = null;
+
+const SUPPORTED_BOONS = [
+  { id: 'b740', label: 'Might' },
+  { id: 'b725', label: 'Fury' },
+  { id: 'b1187', label: 'Quickness' },
+  { id: 'b30328', label: 'Alacrity' },
+  { id: 'b717', label: 'Protection' },
+  { id: 'b718', label: 'Regeneration' },
+  { id: 'b726', label: 'Vigor' },
+  { id: 'b743', label: 'Aegis' },
+  { id: 'b1122', label: 'Stability' },
+  { id: 'b719', label: 'Swiftness' },
+  { id: 'b26980', label: 'Resistance' },
+  { id: 'b873', label: 'Resolution' }
+];
+const SUPPORTED_BOON_IDS = new Set(SUPPORTED_BOONS.map(boon => boon.id));
+
+const DEFAULT_SUPPORTED_PROFS = [
+  { name: 'Firebrand', boons: ['b1122', 'b717', 'b26980', 'b740'] },
+  { name: 'Chronomancer', boons: ['b1122', 'b717', 'b740', 'b725'] },
+  { name: 'Specter', boons: ['b1122', 'b717', 'b740', 'b725'] }
+];
+
+let supportedProfs = [];
 
 function normalizeUrl(url) {
   const trimmed = (url || '').trim();
@@ -104,6 +132,157 @@ function normalizeUrl(url) {
       return null;
     }
   }
+}
+
+function cloneSupportedProfEntry(entry = {}) {
+  const boons = [];
+  const seen = new Set();
+  if (Array.isArray(entry.boons)) {
+    entry.boons.forEach(id => {
+      if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id) || boons.length >= 4) return;
+      seen.add(id);
+      boons.push(id);
+    });
+  }
+  return {
+    name: typeof entry.name === 'string' ? entry.name : '',
+    boons
+  };
+}
+
+function loadSupportedProfs() {
+  try {
+    const stored = localStorage.getItem('combinerSupportedProfs');
+    if (!stored) return DEFAULT_SUPPORTED_PROFS.map(cloneSupportedProfEntry);
+    const parsed = JSON.parse(stored);
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return DEFAULT_SUPPORTED_PROFS.map(cloneSupportedProfEntry);
+    }
+    return parsed.map(cloneSupportedProfEntry);
+  } catch {
+    return DEFAULT_SUPPORTED_PROFS.map(cloneSupportedProfEntry);
+  }
+}
+
+function saveSupportedProfs() {
+  try {
+    const payload = supportedProfs.map(entry => cloneSupportedProfEntry(entry));
+    localStorage.setItem('combinerSupportedProfs', JSON.stringify(payload));
+  } catch {}
+}
+
+function showSupportedProfsMessage(text) {
+  if (!supportedProfsMessage) return;
+  supportedProfsMessage.textContent = text;
+  supportedProfsMessage.classList.remove('hidden');
+  if (supportedProfsMessageTimeout) clearTimeout(supportedProfsMessageTimeout);
+  supportedProfsMessageTimeout = setTimeout(() => {
+    supportedProfsMessage.classList.add('hidden');
+  }, 3000);
+}
+
+function getSupportedProfsForOptions() {
+  return supportedProfs
+    .map(entry => {
+      const name = (entry.name || '').trim();
+      if (!name) return null;
+      const seen = new Set();
+      const boons = Array.isArray(entry.boons)
+        ? entry.boons.filter(id => {
+            if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          }).slice(0, 4)
+        : [];
+      if (!boons.length) return null;
+      return { name, boons };
+    })
+    .filter(Boolean);
+}
+
+function removeSupportedProf(index) {
+  supportedProfs.splice(index, 1);
+  saveSupportedProfs();
+  renderSupportedProfs();
+}
+
+function toggleSupportedProfBoon(index, boonId, checked, checkbox) {
+  const prof = supportedProfs[index];
+  if (!prof) return;
+  if (!Array.isArray(prof.boons)) {
+    prof.boons = [];
+  }
+  if (checked) {
+    if (prof.boons.includes(boonId)) return;
+    if (prof.boons.length >= 4) {
+      if (checkbox) checkbox.checked = false;
+      showSupportedProfsMessage('A profession can only track up to four boons.');
+      return;
+    }
+    prof.boons.push(boonId);
+  } else {
+    prof.boons = prof.boons.filter(id => id !== boonId);
+  }
+  saveSupportedProfs();
+}
+
+function renderSupportedProfs() {
+  if (!supportedProfsContainer) return;
+  supportedProfsContainer.innerHTML = '';
+  if (!supportedProfs.length) {
+    const empty = document.createElement('p');
+    empty.className = 'supported-profs-empty';
+    empty.textContent = 'No professions configured.';
+    supportedProfsContainer.appendChild(empty);
+    return;
+  }
+  const fragment = document.createDocumentFragment();
+  supportedProfs.forEach((prof, index) => {
+    const entry = document.createElement('div');
+    entry.className = 'supported-prof-entry';
+
+    const header = document.createElement('div');
+    header.className = 'supported-prof-header';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'config-input';
+    nameInput.placeholder = 'Profession name';
+    nameInput.value = prof.name || '';
+    nameInput.addEventListener('input', () => {
+      supportedProfs[index].name = nameInput.value;
+      saveSupportedProfs();
+    });
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'small-btn remove-btn';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => removeSupportedProf(index));
+    header.appendChild(nameInput);
+    header.appendChild(removeBtn);
+    entry.appendChild(header);
+
+    const boonList = document.createElement('div');
+    boonList.className = 'supported-prof-boons';
+    SUPPORTED_BOONS.forEach(boon => {
+      const label = document.createElement('label');
+      label.className = 'boon-option';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = boon.id;
+      checkbox.checked = Array.isArray(prof.boons) && prof.boons.includes(boon.id);
+      checkbox.addEventListener('change', () =>
+        toggleSupportedProfBoon(index, boon.id, checkbox.checked, checkbox)
+      );
+      label.appendChild(checkbox);
+      const text = document.createElement('span');
+      text.textContent = boon.label;
+      label.appendChild(text);
+      boonList.appendChild(label);
+    });
+    entry.appendChild(boonList);
+    fragment.appendChild(entry);
+  });
+  supportedProfsContainer.appendChild(fragment);
 }
 
 function getLoginTargetUrl(url) {
@@ -155,6 +334,15 @@ combinerDefensesDetailedCheckbox.checked = localStorage.getItem('combinerDefense
 combinerSupportDetailedCheckbox.checked = localStorage.getItem('combinerSupportDetailed') === 'true';
 combinerBlacklistInput.value = localStorage.getItem('combinerBlacklistAccounts') || '';
 eiAnonymizeCheckbox.checked = localStorage.getItem('eiAnonymizePlayers') === 'true';
+supportedProfs = loadSupportedProfs();
+renderSupportedProfs();
+if (addSupportedProfBtn) {
+  addSupportedProfBtn.addEventListener('click', () => {
+    supportedProfs.push({ name: '', boons: [] });
+    saveSupportedProfs();
+    renderSupportedProfs();
+  });
+}
 
 document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
 document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
@@ -1302,6 +1490,7 @@ async function startParse() {
     supportDetailed: localStorage.getItem('combinerSupportDetailed') === 'true',
     webhookUrl: combinerWebhookInput.value.trim(),
     blacklistAccounts: combinerBlacklistInput.value,
+    supportedProfs: getSupportedProfsForOptions(),
     anonymizePlayers: localStorage.getItem('eiAnonymizePlayers') === 'true',
     description: descriptionInput.value.trim()
   };

@@ -1,6 +1,21 @@
 const fs = require('fs');
 const { URL } = require('url');
 
+const SUPPORTED_BOON_IDS = new Set([
+  'b740',
+  'b725',
+  'b1187',
+  'b30328',
+  'b717',
+  'b718',
+  'b726',
+  'b743',
+  'b1122',
+  'b719',
+  'b26980',
+  'b873'
+]);
+
 function ensureDeps(dir) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
@@ -47,10 +62,32 @@ function formatAccounts(accounts) {
   return line;
 }
 
+function sanitizeSupportedProfs(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .map(entry => {
+      const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+      if (!name) return null;
+      const seen = new Set();
+      const boons = Array.isArray(entry.boons)
+        ? entry.boons
+            .filter(id => {
+              if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
+              seen.add(id);
+              return true;
+            })
+            .slice(0, 4)
+        : [];
+      if (!boons.length) return null;
+      return { name, boons };
+    })
+    .filter(Boolean);
+}
+
 async function editTopStatsConfig(template, dest, opts) {
   const lines = await fs.promises.readFile(template, 'utf8');
   const accountsLine = formatAccounts(opts.blacklistAccounts);
-  const replaced = lines.split(/\r?\n/).map(l => {
+  let replaced = lines.split(/\r?\n/).map(l => {
     if (l.startsWith('guild_name = ')) return `guild_name = ${opts.guildName || ''}`;
     if (l.startsWith('guild_id = ')) return `guild_id = ${opts.guildId || ''}`;
     if (l.startsWith('api_key = ')) return `api_key = ${opts.apiKey || ''}`;
@@ -81,9 +118,23 @@ async function editTopStatsConfig(template, dest, opts) {
       }
       return `webhook_url = ${value}`;
     }
-    if (l.startsWith('accounts = ')) return accountsLine;
+    if (l.startsWith('accounts =')) return accountsLine;
     return l;
   }).join('\n');
+
+  if (Array.isArray(opts.supportedProfs)) {
+    const normalized = sanitizeSupportedProfs(opts.supportedProfs);
+    const startMarker = '# -- TopStatsAIO Supported Professions Start --';
+    const endMarker = '# -- TopStatsAIO Supported Professions End --';
+    if (normalized && replaced.includes(startMarker) && replaced.includes(endMarker)) {
+      const escape = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const blockPattern = String.raw`[\s\S]*?`;
+      const markerRegex = new RegExp(`${escape(startMarker)}${blockPattern}${escape(endMarker)}`);
+      const formatted = normalized.map(({ name, boons }) => `${name} = ${boons.join(', ')}`).join('\n');
+      const block = formatted ? `${startMarker}\n${formatted}\n${endMarker}` : `${startMarker}\n${endMarker}`;
+      replaced = replaced.replace(markerRegex, block);
+    }
+  }
   await fs.promises.writeFile(dest, replaced, 'utf8');
 }
 

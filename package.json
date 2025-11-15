@@ -5,6 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
     "clear-settings": "node scripts/clear-settings.js"
