@@ -114,15 +114,15 @@ const SUPPORTED_BOONS = [
 const SUPPORTED_BOON_IDS = new Set(SUPPORTED_BOONS.map(boon => boon.id));
 
 const GW2_PROFESSION_GROUPS = [
-  { label: 'Guardian', options: ['Guardian', 'Dragonhunter', 'Firebrand', 'Willbender'] },
-  { label: 'Warrior', options: ['Warrior', 'Berserker', 'Spellbreaker', 'Bladesworn'] },
-  { label: 'Revenant', options: ['Revenant', 'Herald', 'Renegade', 'Vindicator'] },
-  { label: 'Engineer', options: ['Engineer', 'Scrapper', 'Holosmith', 'Mechanist'] },
-  { label: 'Ranger', options: ['Ranger', 'Druid', 'Soulbeast', 'Untamed'] },
-  { label: 'Thief', options: ['Thief', 'Daredevil', 'Deadeye', 'Specter'] },
-  { label: 'Elementalist', options: ['Elementalist', 'Tempest', 'Weaver', 'Catalyst'] },
-  { label: 'Mesmer', options: ['Mesmer', 'Chronomancer', 'Mirage', 'Virtuoso'] },
-  { label: 'Necromancer', options: ['Necromancer', 'Reaper', 'Scourge', 'Harbinger'] }
+  { label: 'Guardian', options: ['Guardian', 'Dragonhunter', 'Firebrand', 'Willbender', 'Luminary'] },
+  { label: 'Warrior', options: ['Warrior', 'Berserker', 'Spellbreaker', 'Bladesworn', 'Paragon'] },
+  { label: 'Revenant', options: ['Revenant', 'Herald', 'Renegade', 'Vindicator', 'Conduit'] },
+  { label: 'Engineer', options: ['Engineer', 'Scrapper', 'Holosmith', 'Mechanist', 'Amalgam'] },
+  { label: 'Ranger', options: ['Ranger', 'Druid', 'Soulbeast', 'Untamed', 'Galeshot'] },
+  { label: 'Thief', options: ['Thief', 'Daredevil', 'Deadeye', 'Specter', 'Antiquary'] },
+  { label: 'Elementalist', options: ['Elementalist', 'Tempest', 'Weaver', 'Catalyst', 'Evoker'] },
+  { label: 'Mesmer', options: ['Mesmer', 'Chronomancer', 'Mirage', 'Virtuoso', 'Troubadour'] },
+  { label: 'Necromancer', options: ['Necromancer', 'Reaper', 'Scourge', 'Harbinger', 'Ritualist'] }
 ];
 const GW2_PROFESSION_SET = new Set(
   GW2_PROFESSION_GROUPS.flatMap(group => group.options)
