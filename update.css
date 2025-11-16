@@ -13,6 +13,7 @@ body.light {
 body { margin:0; padding:20px; font-family:'Segoe UI', sans-serif; color:var(--text-color); background:transparent; -webkit-user-select:none; user-select:none; }
 input, textarea { -webkit-user-select:text; user-select:text; }
 h2 { margin-top:0; font-size:18px; }
+#hint { font-size:13px; margin-top:4px; opacity:0.8; }
 #buttons { margin-top:20px; text-align:right; }
 button { background:var(--bg-btn); color:var(--text-color); border:1px solid var(--btn-border); padding:6px 12px; margin-left:10px; border-radius:4px; cursor:pointer; }
 button:hover { background:var(--bg-btn-hover); border-color:var(--btn-border-hover); }

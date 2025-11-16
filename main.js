@@ -5,6 +5,7 @@ const os = require('os');
 const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
+const zlib = require('zlib');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
 const keepTempDirs = process.argv.includes('--keep-temp');
@@ -107,6 +108,132 @@ async function downloadFile(url, dest, onProgress) {
     file.end();
     if (onProgress) onProgress(1);
   }
+}
+
+async function fetchBlockMap(url) {
+  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Blockmap download failed: ${res.status} ${res.statusText}\n${text}`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  const json = JSON.parse(zlib.gunzipSync(buf).toString('utf8'));
+  const file = json.files && json.files[0];
+  if (!file || !Array.isArray(file.sizes)) {
+    throw new Error('Invalid blockmap file');
+  }
+  const size = file.sizes.reduce((acc, n) => acc + Number(n || 0), 0);
+  return { data: json, size };
+}
+
+async function downloadWithBlockMap(url, blockMapUrl, dest, onProgress) {
+  const info = await fetchBlockMap(blockMapUrl);
+  const total = info.size;
+  let existing = 0;
+  try {
+    const stat = await fs.promises.stat(dest);
+    existing = Math.min(stat.size, total || stat.size);
+  } catch {}
+  const headers = { 'User-Agent': 'TopStatsAIO' };
+  if (existing > 0 && total && existing < total) {
+    headers.Range = `bytes=${existing}-`;
+  } else if (existing >= total && total > 0) {
+    if (onProgress) onProgress(1);
+    return;
+  } else {
+    existing = 0;
+  }
+  const res = await fetch(url, { headers });
+  if (!res.ok || (headers.Range && res.status !== 206 && res.status !== 200)) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Download failed: ${res.status} ${res.statusText}\n${text}`);
+  }
+  const fd = await fs.promises.open(dest, existing > 0 ? 'r+' : 'w');
+  if (existing > 0) {
+    await fd.truncate(existing);
+  }
+  const reader = res.body && res.body.getReader ? res.body.getReader() : null;
+  let downloaded = existing;
+  let position = existing;
+  const writeChunk = async (buffer) => {
+    if (!buffer || buffer.length === 0) return;
+    await fd.write(buffer, 0, buffer.length, position);
+    position += buffer.length;
+    downloaded += buffer.length;
+    if (onProgress && total) {
+      onProgress(Math.min(downloaded / total, 1));
+    }
+  };
+  if (!reader) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    await writeChunk(buf);
+  } else {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      await writeChunk(Buffer.from(value));
+    }
+  }
+  await fd.close();
+  if (total && downloaded < total) {
+    throw new Error('Download incomplete');
+  }
+  if (onProgress && !total) {
+    onProgress(1);
+  }
+}
+
+async function downloadUpdateAsset(asset, dest, onProgress) {
+  if (!asset || !asset.url) {
+    throw new Error('No asset available for update');
+  }
+  await fs.promises.mkdir(path.dirname(dest), { recursive: true });
+  if (asset.blockMapUrl) {
+    try {
+      await downloadWithBlockMap(asset.url, asset.blockMapUrl, dest, onProgress);
+      return;
+    } catch (err) {
+      logError('Blockmap download failed, falling back to full download:', err);
+    }
+  }
+  await downloadFile(asset.url, dest, onProgress);
+}
+
+async function findPayloadRoot(dir) {
+  try {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    if (entries.length === 1 && entries[0].isDirectory()) {
+      return path.join(dir, entries[0].name);
+    }
+  } catch {}
+  return dir;
+}
+
+async function createPortableUpdateScript(srcDir, destDir, tmpDir) {
+  const exeName = path.basename(process.execPath);
+  const scriptPath = path.join(tmpDir, 'apply-update.cmd');
+  const lines = [
+    '@echo off',
+    'setlocal enableextensions',
+    `set "SRC=${srcDir}"`,
+    `set "DEST=${destDir}"`,
+    `set "PID=${process.pid}"`,
+    `set "EXE=${exeName}"`,
+    `set "TMPROOT=${tmpDir}"`,
+    'echo Waiting for TopStatsAIO to exit...',
+    ':wait',
+    'tasklist /FI "PID eq %PID%" | find "%PID%" >nul',
+    'if %ERRORLEVEL%==0 (',
+    '  timeout /t 1 /nobreak >nul',
+    '  goto wait',
+    ')',
+    'robocopy "%SRC%" "%DEST%" /MIR /NFL /NDL /NJH /NJS /NC /NS >nul',
+    'rd /s /q "%TMPROOT%"',
+    'start "" "%DEST%\\%EXE%"',
+    'exit /b 0'
+  ];
+  await fs.promises.writeFile(scriptPath, lines.join('\r\n'), 'utf8');
+  return scriptPath;
 }
 
 async function downloadDependency(which) {
@@ -216,6 +343,28 @@ function isInstalled() {
   return p.includes('program files') || p.includes(path.join('appdata', 'local', 'programs').toLowerCase());
 }
 
+function collectAssetInfo(assets, pattern) {
+  const primary = assets.find(a => pattern.test(a.name));
+  if (!primary) return null;
+  const blockMap = assets.find(a => a.name === `${primary.name}.blockmap`);
+  return {
+    name: primary.name,
+    url: primary.browser_download_url,
+    blockMapUrl: blockMap ? blockMap.browser_download_url : null
+  };
+}
+
+function resolveUpdateMode(installedCopy, available) {
+  if (installedCopy) {
+    if (available.installer) return 'installer';
+    if (available.portable) return 'portable';
+    return 'link';
+  }
+  if (available.portable) return 'portable';
+  if (available.installer) return 'installer';
+  return 'link';
+}
+
 function showUpdatePrompt(parent) {
   if (!pendingUpdate) return;
   const prompt = new BrowserWindow({
@@ -233,7 +382,7 @@ function showUpdatePrompt(parent) {
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  const mode = isInstalled() && pendingUpdate.setupUrl ? 'install' : 'link';
+  const mode = pendingUpdate.mode || 'link';
   prompt.loadFile('update.html', {
     query: { version: pendingUpdate.version, mode, url: pendingUpdate.releaseUrl || '' }
   });
@@ -247,44 +396,73 @@ async function checkForAppUpdates(parent) {
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
       const assets = rel.assets || [];
-      const setup = assets.find(a => /setup.*\.exe$/i.test(a.name));
-      const canShow = !isInstalled() || setup;
-      if (canShow) {
-        pendingUpdate = {
-          version: latest,
-          releaseUrl: rel.html_url,
-          setupUrl: setup ? setup.browser_download_url : null
-        };
-        if (parent && parent.webContents) {
-          parent.webContents.send('show-update-notice');
-        }
-        showUpdatePrompt(parent);
+      const portable = collectAssetInfo(assets, /standalone.*\.zip$/i);
+      const installer = collectAssetInfo(assets, /setup.*\.exe$/i);
+      const mode = resolveUpdateMode(isInstalled(), { portable, installer });
+      pendingUpdate = {
+        version: latest,
+        releaseUrl: rel.html_url,
+        assets: { portable, installer },
+        mode
+      };
+      if (parent && parent.webContents) {
+        parent.webContents.send('show-update-notice');
       }
+      showUpdatePrompt(parent);
     }
   } catch (err) {
     logError('Update check failed:', err);
   }
 }
 
+async function applyInstallerUpdate(wc) {
+  if (!pendingUpdate.assets || !pendingUpdate.assets.installer) {
+    throw new Error('Installer asset not available');
+  }
+  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+  const asset = pendingUpdate.assets.installer;
+  const setupPath = path.join(tmpDir, asset.name || 'setup.exe');
+  await downloadUpdateAsset(asset, setupPath, p => send('download', p));
+  send('apply', 1);
+  const err = await shell.openPath(setupPath);
+  if (err) throw new Error(err);
+  app.quit();
+}
+
+async function applyPortableUpdate(wc) {
+  if (!pendingUpdate.assets) throw new Error('No update assets available');
+  const asset = pendingUpdate.assets.portable || pendingUpdate.assets.installer;
+  if (!asset) throw new Error('Portable package not available');
+  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-portable-'));
+  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+  const zipName = asset.name && asset.name.toLowerCase().endsWith('.zip') ? asset.name : 'update.zip';
+  const zipPath = path.join(tmpDir, zipName);
+  await downloadUpdateAsset(asset, zipPath, p => send('download', p));
+  send('apply', 0.2);
+  const extractDir = path.join(tmpDir, 'payload');
+  await fs.promises.mkdir(extractDir, { recursive: true });
+  const zip = new AdmZip(zipPath);
+  zip.extractAllTo(extractDir, true);
+  const payloadRoot = await findPayloadRoot(extractDir);
+  const scriptPath = await createPortableUpdateScript(payloadRoot, path.dirname(process.execPath), tmpDir);
+  send('apply', 1);
+  spawn('cmd.exe', ['/c', 'start', '', scriptPath], { detached: true, windowsHide: true });
+  app.quit();
+}
+
 async function performAppUpdate(wc) {
   if (!pendingUpdate) return;
   try {
-    if (!isInstalled()) {
+    if (pendingUpdate.mode === 'link' || process.platform !== 'win32') {
       await shell.openExternal(pendingUpdate.releaseUrl);
       return;
     }
-    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
-    const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
-    log('performAppUpdate temp dir', tmpDir);
-    if (!pendingUpdate.setupUrl) throw new Error('No installer available');
-    const setupPath = path.join(tmpDir, 'setup.exe');
-    log('Downloading installer to', setupPath);
-    await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
-    send('apply', 1);
-    log('Launching installer');
-    const err = await shell.openPath(setupPath);
-    if (err) throw new Error(err);
-    app.quit();
+    if (pendingUpdate.mode === 'portable') {
+      await applyPortableUpdate(wc);
+    } else {
+      await applyInstallerUpdate(wc);
+    }
   } catch (e) {
     logError('Failed to apply update:', e);
     wc && wc.send('update-progress', { stage: 'error', error: e.message });

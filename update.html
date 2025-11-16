@@ -8,6 +8,7 @@
 <body>
   <h2>Update available</h2>
   <p id="msg"></p>
+  <p id="hint" class="hint"></p>
   <div id="buttons">
     <button id="later">Later</button>
     <button id="download" autofocus>Update</button>
@@ -21,7 +22,16 @@
     const version = params.get('version');
     const mode = params.get('mode');
     const url = params.get('url');
-    document.getElementById('msg').textContent = `Version ${version} is available.`;
+    const msg = document.getElementById('msg');
+    const hint = document.getElementById('hint');
+    msg.textContent = `Version ${version} is available.`;
+    if (mode === 'portable') {
+      hint.textContent = 'The portable files will download, replace this folder, and restart the app.';
+    } else if (mode === 'installer') {
+      hint.textContent = 'The installer will launch automatically after the download finishes.';
+    } else {
+      hint.textContent = 'Open the release page to download manually.';
+    }
     function applyTheme(t){ document.body.classList.toggle('light', t === 'light'); }
     window.electronAPI.getTheme().then(applyTheme);
     window.electronAPI.onThemeChanged(applyTheme);
