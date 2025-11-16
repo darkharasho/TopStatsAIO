@@ -232,7 +232,7 @@ function showUpdatePrompt(parent) {
     parent,
     modal: true,
     width: 360,
-    height: 180,
+    height: 230,
     resizable: false,
     frame: false,
     backgroundColor: useMica ? '#00000000' : '#2d2d2d',
