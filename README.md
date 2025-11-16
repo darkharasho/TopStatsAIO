@@ -23,6 +23,7 @@ The primary directive of this application is to increase the user friendliness o
 - Option to switch between the legacy `arcdps_top_stats_parser` and the newer `GW2_EI_log_combiner` (default)
 - Light and dark themes with customizable accent colors, including a subtle grey option
 - Notifies you of new releases after the app loads with a Mica-style prompt and a reminder icon if you postpone
+- In-place auto-updates for both the installer and standalone builds using the published blockmap files
 - Open a built-in viewer that loads a configured Upload URL and automatically drops your parsed files for upload
 
 ## Setup
@@ -111,6 +112,8 @@ versioned files like:
 
 - `TopStatsAIO-1_0_0-standalone.zip` – zipped portable executable
 - `TopStatsAIO-1_0_0-setup.exe` – Windows installer
+- Matching `.blockmap` files for both artifacts so the auto-updater can stream
+  block-aware downloads and resume partial transfers
 
 
 ## My App Disappeared, What Happened?
