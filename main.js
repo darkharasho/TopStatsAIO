@@ -6,6 +6,7 @@ const { spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
+const { downloadFile, downloadUpdateAsset, collectAssetInfo, resolveUpdateMode, setLogger } = require('./update');
 const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
 const keepTempDirs = process.argv.includes('--keep-temp');
 
@@ -38,6 +39,8 @@ function log(...args) {
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
   } catch {}
 }
+
+setLogger(logError);
 
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
@@ -78,35 +81,42 @@ async function getLatest(repo) {
   return await fetchJson(`https://api.github.com/repos/${repo}/releases/latest`);
 }
 
-async function downloadFile(url, dest, onProgress) {
-  const res = await fetch(url, { headers: { 'User-Agent': 'TopStatsAIO' } });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Download failed: ${res.status} ${res.statusText}\n${text}`);
-  }
-  const total = Number(res.headers.get('content-length')) || 0;
-  const file = fs.createWriteStream(dest);
-  if (res.body && res.body.getReader) {
-    const reader = res.body.getReader();
-    let received = 0;
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      file.write(Buffer.from(value));
-      received += value.length;
-      if (onProgress && total) onProgress(received / total);
+
+async function findPayloadRoot(dir) {
+  try {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    if (entries.length === 1 && entries[0].isDirectory()) {
+      return path.join(dir, entries[0].name);
     }
-    file.end();
-    await new Promise((resolve, reject) => {
-      file.on('finish', resolve);
-      file.on('error', reject);
-    });
-  } else {
-    const buf = Buffer.from(await res.arrayBuffer());
-    file.write(buf);
-    file.end();
-    if (onProgress) onProgress(1);
-  }
+  } catch {}
+  return dir;
+}
+
+async function createPortableUpdateScript(srcDir, destDir, tmpDir) {
+  const exeName = path.basename(process.execPath);
+  const scriptPath = path.join(tmpDir, 'apply-update.cmd');
+  const lines = [
+    '@echo off',
+    'setlocal enableextensions',
+    `set "SRC=${srcDir}"`,
+    `set "DEST=${destDir}"`,
+    `set "PID=${process.pid}"`,
+    `set "EXE=${exeName}"`,
+    `set "TMPROOT=${tmpDir}"`,
+    'echo Waiting for TopStatsAIO to exit...',
+    ':wait',
+    'tasklist /FI "PID eq %PID%" | find "%PID%" >nul',
+    'if %ERRORLEVEL%==0 (',
+    '  timeout /t 1 /nobreak >nul',
+    '  goto wait',
+    ')',
+    'robocopy "%SRC%" "%DEST%" /MIR /NFL /NDL /NJH /NJS /NC /NS >nul',
+    'rd /s /q "%TMPROOT%"',
+    'start "" "%DEST%\\%EXE%"',
+    'exit /b 0'
+  ];
+  await fs.promises.writeFile(scriptPath, lines.join('\r\n'), 'utf8');
+  return scriptPath;
 }
 
 async function downloadDependency(which) {
@@ -222,7 +232,7 @@ function showUpdatePrompt(parent) {
     parent,
     modal: true,
     width: 360,
-    height: 180,
+    height: 230,
     resizable: false,
     frame: false,
     backgroundColor: useMica ? '#00000000' : '#2d2d2d',
@@ -233,7 +243,7 @@ function showUpdatePrompt(parent) {
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  const mode = isInstalled() && pendingUpdate.setupUrl ? 'install' : 'link';
+  const mode = pendingUpdate.mode || 'link';
   prompt.loadFile('update.html', {
     query: { version: pendingUpdate.version, mode, url: pendingUpdate.releaseUrl || '' }
   });
@@ -247,44 +257,73 @@ async function checkForAppUpdates(parent) {
     const current = app.getVersion();
     if (latest && semver.gt(latest, current)) {
       const assets = rel.assets || [];
-      const setup = assets.find(a => /setup.*\.exe$/i.test(a.name));
-      const canShow = !isInstalled() || setup;
-      if (canShow) {
-        pendingUpdate = {
-          version: latest,
-          releaseUrl: rel.html_url,
-          setupUrl: setup ? setup.browser_download_url : null
-        };
-        if (parent && parent.webContents) {
-          parent.webContents.send('show-update-notice');
-        }
-        showUpdatePrompt(parent);
+      const portable = collectAssetInfo(assets, /standalone.*\.zip$/i);
+      const installer = collectAssetInfo(assets, /setup.*\.exe$/i);
+      const mode = resolveUpdateMode(isInstalled(), { portable, installer });
+      pendingUpdate = {
+        version: latest,
+        releaseUrl: rel.html_url,
+        assets: { portable, installer },
+        mode
+      };
+      if (parent && parent.webContents) {
+        parent.webContents.send('show-update-notice');
       }
+      showUpdatePrompt(parent);
     }
   } catch (err) {
     logError('Update check failed:', err);
   }
 }
 
+async function applyInstallerUpdate(wc) {
+  if (!pendingUpdate.assets || !pendingUpdate.assets.installer) {
+    throw new Error('Installer asset not available');
+  }
+  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+  const asset = pendingUpdate.assets.installer;
+  const setupPath = path.join(tmpDir, asset.name || 'setup.exe');
+  await downloadUpdateAsset(asset, setupPath, p => send('download', p));
+  send('apply', 1);
+  const err = await shell.openPath(setupPath);
+  if (err) throw new Error(err);
+  app.quit();
+}
+
+async function applyPortableUpdate(wc) {
+  if (!pendingUpdate.assets) throw new Error('No update assets available');
+  const asset = pendingUpdate.assets.portable || pendingUpdate.assets.installer;
+  if (!asset) throw new Error('Portable package not available');
+  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-portable-'));
+  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+  const zipName = asset.name && asset.name.toLowerCase().endsWith('.zip') ? asset.name : 'update.zip';
+  const zipPath = path.join(tmpDir, zipName);
+  await downloadUpdateAsset(asset, zipPath, p => send('download', p));
+  send('apply', 0.2);
+  const extractDir = path.join(tmpDir, 'payload');
+  await fs.promises.mkdir(extractDir, { recursive: true });
+  const zip = new AdmZip(zipPath);
+  zip.extractAllTo(extractDir, true);
+  const payloadRoot = await findPayloadRoot(extractDir);
+  const scriptPath = await createPortableUpdateScript(payloadRoot, path.dirname(process.execPath), tmpDir);
+  send('apply', 1);
+  spawn('cmd.exe', ['/c', 'start', '', scriptPath], { detached: true, windowsHide: true });
+  app.quit();
+}
+
 async function performAppUpdate(wc) {
   if (!pendingUpdate) return;
   try {
-    if (!isInstalled()) {
+    if (pendingUpdate.mode === 'link' || process.platform !== 'win32') {
       await shell.openExternal(pendingUpdate.releaseUrl);
       return;
     }
-    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
-    const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
-    log('performAppUpdate temp dir', tmpDir);
-    if (!pendingUpdate.setupUrl) throw new Error('No installer available');
-    const setupPath = path.join(tmpDir, 'setup.exe');
-    log('Downloading installer to', setupPath);
-    await downloadFile(pendingUpdate.setupUrl, setupPath, p => send('download', p));
-    send('apply', 1);
-    log('Launching installer');
-    const err = await shell.openPath(setupPath);
-    if (err) throw new Error(err);
-    app.quit();
+    if (pendingUpdate.mode === 'portable') {
+      await applyPortableUpdate(wc);
+    } else {
+      await applyInstallerUpdate(wc);
+    }
   } catch (e) {
     logError('Failed to apply update:', e);
     wc && wc.send('update-progress', { stage: 'error', error: e.message });
