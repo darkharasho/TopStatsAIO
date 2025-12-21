@@ -115,6 +115,13 @@ versioned files like:
 - Matching `.blockmap` files for both artifacts so the auto-updater can stream
   block-aware downloads and resume partial transfers
 
+### Running the Windows build on Linux via Wine
+- Use the installer or standalone ZIP inside a Wine prefix. The NSIS installer is configured
+  for per-user installs without elevation prompts and typically works in Wine.
+- If you encounter dependency errors for .NET or other Windows components, install them
+  into your Wine prefix (e.g., via `winetricks`).
+- You can also skip the installer and unzip the portable build to keep the Wine prefix clean.
+
 
 ## My App Disappeared, What Happened?
 
