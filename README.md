@@ -120,6 +120,8 @@ versioned files like:
   for per-user installs without elevation prompts and typically works in Wine.
 - If you encounter dependency errors for .NET or other Windows components, install them
   into your Wine prefix (e.g., via `winetricks`).
+- The app automatically disables GPU acceleration when it detects Wine to prevent blank
+  or black windows in some configurations.
 - You can also skip the installer and unzip the portable build to keep the Wine prefix clean.
 
 

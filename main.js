@@ -7,7 +7,13 @@ const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const { downloadFile, downloadUpdateAsset, collectAssetInfo, resolveUpdateMode, setLogger } = require('./update');
-const useMica = process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
+const isWine = process.platform === 'win32' && Boolean(
+  process.env.WINEPREFIX ||
+  process.env.WINELOADER ||
+  process.env.WINELOADERNOEXEC ||
+  process.env.WINEDEBUG
+);
+const useMica = process.platform === 'win32' && !isWine && parseInt(os.release().split('.')[2], 10) >= 22000;
 const keepTempDirs = process.argv.includes('--keep-temp');
 
 let depsDir;
@@ -44,6 +50,11 @@ setLogger(logError);
 
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
+
+// Disable GPU acceleration when running under Wine to avoid black/blank windows.
+if (isWine) {
+  app.disableHardwareAcceleration();
+}
 
 // Redirect any popup attempts from webviews into the same view instead of
 // spawning a separate BrowserWindow. This ensures navigation happens within the
