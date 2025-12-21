@@ -8,6 +8,7 @@
     "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
+    "dist:linux": "electron-builder --linux deb rpm",
     "clear-settings": "node scripts/clear-settings.js"
   },
   "keywords": [],
@@ -37,6 +38,14 @@
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "deb",
+        "rpm"
+      ],
+      "icon": "media/TopStatsAIO-Logo.png",
+      "category": "Utility"
     }
   }
 }
