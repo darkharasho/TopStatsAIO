@@ -8,7 +8,7 @@
     "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
-    "dist:linux": "electron-builder --linux deb rpm",
+    "dist:linux": "electron-builder --linux deb rpm flatpak",
     "clear-settings": "node scripts/clear-settings.js"
   },
   "keywords": [],
@@ -42,10 +42,25 @@
     "linux": {
       "target": [
         "deb",
-        "rpm"
+        "rpm",
+        "flatpak"
       ],
       "icon": "media/TopStatsAIO-Logo.png",
       "category": "Utility"
+    },
+    "flatpak": {
+      "runtime": "org.freedesktop.Platform",
+      "runtimeVersion": "23.08",
+      "sdk": "org.freedesktop.Sdk",
+      "base": "org.electronjs.Electron2.BaseApp",
+      "baseVersion": "23.08",
+      "finishArgs": [
+        "--share=network",
+        "--socket=x11",
+        "--device=dri",
+        "--talk-name=org.freedesktop.Notifications",
+        "--filesystem=home"
+      ]
     }
   }
 }
