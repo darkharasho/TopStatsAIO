@@ -275,10 +275,20 @@
         </div>
         <div class="card">
           <h3 class="card-title">Support Professions</h3>
-          <p class="config-hint">Track up to four boons per profession in the Discord webhook.</p>
+          <p class="config-hint">Track up to five boons per profession in the Discord webhook.</p>
           <div id="supported-profs-message" class="supported-profs-message hidden"></div>
           <div id="supported-profs"></div>
           <button id="add-supported-prof" class="small-btn" type="button">Add Profession</button>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Boon Weights</h3>
+          <p class="config-hint">Higher values increase the boon score contribution. Default is 1.</p>
+          <div id="boon-weights" class="weights-grid"></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Condition Weights</h3>
+          <p class="config-hint">Higher values increase the condition score contribution. Default is 1.</p>
+          <div id="condition-weights" class="weights-grid"></div>
         </div>
       </div>
       <div id="combiner-settings-right">
@@ -304,6 +314,62 @@
           </div>
           <div class="config-row">
             <label><input type="checkbox" id="combiner-support-detailed" /> Include Support Detailed Tab</label>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">File Outputs</h3>
+          <div class="config-row">
+            <label for="combiner-input-directory">Input Directory</label>
+            <input type="text" id="combiner-input-directory" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-output-filename">Output Filename</label>
+            <input type="text" id="combiner-output-filename" class="config-input" placeholder="None" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-json-output-filename">JSON Output Filename</label>
+            <input type="text" id="combiner-json-output-filename" class="config-input" placeholder="None" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-db-filename">DB Output Filename</label>
+            <input type="text" id="combiner-db-filename" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-db-path">DB Path</label>
+            <input type="text" id="combiner-db-path" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-write-all-json" /> Write All Data to JSON</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-write-excel" /> Write Excel Output</label>
+          </div>
+          <div class="config-row">
+            <label for="combiner-excel-filename">Excel Output Filename</label>
+            <input type="text" id="combiner-excel-filename" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-excel-path">Excel Path</label>
+            <input type="text" id="combiner-excel-path" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-skill-cast-limit">Skill Casts by Role Limit</label>
+            <input type="number" min="1" id="combiner-skill-cast-limit" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-sort-mode">Sort Mode</label>
+            <select id="combiner-sort-mode" class="config-input">
+              <option value="Total">Total</option>
+              <option value="Stat/1s">Stat/1s</option>
+              <option value="Stat/60s">Stat/60s</option>
+            </select>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Discord Notes</h3>
+          <div class="config-row column">
+            <label for="combiner-discord-notes">Additional Notes</label>
+            <textarea id="combiner-discord-notes" class="config-input config-textarea" rows="3" placeholder="Optional message to include in Discord posts."></textarea>
           </div>
         </div>
         <div class="card">

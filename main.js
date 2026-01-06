@@ -561,7 +561,9 @@ ipcMain.handle('start-parse', async (event, data) => {
   const opts = data.options || {};
   if (opts.parser === 'combiner') {
     const basePath = process.env.PORTABLE_EXECUTABLE_DIR || app.getPath('userData');
-    opts.dbPath = basePath.replace(/\\/g, '/');
+    if (!opts.dbPath) {
+      opts.dbPath = basePath.replace(/\\/g, '/');
+    }
   }
   const parsedDir = path.join(app.getPath('userData'), 'parsed_files');
   await fs.promises.rm(parsedDir, { recursive: true, force: true });
@@ -601,6 +603,10 @@ ipcMain.handle('start-parse', async (event, data) => {
       }
     }
 
+    const processedDir = path.join(tempDir, 'ProcessedLogs');
+    if (!opts.inputDirectory) {
+      opts.inputDirectory = processedDir.replace(/\\/g, '/');
+    }
     const eiTemplate = path.join(__dirname, 'EliteInsightsConfigTemplate.conf');
     const eiConf = path.join(tempDir, 'EliteInsightConfig.conf');
     await editEIConfig(eiTemplate, eiConf, tempDir, opts.dpsUserToken, { anonymizePlayers: opts.anonymizePlayers });
@@ -610,7 +616,6 @@ ipcMain.handle('start-parse', async (event, data) => {
     send('Config files prepared');
 
     let cliExe = path.join(depsDir, 'eicli', 'GuildWars2EliteInsights-CLI.exe');
-    const processedDir = path.join(tempDir, 'ProcessedLogs');
     if (!fs.existsSync(cliExe)) {
       const alt = path.join(depsDir, 'eicli', 'gw2eicli.exe');
       if (fs.existsSync(alt)) {
