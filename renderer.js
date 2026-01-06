@@ -50,6 +50,8 @@ const combinerBoonsDetailedCheckbox = document.getElementById('combiner-boons-de
 const combinerOffensiveDetailedCheckbox = document.getElementById('combiner-offensive-detailed');
 const combinerDefensesDetailedCheckbox = document.getElementById('combiner-defenses-detailed');
 const combinerSupportDetailedCheckbox = document.getElementById('combiner-support-detailed');
+const tiddlyhostUsernameInput = document.getElementById('tiddlyhost-username');
+const tiddlyhostPasswordInput = document.getElementById('tiddlyhost-password');
 const combinerBlacklistInput = document.getElementById('combiner-blacklist-accounts');
 const combinerInputDirectoryInput = document.getElementById('combiner-input-directory');
 const combinerOutputFilenameInput = document.getElementById('combiner-output-filename');
@@ -115,6 +117,7 @@ let tiddlySetupStage = 0;
 let supportProfsMessageTimeout = null;
 let boonWeightsState = {};
 let conditionWeightsState = {};
+let tiddlyhostCredentials = { username: '', password: '' };
 
 const SUPPORTED_BOONS = [
   { id: 'b740', label: 'Might' },
@@ -203,6 +206,45 @@ function normalizeUrl(url) {
       return null;
     }
   }
+}
+
+function isTiddlyhostSignIn(url) {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.endsWith('tiddlyhost.com') && parsed.pathname.replace(/\/+$/, '') === '/users/sign_in';
+  } catch {
+    return false;
+  }
+}
+
+function makeTiddlyhostLoginScript({ username, password }) {
+  return `(() => {
+    const username = ${JSON.stringify(username || '')};
+    const password = ${JSON.stringify(password || '')};
+    if (!username || !password) return;
+    const userField = document.querySelector(
+      'input[name="user[email]"], input[name="user[login]"], input#user_email, input#user_login, input[type="email"]'
+    );
+    const passField = document.querySelector(
+      'input[name="user[password]"], input#user_password, input[type="password"]'
+    );
+    if (!userField || !passField) return;
+    userField.focus();
+    userField.value = username;
+    userField.dispatchEvent(new Event('input', { bubbles: true }));
+    userField.dispatchEvent(new Event('change', { bubbles: true }));
+    passField.value = password;
+    passField.dispatchEvent(new Event('input', { bubbles: true }));
+    passField.dispatchEvent(new Event('change', { bubbles: true }));
+    const remember = document.querySelector(
+      'input[name="user[remember_me]"], input#user_remember_me, input[type="checkbox"][name*="remember"]'
+    );
+    if (remember) {
+      remember.checked = true;
+      remember.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  })();`;
 }
 
 function cloneSupportProfEntry(entry = {}) {
@@ -299,6 +341,28 @@ function renderWeightInputs(container, weights, storageKey) {
     row.appendChild(input);
     container.appendChild(row);
   });
+}
+
+async function loadTiddlyhostCredentials() {
+  if (!window.electronAPI?.getTiddlyhostCredentials) return;
+  try {
+    const creds = await window.electronAPI.getTiddlyhostCredentials();
+    tiddlyhostCredentials = {
+      username: typeof creds?.username === 'string' ? creds.username : '',
+      password: typeof creds?.password === 'string' ? creds.password : ''
+    };
+    if (tiddlyhostUsernameInput) tiddlyhostUsernameInput.value = tiddlyhostCredentials.username;
+    if (tiddlyhostPasswordInput) tiddlyhostPasswordInput.value = tiddlyhostCredentials.password;
+  } catch {}
+}
+
+function saveTiddlyhostCredentials() {
+  if (!window.electronAPI?.setTiddlyhostCredentials) return;
+  tiddlyhostCredentials = {
+    username: tiddlyhostUsernameInput?.value.trim() || '',
+    password: tiddlyhostPasswordInput?.value || ''
+  };
+  window.electronAPI.setTiddlyhostCredentials(tiddlyhostCredentials);
 }
 
 function showSupportProfsMessage(text) {
@@ -667,6 +731,12 @@ dpsUserTokenInput.addEventListener('input', () => {
 uploadUrlInput.addEventListener('input', () => {
   localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
 });
+if (tiddlyhostUsernameInput) {
+  tiddlyhostUsernameInput.addEventListener('input', saveTiddlyhostCredentials);
+}
+if (tiddlyhostPasswordInput) {
+  tiddlyhostPasswordInput.addEventListener('input', saveTiddlyhostCredentials);
+}
 tiddlySetupBtn.addEventListener('click', async () => {
   const payload = await window.electronAPI.getExampleOutput('combiner');
   if (payload && payload.length) {
@@ -699,15 +769,21 @@ tiddlyUseUrlBtn.addEventListener('click', () => {
   tiddlyUseUrlBtn.classList.add('hidden');
 });
 uploadLoginBtn.addEventListener('click', () => {
+  const hasCredentials = Boolean(tiddlyhostCredentials.username && tiddlyhostCredentials.password);
   let url = normalizeUrl(uploadUrlInput.value);
-  if (!url) {
-    alert('Upload URL is invalid.');
-    return;
+  if (!hasCredentials) {
+    if (!url) {
+      alert('Upload URL is invalid.');
+      return;
+    }
+    localStorage.setItem('uploadUrl', url);
+    uploadUrlInput.value = url;
+  } else if (url) {
+    localStorage.setItem('uploadUrl', url);
+    uploadUrlInput.value = url;
   }
-  localStorage.setItem('uploadUrl', url);
-  uploadUrlInput.value = url;
-  const loginUrl = getLoginTargetUrl(url) || url;
-  openUploadWindow(loginUrl, [], false, { syncInput: false });
+  const loginUrl = hasCredentials ? 'https://tiddlyhost.com/users/sign_in' : (getLoginTargetUrl(url) || url);
+  openUploadWindow(loginUrl, [], false, { syncInput: false, loginDetails: hasCredentials ? tiddlyhostCredentials : null });
 });
 setupTiddlyhostBtn.addEventListener('click', () => {
   openUploadWindow('https://tiddlyhost.com/', [], true);
@@ -1057,6 +1133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   applyTheme(theme);
   window.electronAPI.setTheme(theme);
+  await loadTiddlyhostCredentials();
   const grad = localStorage.getItem('gradientTheme') || 'default';
   applyGradient(grad);
   const savedRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
@@ -1614,7 +1691,7 @@ function updateTiddlyGuide(url) {
 }
 
 function openUploadWindow(url, payload, isSetup, options = {}) {
-  const { syncInput = true } = options;
+  const { syncInput = true, loginDetails = null } = options;
   tiddlyMode = !!isSetup;
   previousWindow = settingsWindow.classList.contains('active') ? 'settings' : 'parse';
   if (previousWindow === 'settings') {
@@ -1645,6 +1722,10 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
   const dropScript = payload.length ? makeDropScript(payload, isSetup) : null;
   const handleFinish = () => {
     if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(()=>{});
+    if (loginDetails && isTiddlyhostSignIn(uploadFrame.getURL())) {
+      const loginScript = makeTiddlyhostLoginScript(loginDetails);
+      uploadFrame.executeJavaScript(loginScript, true).catch(() => {});
+    }
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };

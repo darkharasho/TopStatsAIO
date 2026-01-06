@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -20,6 +20,47 @@ let pendingUpdate = null;
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
+}
+
+function getTiddlyhostCredentialsPath() {
+  return path.join(app.getPath('userData'), 'tiddlyhost-credentials.json');
+}
+
+function loadTiddlyhostCredentials() {
+  if (!safeStorage.isEncryptionAvailable()) {
+    return { username: '', password: '' };
+  }
+  try {
+    const raw = fs.readFileSync(getTiddlyhostCredentialsPath(), 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.payload) return { username: '', password: '' };
+    const decrypted = safeStorage.decryptString(Buffer.from(parsed.payload, 'base64'));
+    const data = JSON.parse(decrypted);
+    return {
+      username: typeof data.username === 'string' ? data.username : '',
+      password: typeof data.password === 'string' ? data.password : ''
+    };
+  } catch {
+    return { username: '', password: '' };
+  }
+}
+
+function saveTiddlyhostCredentials({ username = '', password = '' } = {}) {
+  if (!safeStorage.isEncryptionAvailable()) {
+    return false;
+  }
+  const hasValues = Boolean(username || password);
+  const filePath = getTiddlyhostCredentialsPath();
+  if (!hasValues) {
+    try {
+      fs.rmSync(filePath, { force: true });
+    } catch {}
+    return true;
+  }
+  const payload = safeStorage.encryptString(JSON.stringify({ username, password }));
+  const contents = JSON.stringify({ payload: payload.toString('base64') }, null, 2);
+  fs.writeFileSync(filePath, contents, 'utf8');
+  return true;
 }
 
 function logError(...args) {
@@ -535,6 +576,12 @@ ipcMain.handle('open-parser-folder', async (event, which) => {
 
 ipcMain.handle('open-external', async (event, url) => {
   await shell.openExternal(url);
+});
+ipcMain.handle('get-tiddlyhost-credentials', () => {
+  return loadTiddlyhostCredentials();
+});
+ipcMain.handle('set-tiddlyhost-credentials', async (event, creds) => {
+  return saveTiddlyhostCredentials(creds);
 });
 
 ipcMain.on('cancel-parse', () => {
