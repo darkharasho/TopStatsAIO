@@ -236,6 +236,15 @@
         </div>
         <div class="card" id="site-setup-card">
           <h3 class="card-title">Site Setup</h3>
+          <p class="config-hint">Optional: store your Tiddlyhost login to auto-fill the sign-in form.</p>
+          <div class="config-row">
+            <label for="tiddlyhost-username">Tiddlyhost Username</label>
+            <input type="text" id="tiddlyhost-username" class="config-input" autocomplete="username" />
+          </div>
+          <div class="config-row">
+            <label for="tiddlyhost-password">Tiddlyhost Password</label>
+            <input type="password" id="tiddlyhost-password" class="config-input" autocomplete="current-password" />
+          </div>
           <div class="config-row">
             <button id="setup-tiddlyhost">Set up Tiddlyhost</button>
           </div>
