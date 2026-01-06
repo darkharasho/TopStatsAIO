@@ -136,7 +136,7 @@ async function editTopStatsConfig(template, dest, opts) {
     if (line.startsWith('Defenses_Detailed = ')) return `Defenses_Detailed = ${boolValue(opts.defensesDetailed)}`;
     if (line.startsWith('Support_Detailed = ')) return `Support_Detailed = ${boolValue(opts.supportDetailed)}`;
     if (line.startsWith('Sort_Mode = ')) return `Sort_Mode = ${stringValue(opts.sortMode, 'Total')}`;
-    if (line.startsWith('webhook_url = ')) {
+    if (section === 'DiscordCfg' && line.startsWith('webhook_url = ')) {
       const hook = opts.webhookUrl;
       let value = 'false';
       if (hook instanceof URL) {
@@ -154,7 +154,7 @@ async function editTopStatsConfig(template, dest, opts) {
       }
       return `webhook_url = ${value}`;
     }
-    if (line.startsWith('discord_additional_notes = ')) {
+    if (section === 'DiscordCfg' && line.startsWith('discord_additional_notes = ')) {
       return `discord_additional_notes = ${opts.discordNotes || ''}`;
     }
     if (line.startsWith('accounts =')) return accountsLine;
