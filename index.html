@@ -128,55 +128,8 @@
         </div>
         <div class="card" id="combiner-config-card">
           <h3 class="card-title">GW2 EI Log Combiner</h3>
-          <div class="config-row">
-            <label for="combiner-guild-name">Guild Name</label>
-            <input type="text" id="combiner-guild-name" class="config-input" />
-          </div>
-          <div class="config-row">
-            <label for="combiner-guild-id">Guild ID</label>
-            <input type="text" id="combiner-guild-id" class="config-input" />
-            <button id="combiner-guild-lookup" class="small-btn" type="button" style="margin-left:auto;">Lookup</button>
-          </div>
-          <div class="config-row">
-            <label for="combiner-api-key">API Key</label>
-            <input type="text" id="combiner-api-key" class="config-input" />
-          </div>
-          <div class="config-row">
-            <label for="combiner-webhook-url">Webhook URL</label>
-            <input type="text" id="combiner-webhook-url" class="config-input" placeholder="https://discord.com/api/webhooks/..." />
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-glicko" /> Enable Glicko DB Update</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-fight-charts" /> Generate Fight Charts</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-hide-columns" /> Hide Columns</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-boons-detailed" /> Include Boons Detailed Tab</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-offensive-detailed" /> Include Offensive Detailed Tab</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-defenses-detailed" /> Include Defenses Detailed Tab</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-support-detailed" /> Include Support Detailed Tab</label>
-          </div>
-          <div class="config-row column">
-            <label for="combiner-blacklist-accounts">Account Blacklist (comma separated)</label>
-            <input type="text" id="combiner-blacklist-accounts" class="config-input" placeholder="account.1234, another.5678" />
-          </div>
-          <div class="config-row column">
-            <label>Support Professions</label>
-            <p class="config-hint">Track up to four boons per profession in the Discord webhook.</p>
-            <div id="supported-profs-message" class="supported-profs-message hidden"></div>
-            <div id="supported-profs"></div>
-            <button id="add-supported-prof" class="small-btn" type="button">Add Profession</button>
-          </div>
+          <p class="config-hint">Configure guild, output, and Discord options in a dedicated view.</p>
+          <button id="open-combiner-settings" class="small-btn" type="button">Open Log Combiner Settings</button>
         </div>
         <div class="card" id="elite-insights-card">
           <h3 class="card-title">Elite Insights</h3>
@@ -285,6 +238,79 @@
           <h3 class="card-title">Site Setup</h3>
           <div class="config-row">
             <button id="setup-tiddlyhost">Set up Tiddlyhost</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="combiner-settings-window">
+    <div class="combiner-settings-header">
+      <button id="combiner-settings-back" class="nav-btn" aria-label="Back" title="Back">⮜</button>
+      <div>
+        <h2 class="settings-header">GW2 EI Log Combiner</h2>
+        <p class="config-hint">Adjust combiner output, Discord integration, and support role tracking.</p>
+      </div>
+    </div>
+    <div id="combiner-settings-grid">
+      <div id="combiner-settings-left">
+        <div class="card">
+          <h3 class="card-title">Guild &amp; Discord</h3>
+          <div class="config-row">
+            <label for="combiner-guild-name">Guild Name</label>
+            <input type="text" id="combiner-guild-name" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-guild-id">Guild ID</label>
+            <input type="text" id="combiner-guild-id" class="config-input" />
+            <button id="combiner-guild-lookup" class="small-btn" type="button" style="margin-left:auto;">Lookup</button>
+          </div>
+          <div class="config-row">
+            <label for="combiner-api-key">API Key</label>
+            <input type="text" id="combiner-api-key" class="config-input" />
+          </div>
+          <div class="config-row">
+            <label for="combiner-webhook-url">Webhook URL</label>
+            <input type="text" id="combiner-webhook-url" class="config-input" placeholder="https://discord.com/api/webhooks/..." />
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Support Professions</h3>
+          <p class="config-hint">Track up to four boons per profession in the Discord webhook.</p>
+          <div id="supported-profs-message" class="supported-profs-message hidden"></div>
+          <div id="supported-profs"></div>
+          <button id="add-supported-prof" class="small-btn" type="button">Add Profession</button>
+        </div>
+      </div>
+      <div id="combiner-settings-right">
+        <div class="card">
+          <h3 class="card-title">Output Options</h3>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-glicko" /> Enable Glicko DB Update</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-fight-charts" /> Generate Fight Charts</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-hide-columns" /> Hide Columns</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-boons-detailed" /> Include Boons Detailed Tab</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-offensive-detailed" /> Include Offensive Detailed Tab</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-defenses-detailed" /> Include Defenses Detailed Tab</label>
+          </div>
+          <div class="config-row">
+            <label><input type="checkbox" id="combiner-support-detailed" /> Include Support Detailed Tab</label>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Account Filters</h3>
+          <div class="config-row column">
+            <label for="combiner-blacklist-accounts">Account Blacklist (comma separated)</label>
+            <input type="text" id="combiner-blacklist-accounts" class="config-input" placeholder="account.1234, another.5678" />
           </div>
         </div>
       </div>

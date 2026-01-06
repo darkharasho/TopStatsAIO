@@ -20,6 +20,9 @@ const fileLoading = document.getElementById('file-tree-loading');
 const mainWindowEl = document.getElementById('main-window');
 const settingsWindow = document.getElementById('settings-window');
 const closeSettingsBtn = document.getElementById('close-settings');
+const combinerSettingsWindow = document.getElementById('combiner-settings-window');
+const openCombinerSettingsBtn = document.getElementById('open-combiner-settings');
+const combinerSettingsBackBtn = document.getElementById('combiner-settings-back');
 const darkBtn = document.getElementById('theme-dark');
 const lightBtn = document.getElementById('theme-light');
 const acrylicBtn = document.getElementById('theme-acrylic');
@@ -446,15 +449,36 @@ selectedFolderInput.addEventListener('blur', () => {
   selectedFolderInput.style.fontSize = '';
 });
 closeSettingsBtn.addEventListener('click', closeSettings);
+if (openCombinerSettingsBtn) {
+  openCombinerSettingsBtn.addEventListener('click', () => {
+    settingsWindow.classList.remove('active');
+    combinerSettingsWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Log Combiner Settings';
+  });
+}
+if (combinerSettingsBackBtn) {
+  combinerSettingsBackBtn.addEventListener('click', () => {
+    combinerSettingsWindow.classList.remove('active');
+    settingsWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Settings';
+  });
+}
 
 function openSettings() {
   mainWindowEl.classList.add('fade-out');
   settingsWindow.classList.add('active');
+  if (combinerSettingsWindow) {
+    combinerSettingsWindow.classList.remove('active');
+  }
+  document.getElementById('title-text').textContent = 'Settings';
 }
 
 function closeSettings() {
   mainWindowEl.classList.remove('fade-out');
   settingsWindow.classList.remove('active');
+  if (combinerSettingsWindow) {
+    combinerSettingsWindow.classList.remove('active');
+  }
 }
 
 function updateDescriptionVisibility() {

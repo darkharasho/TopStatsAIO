@@ -199,6 +199,11 @@ body.light #date-filter::-webkit-calendar-picker-indicator { filter: invert(0); 
 #settings-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; padding:60px 40px 40px; display:flex; flex-direction:column; gap:20px; overflow:auto; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
 #settings-window.active { opacity:1; pointer-events:auto; }
 #close-settings { position:absolute; top:10px; right:10px; }
+#combiner-settings-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; padding:60px 40px 40px; display:flex; flex-direction:column; gap:20px; overflow:auto; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:2; }
+#combiner-settings-window.active { opacity:1; pointer-events:auto; }
+.combiner-settings-header { display:flex; align-items:flex-start; gap:12px; }
+#combiner-settings-grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; align-items:flex-start; }
+#combiner-settings-left, #combiner-settings-right { display:flex; flex-direction:column; gap:20px; }
 
 #parse-window { position:fixed; top:32px; left:0; right:0; bottom:0; background:transparent; padding:40px; display:flex; flex-direction:column; gap:20px; overflow:auto; opacity:0; pointer-events:none; transition:opacity 0.3s ease; z-index:1; }
 #parse-window.active { opacity:1; pointer-events:auto; }
