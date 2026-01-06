@@ -20,6 +20,9 @@ const fileLoading = document.getElementById('file-tree-loading');
 const mainWindowEl = document.getElementById('main-window');
 const settingsWindow = document.getElementById('settings-window');
 const closeSettingsBtn = document.getElementById('close-settings');
+const combinerSettingsWindow = document.getElementById('combiner-settings-window');
+const openCombinerSettingsBtn = document.getElementById('open-combiner-settings');
+const combinerSettingsBackBtn = document.getElementById('combiner-settings-back');
 const darkBtn = document.getElementById('theme-dark');
 const lightBtn = document.getElementById('theme-light');
 const acrylicBtn = document.getElementById('theme-acrylic');
@@ -48,6 +51,20 @@ const combinerOffensiveDetailedCheckbox = document.getElementById('combiner-offe
 const combinerDefensesDetailedCheckbox = document.getElementById('combiner-defenses-detailed');
 const combinerSupportDetailedCheckbox = document.getElementById('combiner-support-detailed');
 const combinerBlacklistInput = document.getElementById('combiner-blacklist-accounts');
+const combinerInputDirectoryInput = document.getElementById('combiner-input-directory');
+const combinerOutputFilenameInput = document.getElementById('combiner-output-filename');
+const combinerJsonOutputFilenameInput = document.getElementById('combiner-json-output-filename');
+const combinerDbFilenameInput = document.getElementById('combiner-db-filename');
+const combinerDbPathInput = document.getElementById('combiner-db-path');
+const combinerWriteAllJsonCheckbox = document.getElementById('combiner-write-all-json');
+const combinerWriteExcelCheckbox = document.getElementById('combiner-write-excel');
+const combinerExcelFilenameInput = document.getElementById('combiner-excel-filename');
+const combinerExcelPathInput = document.getElementById('combiner-excel-path');
+const combinerSkillCastLimitInput = document.getElementById('combiner-skill-cast-limit');
+const combinerSortModeSelect = document.getElementById('combiner-sort-mode');
+const combinerDiscordNotesInput = document.getElementById('combiner-discord-notes');
+const boonWeightsContainer = document.getElementById('boon-weights');
+const conditionWeightsContainer = document.getElementById('condition-weights');
 const supportProfsContainer = document.getElementById('supported-profs');
 const addSupportProfBtn = document.getElementById('add-supported-prof');
 const supportProfsMessage = document.getElementById('supported-profs-message');
@@ -96,6 +113,8 @@ let tiddlyMode = false;
 let tiddlySitePollId = 0;
 let tiddlySetupStage = 0;
 let supportProfsMessageTimeout = null;
+let boonWeightsState = {};
+let conditionWeightsState = {};
 
 const SUPPORTED_BOONS = [
   { id: 'b740', label: 'Might' },
@@ -113,6 +132,39 @@ const SUPPORTED_BOONS = [
 ];
 const SUPPORTED_BOON_IDS = new Set(SUPPORTED_BOONS.map(boon => boon.id));
 
+const BOON_WEIGHT_KEYS = [
+  'Aegis',
+  'Alacrity',
+  'Fury',
+  'Might',
+  'Protection',
+  'Quickness',
+  'Regeneration',
+  'Resistance',
+  'Resolution',
+  'Stability',
+  'Swiftness',
+  'Vigor',
+  'Superspeed'
+];
+
+const CONDITION_WEIGHT_KEYS = [
+  'Bleeding',
+  'Burning',
+  'Confusion',
+  'Poison',
+  'Torment',
+  'Blind',
+  'Chilled',
+  'Crippled',
+  'Fear',
+  'Immobile',
+  'Slow',
+  'Taunt',
+  'Weakness',
+  'Vulnerability'
+];
+
 const GW2_PROFESSION_GROUPS = [
   { label: 'Guardian', options: ['Guardian', 'Dragonhunter', 'Firebrand', 'Willbender', 'Luminary'] },
   { label: 'Warrior', options: ['Warrior', 'Berserker', 'Spellbreaker', 'Bladesworn', 'Paragon'] },
@@ -129,9 +181,11 @@ const GW2_PROFESSION_SET = new Set(
 );
 const SUPPORT_PROFS_STORAGE_KEY = 'combinerSupportProfs';
 const LEGACY_SUPPORT_PROFS_STORAGE_KEY = 'combinerSupportedProfs';
+const BOON_WEIGHTS_STORAGE_KEY = 'combinerBoonWeights';
+const CONDITION_WEIGHTS_STORAGE_KEY = 'combinerConditionWeights';
 
 const DEFAULT_SUPPORT_PROFS = [
-  { name: 'Firebrand', boons: ['b1122', 'b717', 'b26980', 'b740'] },
+  { name: 'Firebrand', boons: ['b1122', 'b717', 'b26980', 'b740', 'b1187'] },
   { name: 'Chronomancer', boons: ['b1122', 'b717', 'b740', 'b725'] },
   { name: 'Specter', boons: ['b1122', 'b717', 'b740', 'b725'] }
 ];
@@ -156,7 +210,7 @@ function cloneSupportProfEntry(entry = {}) {
   const seen = new Set();
   if (Array.isArray(entry.boons)) {
     entry.boons.forEach(id => {
-      if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id) || boons.length >= 4) return;
+      if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id) || boons.length >= 5) return;
       seen.add(id);
       boons.push(id);
     });
@@ -193,6 +247,60 @@ function saveSupportProfs() {
   } catch {}
 }
 
+function loadWeights(storageKey, keys) {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (!stored) {
+      return keys.reduce((acc, key) => {
+        acc[key] = 1;
+        return acc;
+      }, {});
+    }
+    const parsed = JSON.parse(stored);
+    return keys.reduce((acc, key) => {
+      const raw = parsed && typeof parsed[key] !== 'undefined' ? parsed[key] : 1;
+      const num = Number(raw);
+      acc[key] = Number.isFinite(num) ? num : 1;
+      return acc;
+    }, {});
+  } catch {
+    return keys.reduce((acc, key) => {
+      acc[key] = 1;
+      return acc;
+    }, {});
+  }
+}
+
+function saveWeights(storageKey, weights) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(weights));
+  } catch {}
+}
+
+function renderWeightInputs(container, weights, storageKey) {
+  if (!container) return;
+  container.innerHTML = '';
+  Object.entries(weights).forEach(([key, value]) => {
+    const row = document.createElement('div');
+    row.className = 'weight-row';
+    const label = document.createElement('label');
+    label.textContent = key;
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.step = '0.1';
+    input.value = value;
+    input.addEventListener('input', () => {
+      const num = Number(input.value);
+      weights[key] = Number.isFinite(num) ? num : 1;
+      saveWeights(storageKey, weights);
+    });
+    row.appendChild(label);
+    row.appendChild(input);
+    container.appendChild(row);
+  });
+}
+
 function showSupportProfsMessage(text) {
   if (!supportProfsMessage) return;
   supportProfsMessage.textContent = text;
@@ -214,7 +322,7 @@ function getSupportProfsForOptions() {
             if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
             seen.add(id);
             return true;
-          }).slice(0, 4)
+          }).slice(0, 5)
         : [];
       if (!boons.length) return null;
       return { name, boons };
@@ -236,9 +344,9 @@ function toggleSupportProfBoon(index, boonId, checked, checkbox) {
   }
   if (checked) {
     if (prof.boons.includes(boonId)) return;
-    if (prof.boons.length >= 4) {
+    if (prof.boons.length >= 5) {
       if (checkbox) checkbox.checked = false;
-      showSupportProfsMessage('A profession can only track up to four boons.');
+      showSupportProfsMessage('A profession can only track up to five boons.');
       return;
     }
     prof.boons.push(boonId);
@@ -374,9 +482,27 @@ combinerOffensiveDetailedCheckbox.checked = localStorage.getItem('combinerOffens
 combinerDefensesDetailedCheckbox.checked = localStorage.getItem('combinerDefensesDetailed') === 'true';
 combinerSupportDetailedCheckbox.checked = localStorage.getItem('combinerSupportDetailed') === 'true';
 combinerBlacklistInput.value = localStorage.getItem('combinerBlacklistAccounts') || '';
+combinerInputDirectoryInput.value = localStorage.getItem('combinerInputDirectory') || 'd:/gw2logs/output';
+combinerOutputFilenameInput.value = localStorage.getItem('combinerOutputFilename') || '';
+combinerJsonOutputFilenameInput.value = localStorage.getItem('combinerJsonOutputFilename') || '';
+combinerDbFilenameInput.value = localStorage.getItem('combinerDbFilename') || 'Top_Stats.db';
+combinerDbPathInput.value = localStorage.getItem('combinerDbPath') || '.';
+const writeAllJsonStored = localStorage.getItem('combinerWriteAllJson');
+combinerWriteAllJsonCheckbox.checked = writeAllJsonStored ? writeAllJsonStored === 'true' : true;
+const writeExcelStored = localStorage.getItem('combinerWriteExcel');
+combinerWriteExcelCheckbox.checked = writeExcelStored ? writeExcelStored === 'true' : false;
+combinerExcelFilenameInput.value = localStorage.getItem('combinerExcelFilename') || 'Top_Stats.xlsx';
+combinerExcelPathInput.value = localStorage.getItem('combinerExcelPath') || '.';
+combinerSkillCastLimitInput.value = localStorage.getItem('combinerSkillCastLimit') || '40';
+combinerSortModeSelect.value = localStorage.getItem('combinerSortMode') || 'Total';
+combinerDiscordNotesInput.value = localStorage.getItem('combinerDiscordNotes') || '';
 eiAnonymizeCheckbox.checked = localStorage.getItem('eiAnonymizePlayers') === 'true';
 supportProfs = loadSupportProfs();
 renderSupportProfs();
+boonWeightsState = loadWeights(BOON_WEIGHTS_STORAGE_KEY, BOON_WEIGHT_KEYS);
+conditionWeightsState = loadWeights(CONDITION_WEIGHTS_STORAGE_KEY, CONDITION_WEIGHT_KEYS);
+renderWeightInputs(boonWeightsContainer, boonWeightsState, BOON_WEIGHTS_STORAGE_KEY);
+renderWeightInputs(conditionWeightsContainer, conditionWeightsState, CONDITION_WEIGHTS_STORAGE_KEY);
 if (addSupportProfBtn) {
   addSupportProfBtn.addEventListener('click', () => {
     supportProfs.push({ name: '', boons: [] });
@@ -446,15 +572,36 @@ selectedFolderInput.addEventListener('blur', () => {
   selectedFolderInput.style.fontSize = '';
 });
 closeSettingsBtn.addEventListener('click', closeSettings);
+if (openCombinerSettingsBtn) {
+  openCombinerSettingsBtn.addEventListener('click', () => {
+    settingsWindow.classList.remove('active');
+    combinerSettingsWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Log Combiner Settings';
+  });
+}
+if (combinerSettingsBackBtn) {
+  combinerSettingsBackBtn.addEventListener('click', () => {
+    combinerSettingsWindow.classList.remove('active');
+    settingsWindow.classList.add('active');
+    document.getElementById('title-text').textContent = 'Settings';
+  });
+}
 
 function openSettings() {
   mainWindowEl.classList.add('fade-out');
   settingsWindow.classList.add('active');
+  if (combinerSettingsWindow) {
+    combinerSettingsWindow.classList.remove('active');
+  }
+  document.getElementById('title-text').textContent = 'Settings';
 }
 
 function closeSettings() {
   mainWindowEl.classList.remove('fade-out');
   settingsWindow.classList.remove('active');
+  if (combinerSettingsWindow) {
+    combinerSettingsWindow.classList.remove('active');
+  }
 }
 
 function updateDescriptionVisibility() {
@@ -631,6 +778,42 @@ combinerSupportDetailedCheckbox.addEventListener('change', () => {
 });
 combinerBlacklistInput.addEventListener('input', () => {
   localStorage.setItem('combinerBlacklistAccounts', combinerBlacklistInput.value);
+});
+combinerInputDirectoryInput.addEventListener('input', () => {
+  localStorage.setItem('combinerInputDirectory', combinerInputDirectoryInput.value);
+});
+combinerOutputFilenameInput.addEventListener('input', () => {
+  localStorage.setItem('combinerOutputFilename', combinerOutputFilenameInput.value);
+});
+combinerJsonOutputFilenameInput.addEventListener('input', () => {
+  localStorage.setItem('combinerJsonOutputFilename', combinerJsonOutputFilenameInput.value);
+});
+combinerDbFilenameInput.addEventListener('input', () => {
+  localStorage.setItem('combinerDbFilename', combinerDbFilenameInput.value);
+});
+combinerDbPathInput.addEventListener('input', () => {
+  localStorage.setItem('combinerDbPath', combinerDbPathInput.value);
+});
+combinerWriteAllJsonCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerWriteAllJson', combinerWriteAllJsonCheckbox.checked ? 'true' : 'false');
+});
+combinerWriteExcelCheckbox.addEventListener('change', () => {
+  localStorage.setItem('combinerWriteExcel', combinerWriteExcelCheckbox.checked ? 'true' : 'false');
+});
+combinerExcelFilenameInput.addEventListener('input', () => {
+  localStorage.setItem('combinerExcelFilename', combinerExcelFilenameInput.value);
+});
+combinerExcelPathInput.addEventListener('input', () => {
+  localStorage.setItem('combinerExcelPath', combinerExcelPathInput.value);
+});
+combinerSkillCastLimitInput.addEventListener('input', () => {
+  localStorage.setItem('combinerSkillCastLimit', combinerSkillCastLimitInput.value);
+});
+combinerSortModeSelect.addEventListener('change', () => {
+  localStorage.setItem('combinerSortMode', combinerSortModeSelect.value);
+});
+combinerDiscordNotesInput.addEventListener('input', () => {
+  localStorage.setItem('combinerDiscordNotes', combinerDiscordNotesInput.value);
 });
 eiAnonymizeCheckbox.addEventListener('change', () => {
   localStorage.setItem('eiAnonymizePlayers', eiAnonymizeCheckbox.checked ? 'true' : 'false');
@@ -1530,6 +1713,20 @@ async function startParse() {
     defensesDetailed: localStorage.getItem('combinerDefensesDetailed') === 'true',
     supportDetailed: localStorage.getItem('combinerSupportDetailed') === 'true',
     webhookUrl: combinerWebhookInput.value.trim(),
+    inputDirectory: combinerInputDirectoryInput.value.trim(),
+    outputFilename: combinerOutputFilenameInput.value.trim(),
+    jsonOutputFilename: combinerJsonOutputFilenameInput.value.trim(),
+    dbFilename: combinerDbFilenameInput.value.trim(),
+    dbPath: combinerDbPathInput.value.trim(),
+    writeAllDataToJson: combinerWriteAllJsonCheckbox.checked,
+    writeExcel: combinerWriteExcelCheckbox.checked,
+    excelOutputFilename: combinerExcelFilenameInput.value.trim(),
+    excelPath: combinerExcelPathInput.value.trim(),
+    skillCastsByRoleLimit: combinerSkillCastLimitInput.value,
+    sortMode: combinerSortModeSelect.value,
+    discordNotes: combinerDiscordNotesInput.value.trim(),
+    boonWeights: boonWeightsState,
+    conditionWeights: conditionWeightsState,
     blacklistAccounts: combinerBlacklistInput.value,
     supportProfs: getSupportProfsForOptions(),
     anonymizePlayers: localStorage.getItem('eiAnonymizePlayers') === 'true',
