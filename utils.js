@@ -100,6 +100,24 @@ async function editTopStatsConfig(template, dest, opts) {
     const num = Number(value);
     return Number.isFinite(num) ? num : fallback;
   };
+  const normalizeWebhookUrl = hook => {
+    if (hook instanceof URL) {
+      return hook.protocol === 'http:' || hook.protocol === 'https:' ? hook.toString() : 'false';
+    }
+    if (typeof hook !== 'string') return 'false';
+    const hookTrimmed = hook.trim();
+    if (!hookTrimmed) return 'false';
+    const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(hookTrimmed);
+    const hasDotHost = /^[^/\s]+\.[^/\s]+/i.test(hookTrimmed);
+    const candidate = !hasScheme && hasDotHost ? `https://${hookTrimmed}` : hookTrimmed;
+    try {
+      const parsed = new URL(candidate);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return 'false';
+      return parsed.toString();
+    } catch {
+      return 'false';
+    }
+  };
   const boonWeights = opts.boonWeights && typeof opts.boonWeights === 'object' ? opts.boonWeights : null;
   const conditionWeights = opts.conditionWeights && typeof opts.conditionWeights === 'object'
     ? opts.conditionWeights
@@ -137,22 +155,7 @@ async function editTopStatsConfig(template, dest, opts) {
     if (line.startsWith('Support_Detailed = ')) return `Support_Detailed = ${boolValue(opts.supportDetailed)}`;
     if (line.startsWith('Sort_Mode = ')) return `Sort_Mode = ${stringValue(opts.sortMode, 'Total')}`;
     if (section === 'DiscordCfg' && line.startsWith('webhook_url = ')) {
-      const hook = opts.webhookUrl;
-      let value = 'false';
-      if (hook instanceof URL) {
-        value = hook.toString();
-      } else if (typeof hook === 'string') {
-        const hookTrimmed = hook.trim();
-        if (hookTrimmed) {
-          try {
-            const parsed = new URL(hookTrimmed);
-            value = parsed.toString();
-          } catch {
-            value = 'false';
-          }
-        }
-      }
-      return `webhook_url = ${value}`;
+      return `webhook_url = ${normalizeWebhookUrl(opts.webhookUrl)}`;
     }
     if (section === 'DiscordCfg' && line.startsWith('discord_additional_notes = ')) {
       return `discord_additional_notes = ${opts.discordNotes || ''}`;
