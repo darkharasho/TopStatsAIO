@@ -85,5 +85,12 @@ describe('utils', () => {
     });
     const content2 = fs.readFileSync(dest2, 'utf8');
     expect(content2).toMatch('webhook_url = https://discord.com/api/webhooks/123');
+
+    const dest3 = path.join(tempDir, 'out-no-scheme.ini');
+    await editTopStatsConfig(path.join(__dirname, '..', 'top_stats_config.ini'), dest3, {
+      webhookUrl: 'discord.com/api/webhooks/123',
+    });
+    const content3 = fs.readFileSync(dest3, 'utf8');
+    expect(content3).toMatch('webhook_url = https://discord.com/api/webhooks/123');
   });
 });
