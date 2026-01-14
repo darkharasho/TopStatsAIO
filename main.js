@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog, safeStorage } =
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { spawn } = require('child_process');
+const { execSync, spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
@@ -17,6 +17,7 @@ let currentParseCancel = null;
 let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
+let cachedWineAvailable = null;
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
@@ -43,6 +44,39 @@ function loadTiddlyhostCredentials() {
   } catch {
     return { username: '', password: '' };
   }
+}
+
+function hasWine() {
+  if (cachedWineAvailable !== null) {
+    return cachedWineAvailable;
+  }
+  try {
+    execSync('wine --version', { stdio: 'ignore' });
+    cachedWineAvailable = true;
+  } catch (error) {
+    cachedWineAvailable = false;
+  }
+  return cachedWineAvailable;
+}
+
+function resolveWindowsCommand(cmd, args, wc) {
+  if (process.platform === 'win32') {
+    return { cmd, args };
+  }
+  const ext = path.extname(cmd).toLowerCase();
+  if (ext !== '.exe' && ext !== '.bat') {
+    return { cmd, args };
+  }
+  if (!hasWine()) {
+    const message = 'Wine is required on Linux to run Windows dependencies. Please install Wine and try again.';
+    wc.send('parse-progress', message);
+    dialog.showErrorBox('Wine required', message);
+    throw new Error('Wine is not installed');
+  }
+  if (ext === '.bat') {
+    return { cmd: 'wine', args: ['cmd', '/c', cmd, ...args] };
+  }
+  return { cmd: 'wine', args: [cmd, ...args] };
 }
 
 function saveTiddlyhostCredentials({ username = '', password = '' } = {}) {
@@ -820,7 +854,14 @@ ipcMain.handle('start-parse', async (event, data) => {
 
 function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOnSpawn = null) {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { cwd, shell: useShell, windowsHide: true });
+    let resolved;
+    try {
+      resolved = resolveWindowsCommand(cmd, args, wc);
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    const child = spawn(resolved.cmd, resolved.args, { cwd, shell: useShell, windowsHide: true });
     if (registerChild) registerChild(child);
     if (inputOnSpawn) {
       child.once('spawn', () => {
