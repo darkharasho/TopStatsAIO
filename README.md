@@ -125,6 +125,20 @@ Run `npm run dist:linux` on a Linux host to produce AppImage artifacts. If
 npm run dist:linux
 ```
 
+Install `flatpak-builder` with your distro package manager before running the
+Flatpak build:
+
+```bash
+# Ubuntu/Debian
+sudo apt install flatpak-builder
+
+# Fedora
+sudo dnf install flatpak-builder
+
+# Arch
+sudo pacman -S flatpak-builder
+```
+
 
 ## My App Disappeared, What Happened?
 
