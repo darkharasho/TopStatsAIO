@@ -117,8 +117,9 @@ versioned files like:
 
 ## Linux Package (Flatpak + AppImage)
 
-Run `npm run dist:linux` on a Linux host with Flatpak tooling installed to
-produce AppImage and Flatpak artifacts via `electron-builder`.
+Run `npm run dist:linux` on a Linux host to produce AppImage artifacts. If
+`flatpak-builder` is installed, it will also output Flatpak bundles via
+`electron-builder`.
 
 ```bash
 npm run dist:linux
