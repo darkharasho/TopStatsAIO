@@ -8,6 +8,7 @@
     "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
+    "dist:linux": "node scripts/build-linux.js",
     "clear-settings": "node scripts/clear-settings.js"
   },
   "keywords": [],
@@ -32,6 +33,21 @@
         "portable"
       ],
       "icon": "media/TopStatsAIO-Logo.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "flatpak"
+      ],
+      "category": "Utility",
+      "icon": "media/TopStatsAIO-Logo.png"
+    },
+    "flatpak": {
+      "runtime": "org.freedesktop.Platform",
+      "runtimeVersion": "23.08",
+      "sdk": "org.freedesktop.Sdk",
+      "base": "org.electronjs.Electron2.BaseApp",
+      "baseVersion": "23.08"
     },
     "nsis": {
       "oneClick": false,

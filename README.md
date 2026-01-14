@@ -115,6 +115,15 @@ versioned files like:
 - Matching `.blockmap` files for both artifacts so the auto-updater can stream
   block-aware downloads and resume partial transfers
 
+## Linux Package (Flatpak + AppImage)
+
+Run `npm run dist:linux` on a Linux host with Flatpak tooling installed to
+produce AppImage and Flatpak artifacts via `electron-builder`.
+
+```bash
+npm run dist:linux
+```
+
 
 ## My App Disappeared, What Happened?
 
