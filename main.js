@@ -20,6 +20,7 @@ let mainWindow = null;
 let pendingUpdate = null;
 let cachedWineAvailable = null;
 let cachedWineReady = false;
+let wineDotnetAlerted = false;
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
@@ -99,7 +100,8 @@ function resolveWindowsCommand(cmd, args, wc) {
   }
   const wineEnv = {
     ...process.env,
-    WINEPREFIX: path.join(app.getPath('userData'), 'wine')
+    WINEPREFIX: path.join(app.getPath('userData'), 'wine'),
+    WINEDEBUG: process.env.WINEDEBUG || '-all'
   };
   if (ext === '.bat') {
     return { cmd: 'wine', args: ['cmd', '/c', cmd, ...args], env: wineEnv };
@@ -904,7 +906,23 @@ function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOn
       });
     }
     child.stdout.on('data', d => wc.send('parse-progress', d.toString().trim()));
-    child.stderr.on('data', d => wc.send('parse-progress', `Error: ${d.toString().trim()}`));
+    child.stderr.on('data', d => {
+      const text = d.toString().trim();
+      if (!text) return;
+      if (resolved.cmd === 'wine') {
+        const lower = text.toLowerCase();
+        if (!wineDotnetAlerted && (lower.includes('you must install .net') || lower.includes('hostfxr.dll'))) {
+          wineDotnetAlerted = true;
+          const url = 'https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win-x64&os=win10';
+          const message = `Wine requires the .NET Desktop Runtime for these tools. Please install it and try again:\n${url}`;
+          wc.send('parse-progress', message);
+          dialog.showErrorBox('.NET runtime required', message);
+          shell.openExternal(url);
+        }
+        return;
+      }
+      wc.send('parse-progress', `Error: ${text}`);
+    });
     child.on('close', code => {
       if (code === 0) {
         resolve();
