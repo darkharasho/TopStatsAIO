@@ -21,6 +21,7 @@ let pendingUpdate = null;
 let cachedWineAvailable = null;
 let cachedWineReady = false;
 let wineDotnetAlerted = false;
+let cachedWineDotnetReady = false;
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
@@ -76,6 +77,47 @@ function ensureWineReady() {
   cachedWineReady = true;
 }
 
+function hasWineDotnet(wineEnv) {
+  try {
+    execSync(
+      'wine reg query "HKLM\\Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full" /v Release',
+      { stdio: 'ignore', env: wineEnv }
+    );
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function ensureWineDotnet(wc, wineEnv) {
+  if (cachedWineDotnetReady) {
+    return;
+  }
+  if (hasWineDotnet(wineEnv)) {
+    cachedWineDotnetReady = true;
+    return;
+  }
+  try {
+    execSync('winetricks --version', { stdio: 'ignore', env: wineEnv });
+  } catch (error) {
+    const message = 'winetricks is required to install the .NET runtime for Wine. Please install winetricks and try again.';
+    wc.send('parse-progress', message);
+    dialog.showErrorBox('winetricks required', message);
+    throw new Error('winetricks is not installed');
+  }
+  wc.send('parse-progress', 'Installing .NET runtime in Wine. This may take a few minutes...');
+  try {
+    execSync('winetricks -q dotnet48', { stdio: 'ignore', env: wineEnv });
+  } catch (error) {
+    const message = 'Failed to install the .NET runtime via winetricks. Please run `winetricks dotnet48` manually and try again.';
+    wc.send('parse-progress', message);
+    dialog.showErrorBox('.NET install failed', message);
+    throw error;
+  }
+  cachedWineDotnetReady = true;
+  wc.send('parse-progress', 'Wine .NET runtime installed.');
+}
+
 function resolveWindowsCommand(cmd, args, wc) {
   if (process.platform === 'win32') {
     return { cmd, args, env: process.env };
@@ -103,6 +145,11 @@ function resolveWindowsCommand(cmd, args, wc) {
     WINEPREFIX: path.join(app.getPath('userData'), 'wine'),
     WINEDEBUG: process.env.WINEDEBUG || '-all'
   };
+  try {
+    ensureWineDotnet(wc, wineEnv);
+  } catch (error) {
+    throw error;
+  }
   if (ext === '.bat') {
     return { cmd: 'wine', args: ['cmd', '/c', cmd, ...args], env: wineEnv };
   }
