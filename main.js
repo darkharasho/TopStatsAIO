@@ -19,6 +19,7 @@ let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
 let cachedWineAvailable = null;
+let cachedWineReady = false;
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
@@ -60,13 +61,27 @@ function hasWine() {
   return cachedWineAvailable;
 }
 
+function ensureWineReady() {
+  if (cachedWineReady) {
+    return;
+  }
+  const winePrefix = path.join(app.getPath('userData'), 'wine');
+  const wineEnv = {
+    ...process.env,
+    WINEPREFIX: winePrefix
+  };
+  execSync('wineboot -u', { stdio: 'ignore', env: wineEnv });
+  execSync('wineserver -w', { stdio: 'ignore', env: wineEnv });
+  cachedWineReady = true;
+}
+
 function resolveWindowsCommand(cmd, args, wc) {
   if (process.platform === 'win32') {
-    return { cmd, args };
+    return { cmd, args, env: process.env };
   }
   const ext = path.extname(cmd).toLowerCase();
   if (ext !== '.exe' && ext !== '.bat') {
-    return { cmd, args };
+    return { cmd, args, env: process.env };
   }
   if (!hasWine()) {
     const message = 'Wine is required on Linux to run Windows dependencies. Please install Wine and try again.';
@@ -74,10 +89,22 @@ function resolveWindowsCommand(cmd, args, wc) {
     dialog.showErrorBox('Wine required', message);
     throw new Error('Wine is not installed');
   }
-  if (ext === '.bat') {
-    return { cmd: 'wine', args: ['cmd', '/c', cmd, ...args] };
+  try {
+    ensureWineReady();
+  } catch (error) {
+    const message = 'Wine failed to initialize. Please ensure Wine is installed correctly and try again.';
+    wc.send('parse-progress', message);
+    dialog.showErrorBox('Wine error', message);
+    throw error;
   }
-  return { cmd: 'wine', args: [cmd, ...args] };
+  const wineEnv = {
+    ...process.env,
+    WINEPREFIX: path.join(app.getPath('userData'), 'wine')
+  };
+  if (ext === '.bat') {
+    return { cmd: 'wine', args: ['cmd', '/c', cmd, ...args], env: wineEnv };
+  }
+  return { cmd: 'wine', args: [cmd, ...args], env: wineEnv };
 }
 
 function saveTiddlyhostCredentials({ username = '', password = '' } = {}) {
@@ -862,7 +889,12 @@ function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOn
       reject(error);
       return;
     }
-    const child = spawn(resolved.cmd, resolved.args, { cwd, shell: useShell, windowsHide: true });
+    const child = spawn(resolved.cmd, resolved.args, {
+      cwd,
+      shell: useShell,
+      windowsHide: true,
+      env: resolved.env || process.env
+    });
     if (registerChild) registerChild(child);
     if (inputOnSpawn) {
       child.once('spawn', () => {
