@@ -7,6 +7,14 @@ const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const { downloadFile, downloadUpdateAsset, collectAssetInfo, resolveUpdateMode, setLogger } = require('./update');
+const {
+  performPreFlightCheck,
+  getWineDotnetAlerted,
+  setWineDotnetAlerted,
+  toWindowsPath,
+  hasWine,
+  resolveWindowsCommand
+} = require('./wineUtils');
 const isLinux = process.platform === 'linux';
 const useMica = !isLinux && process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
 const keepTempDirs = process.argv.includes('--keep-temp');
@@ -18,10 +26,6 @@ let currentParseCancel = null;
 let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
-let cachedWineAvailable = null;
-let cachedWineReady = false;
-let wineDotnetAlerted = false;
-let cachedWineDotnetReady = false;
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
@@ -50,111 +54,7 @@ function loadTiddlyhostCredentials() {
   }
 }
 
-function hasWine() {
-  if (cachedWineAvailable !== null) {
-    return cachedWineAvailable;
-  }
-  try {
-    execSync('wine --version', { stdio: 'ignore' });
-    cachedWineAvailable = true;
-  } catch (error) {
-    cachedWineAvailable = false;
-  }
-  return cachedWineAvailable;
-}
-
-function ensureWineReady() {
-  if (cachedWineReady) {
-    return;
-  }
-  const winePrefix = path.join(app.getPath('userData'), 'wine');
-  const wineEnv = {
-    ...process.env,
-    WINEPREFIX: winePrefix
-  };
-  execSync('wineboot -u', { stdio: 'ignore', env: wineEnv });
-  execSync('wineserver -w', { stdio: 'ignore', env: wineEnv });
-  cachedWineReady = true;
-}
-
-function hasWineDotnet(wineEnv) {
-  try {
-    execSync(
-      'wine reg query "HKLM\\Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full" /v Release',
-      { stdio: 'ignore', env: wineEnv }
-    );
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-function ensureWineDotnet(wc, wineEnv) {
-  if (cachedWineDotnetReady) {
-    return;
-  }
-  if (hasWineDotnet(wineEnv)) {
-    cachedWineDotnetReady = true;
-    return;
-  }
-  try {
-    execSync('winetricks --version', { stdio: 'ignore', env: wineEnv });
-  } catch (error) {
-    const message = 'winetricks is required to install the .NET runtime for Wine. Please install winetricks and try again.';
-    wc.send('parse-progress', message);
-    dialog.showErrorBox('winetricks required', message);
-    throw new Error('winetricks is not installed');
-  }
-  wc.send('parse-progress', 'Installing .NET runtime in Wine. This may take a few minutes...');
-  try {
-    execSync('winetricks -q dotnet48', { stdio: 'ignore', env: wineEnv });
-  } catch (error) {
-    const message = 'Failed to install the .NET runtime via winetricks. Please run `winetricks dotnet48` manually and try again.';
-    wc.send('parse-progress', message);
-    dialog.showErrorBox('.NET install failed', message);
-    throw error;
-  }
-  cachedWineDotnetReady = true;
-  wc.send('parse-progress', 'Wine .NET runtime installed.');
-}
-
-function resolveWindowsCommand(cmd, args, wc) {
-  if (process.platform === 'win32') {
-    return { cmd, args, env: process.env };
-  }
-  const ext = path.extname(cmd).toLowerCase();
-  if (ext !== '.exe' && ext !== '.bat') {
-    return { cmd, args, env: process.env };
-  }
-  if (!hasWine()) {
-    const message = 'Wine is required on Linux to run Windows dependencies. Please install Wine and try again.';
-    wc.send('parse-progress', message);
-    dialog.showErrorBox('Wine required', message);
-    throw new Error('Wine is not installed');
-  }
-  try {
-    ensureWineReady();
-  } catch (error) {
-    const message = 'Wine failed to initialize. Please ensure Wine is installed correctly and try again.';
-    wc.send('parse-progress', message);
-    dialog.showErrorBox('Wine error', message);
-    throw error;
-  }
-  const wineEnv = {
-    ...process.env,
-    WINEPREFIX: path.join(app.getPath('userData'), 'wine'),
-    WINEDEBUG: process.env.WINEDEBUG || '-all'
-  };
-  try {
-    ensureWineDotnet(wc, wineEnv);
-  } catch (error) {
-    throw error;
-  }
-  if (ext === '.bat') {
-    return { cmd: 'wine', args: ['cmd', '/c', cmd, ...args], env: wineEnv };
-  }
-  return { cmd: 'wine', args: [cmd, ...args], env: wineEnv };
-}
+// Wine functions moved to wineUtils.js
 
 function saveTiddlyhostCredentials({ username = '', password = '' } = {}) {
   if (!safeStorage.isEncryptionAvailable()) {
@@ -165,7 +65,7 @@ function saveTiddlyhostCredentials({ username = '', password = '' } = {}) {
   if (!hasValues) {
     try {
       fs.rmSync(filePath, { force: true });
-    } catch {}
+    } catch { }
     return true;
   }
   const payload = safeStorage.encryptString(JSON.stringify({ username, password }));
@@ -180,7 +80,7 @@ function logError(...args) {
   const msg = args.map(a => (a instanceof Error ? a.stack : String(a))).join(' ');
   try {
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
-  } catch {}
+  } catch { }
 }
 
 function log(...args) {
@@ -189,7 +89,7 @@ function log(...args) {
   const msg = args.map(a => String(a)).join(' ');
   try {
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
-  } catch {}
+  } catch { }
 }
 
 setLogger(logError);
@@ -240,7 +140,7 @@ async function findPayloadRoot(dir) {
     if (entries.length === 1 && entries[0].isDirectory()) {
       return path.join(dir, entries[0].name);
     }
-  } catch {}
+  } catch { }
   return dir;
 }
 
@@ -484,6 +384,8 @@ async function performAppUpdate(wc) {
 }
 
 app.whenReady().then(() => {
+  console.log('DEBUG: User Data Path:', app.getPath('userData'));
+  console.log('DEBUG: WINEPREFIX:', path.join(app.getPath('userData'), 'wine'));
   const userData = app.getPath('userData');
   depsDir = path.join(userData, 'dependencies');
   versionsFile = path.join(depsDir, 'versions.json');
@@ -635,7 +537,7 @@ ipcMain.handle('get-example-output', async (event, which) => {
       const entries = await fs.promises.readdir(dir, { withFileTypes: true });
       const match = entries.find(e => e.isDirectory() && /example[ _-]*output/i.test(e.name));
       if (match) target = path.join(dir, match.name);
-    } catch {}
+    } catch { }
     if (!target) {
       console.warn('Example output directory not found');
       return [];
@@ -742,6 +644,15 @@ ipcMain.handle('start-parse', async (event, data) => {
     if (keepTempDirs) {
       send('Debug mode active: temporary folder will not be deleted automatically.');
     }
+
+    if (process.platform !== 'win32') {
+      const ready = await performPreFlightCheck(wc, depsDir, app.getPath('userData'));
+      if (!ready) {
+        wc.send('parse-complete', { success: false, files: [] });
+        return;
+      }
+    }
+
     step('copy', 'Copying files', 0, null, 0, files.length);
     for (let i = 0; i < files.length; i++) {
       const src = files[i];
@@ -762,12 +673,35 @@ ipcMain.handle('start-parse', async (event, data) => {
     }
 
     const processedDir = path.join(tempDir, 'ProcessedLogs');
+    let configOutDir = tempDir;
+    let configInputDir = processedDir;
+
+    if (process.platform !== 'win32' && hasWine()) {
+      try {
+        const converted = await toWindowsPath([tempDir, processedDir]);
+        if (converted && converted.length === 2) {
+          configOutDir = converted[0];
+          configInputDir = converted[1];
+        }
+      } catch (e) {
+        console.warn('Failed to convert paths for config:', e);
+      }
+    }
+
     if (!opts.inputDirectory) {
-      opts.inputDirectory = processedDir.replace(/\\/g, '/');
+      opts.inputDirectory = configInputDir.replace(/\\/g, '/');
     }
     const eiTemplate = path.join(__dirname, 'EliteInsightsConfigTemplate.conf');
     const eiConf = path.join(tempDir, 'EliteInsightConfig.conf');
-    await editEIConfig(eiTemplate, eiConf, tempDir, opts.dpsUserToken, { anonymizePlayers: opts.anonymizePlayers });
+    // Use the Windows-friendly path for the config file content
+    await editEIConfig(eiTemplate, eiConf, configOutDir, opts.dpsUserToken, { anonymizePlayers: opts.anonymizePlayers });
+
+    // DEBUG: Log the config content to verify paths
+    try {
+      const confContent = await fs.promises.readFile(eiConf, 'utf8');
+      send(`[DEBUG] EI Config Content:\n${confContent.substring(0, 500)}...`); // first 500 chars
+    } catch (e) { console.warn('[DEBUG] Failed to read config for logging', e); }
+
     const combTemplate = path.join(__dirname, 'top_stats_config.ini');
     const combConf = path.join(tempDir, 'top_stats_config.ini');
     await editTopStatsConfig(combTemplate, combConf, opts);
@@ -816,8 +750,39 @@ ipcMain.handle('start-parse', async (event, data) => {
       updateCliProgress();
       try {
         send(`Running EI CLI on ${logs.length} log${logs.length === 1 ? '' : 's'}`);
-        const args = ['-c', eiConf, ...logs.map(f => path.join(tempDir, f))];
-        await runProcess(cliExe, args, tempDir, wc, false, c => child = c);
+        // Convert paths for Wine
+        // We revert to Absolute Z: paths because relative paths might be flaky with dotnet on Wine.
+        // Now that we fixed the Runtime issue (by using dotnet.exe), absolute paths should be safe.
+        const linuxPaths = [eiConf, ...logs.map(f => path.join(tempDir, f))];
+        let windowsPaths = linuxPaths;
+        if (process.platform !== 'win32' && hasWine()) {
+          try {
+            windowsPaths = await toWindowsPath(linuxPaths);
+          } catch (e) { console.warn('Path conversion failed', e); }
+        }
+
+        // windowsPaths[0] is conf, rest are logs
+        const confPath = windowsPaths[0];
+        const logPaths = windowsPaths.slice(1);
+
+        // Use 'dotnet' directly to bypass the exe shim which fails to find runtime on Wine
+        let cmdToRun = cliExe;
+        let argsToRun = ['-c', confPath, ...logPaths];
+
+        if (process.platform !== 'win32' && hasWine()) {
+          const dllPath = cliExe.replace(/\.exe$/i, '.dll');
+          if (fs.existsSync(dllPath)) {
+            cmdToRun = 'dotnet.exe';
+            let winDllPath = dllPath;
+            try {
+              const converted = await toWindowsPath(dllPath);
+              if (converted && converted.length > 0) winDllPath = converted[0];
+            } catch (e) { console.warn('DLL path conversion failed', e); }
+            argsToRun = [winDllPath, '-c', confPath, ...logPaths];
+          }
+        }
+
+        await runProcess(cmdToRun, argsToRun, tempDir, wc, false, c => child = c);
         cliCompleted = logs.length;
         updateCliProgress();
       } catch (e) {
@@ -924,20 +889,25 @@ ipcMain.handle('start-parse', async (event, data) => {
   } finally {
     currentParseCancel = null;
     if (!keepTempDirs && tempDir) {
-      try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch {}
+      try { await fs.promises.rm(tempDir, { recursive: true, force: true }); } catch { }
     }
   }
 });
 
-function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOnSpawn = null) {
+async function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOnSpawn = null) {
+  let resolved;
+  try {
+    resolved = await resolveWindowsCommand(cmd, args, wc, depsDir, app.getPath('userData'));
+  } catch (error) {
+    throw error;
+  }
+
+  // LOGGING: Debug what exactly is being executed
+  const debugCmdString = `${resolved.cmd} ${resolved.args.map(a => /\s/.test(a) ? `"${a}"` : a).join(' ')}`;
+  console.log(`[runProcess] Spawning: ${debugCmdString}`);
+  wc.send('parse-progress', `[DEBUG] Command: ${debugCmdString}`);
+
   return new Promise((resolve, reject) => {
-    let resolved;
-    try {
-      resolved = resolveWindowsCommand(cmd, args, wc);
-    } catch (error) {
-      reject(error);
-      return;
-    }
     const child = spawn(resolved.cmd, resolved.args, {
       cwd,
       shell: useShell,
@@ -949,7 +919,7 @@ function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOn
       child.once('spawn', () => {
         try {
           if (child.stdin) child.stdin.write(inputOnSpawn);
-        } catch {}
+        } catch { }
       });
     }
     child.stdout.on('data', d => wc.send('parse-progress', d.toString().trim()));
@@ -958,8 +928,8 @@ function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, inputOn
       if (!text) return;
       if (resolved.cmd === 'wine') {
         const lower = text.toLowerCase();
-        if (!wineDotnetAlerted && (lower.includes('you must install .net') || lower.includes('hostfxr.dll'))) {
-          wineDotnetAlerted = true;
+        if (!getWineDotnetAlerted() && (lower.includes('you must install .net') || lower.includes('hostfxr.dll'))) {
+          setWineDotnetAlerted(true);
           const url = 'https://aka.ms/dotnet-core-applaunch?missing_runtime=true&arch=x64&rid=win-x64&os=win10';
           const message = `Wine requires the .NET Desktop Runtime for these tools. Please install it and try again:\n${url}`;
           wc.send('parse-progress', message);

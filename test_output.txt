@@ -1,0 +1,46 @@
+  console.warn
+    winepath failed (Exit code 1), using fallback path conversion.
+
+      276 |         console.warn('winepath returned different number of lines than inputs, falling back.');
+      277 |     } catch (e) {
+    > 278 |         console.warn(`winepath failed (${e.message}), using fallback path conversion.`);
+          |                 ^
+      279 |     }
+      280 |
+      281 |     // 2. Fallback: manual Z: mapping
+
+      at warn (wineUtils.js:278:17)
+      at Object.<anonymous> (__tests__/wineUtils.test.js:144:25)
+
+FAIL __tests__/wineUtils.test.js
+  wineUtils
+    performPreFlightCheck
+      ✓ skips on windows (2 ms)
+      ✓ returns false if no wine (1 ms)
+      ✕ installs deps if missing (22 ms)
+    toWindowsPath
+      ✓ converts paths using winepath async (1 ms)
+      ✓ fallbacks on timeout or error (12 ms)
+
+  ● wineUtils › performPreFlightCheck › installs deps if missing
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+       95 |             // It will try to install, then verify. Verification fails (execSync mock doesn't change state).
+       96 |             // So it throws, catches, logs error, returns false.
+    >  97 |             expect(res).toBe(false);
+          |                         ^
+       98 |
+       99 |             expect(wc.send).toHaveBeenCalledWith('parse-progress', expect.stringMatching(/Installing/));
+      100 |         });
+
+      at Object.toBe (__tests__/wineUtils.test.js:97:25)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        0.162 s, estimated 1 s
+Ran all test suites matching /__tests__\/wineUtils.test.js/i.

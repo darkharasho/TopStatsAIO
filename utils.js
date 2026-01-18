@@ -37,7 +37,12 @@ function writeVersions(file, v) {
 async function editEIConfig(template, dest, outDir, token, opts = {}) {
   const lines = await fs.promises.readFile(template, 'utf8');
   const replaced = lines.split(/\r?\n/).map(l => {
-    if (l.startsWith('OutLocation=')) return `OutLocation=${outDir}`;
+    if (l.startsWith('OutLocation=')) {
+      // FORCE empty OutLocation on Linux/Wine to prevent crashes due to invalid paths/permissions.
+      // CLI will default to input directory, which is safe and what we want.
+      if (process.platform !== 'win32') return 'OutLocation=';
+      return `OutLocation=${outDir || ''}`;
+    }
     if (l.startsWith('DPSReportUserToken=')) return `DPSReportUserToken=${token || ''}`;
     if (l.startsWith('Anonymous=')) return `Anonymous=${opts.anonymizePlayers ? 'True' : 'False'}`;
     return l;
@@ -71,12 +76,12 @@ function sanitizeSupportProfs(entries) {
       const seen = new Set();
       const boons = Array.isArray(entry.boons)
         ? entry.boons
-            .filter(id => {
-              if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
-              seen.add(id);
-              return true;
-            })
-            .slice(0, 5)
+          .filter(id => {
+            if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+          })
+          .slice(0, 5)
         : [];
       if (!boons.length) return null;
       return { name, boons };
