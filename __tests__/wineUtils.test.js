@@ -60,6 +60,12 @@ describe('wineUtils', () => {
         jest.restoreAllMocks();
     });
 
+    // Silence expected errors
+    beforeEach(() => {
+        jest.spyOn(console, 'error').mockImplementation(() => { });
+        jest.spyOn(console, 'warn').mockImplementation(() => { });
+    });
+
     describe('performPreFlightCheck', () => {
         test('skips on windows', async () => {
             Object.defineProperty(process, 'platform', { value: 'win32' });
@@ -70,16 +76,23 @@ describe('wineUtils', () => {
 
         test('returns false if no wine', async () => {
             execSyncSpy.mockImplementation(() => { throw new Error('no wine'); });
-            const res = await performPreFlightCheck({}, depsDir, userDataPath);
+            const res = await performPreFlightCheck({ send: jest.fn() }, depsDir, userDataPath);
             expect(res).toBe(false);
         });
 
         test('installs deps if missing', async () => {
             // Mock wine exists
+            let regQueryCalls = 0;
+            // Mock wine exists
             execSyncSpy.mockImplementation((cmd) => {
                 if (cmd.includes('wine --version')) return;
-                if (cmd.includes('reg query')) throw new Error('missing 4.8');
-                if (cmd.includes('dotnet --list-runtimes')) return ''; // missing 8
+                if (cmd.includes('reg query')) {
+                    regQueryCalls++;
+                    // Fail the first time (check), succeed the second time (verify after install)
+                    if (regQueryCalls === 1) throw new Error('missing 4.8');
+                    return '4.8.something';
+                }
+                if (cmd.includes('dotnet --list-runtimes')) return ''; // missing 8 (ignored for this test logic flow as we verify 4.8 first)
             });
 
             const wc = { send: jest.fn() };
