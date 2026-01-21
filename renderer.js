@@ -1266,6 +1266,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     startLoad(saved);
   }
   await checkDeps();
+
+  // Platform specific class
+  const platform = window.electronAPI.getPlatform();
+  document.body.classList.add(`platform-${platform}`);
 });
 
 chooseFolderBtn.addEventListener('click', async () => {
