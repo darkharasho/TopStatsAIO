@@ -13,7 +13,9 @@ const {
   setWineDotnetAlerted,
   toWindowsPath,
   hasWine,
-  resolveWindowsCommand
+  resolveWindowsCommand,
+  getNativeDotnetPath,
+  hasNativeDotnet
 } = require('./wineUtils');
 const isLinux = process.platform === 'linux';
 const useMica = !isLinux && process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
@@ -260,7 +262,7 @@ function createWindow() {
     ...(useMica ? { backgroundMaterial: appTheme === 'acrylic' ? 'acrylic' : 'mica', visualEffectState: 'active' } : {}),
     titleBarStyle: 'hidden',
     title: 'Top Stats AIO',
-    icon: path.join(__dirname, 'media', 'TopStatsAIO-Logo.ico'),
+    icon: path.join(__dirname, 'media', process.platform === 'win32' ? 'TopStatsAIO-Logo.ico' : 'TopStatsAIO-Logo.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       webviewTag: true
@@ -676,7 +678,12 @@ ipcMain.handle('start-parse', async (event, data) => {
     let configOutDir = tempDir;
     let configInputDir = processedDir;
 
-    if (process.platform !== 'win32' && hasWine()) {
+    // Check for native dotnet support
+    const nativeDotnetPath = process.platform !== 'win32' ? getNativeDotnetPath(depsDir) : null;
+    const hasNativeHelper = nativeDotnetPath && fs.existsSync(nativeDotnetPath);
+
+    // Only convert to Windows paths if we are strictly using Wine AND NOT using native dotnet
+    if (process.platform !== 'win32' && hasWine() && !hasNativeHelper) {
       try {
         const converted = await toWindowsPath([tempDir, processedDir]);
         if (converted && converted.length === 2) {
@@ -696,11 +703,7 @@ ipcMain.handle('start-parse', async (event, data) => {
     // Use the Windows-friendly path for the config file content
     await editEIConfig(eiTemplate, eiConf, configOutDir, opts.dpsUserToken, { anonymizePlayers: opts.anonymizePlayers });
 
-    // DEBUG: Log the config content to verify paths
-    try {
-      const confContent = await fs.promises.readFile(eiConf, 'utf8');
-      send(`[DEBUG] EI Config Content:\n${confContent.substring(0, 500)}...`); // first 500 chars
-    } catch (e) { console.warn('[DEBUG] Failed to read config for logging', e); }
+
 
     const combTemplate = path.join(__dirname, 'top_stats_config.ini');
     const combConf = path.join(tempDir, 'top_stats_config.ini');
@@ -750,35 +753,45 @@ ipcMain.handle('start-parse', async (event, data) => {
       updateCliProgress();
       try {
         send(`Running EI CLI on ${logs.length} log${logs.length === 1 ? '' : 's'}`);
-        // Convert paths for Wine
-        // We revert to Absolute Z: paths because relative paths might be flaky with dotnet on Wine.
-        // Now that we fixed the Runtime issue (by using dotnet.exe), absolute paths should be safe.
-        const linuxPaths = [eiConf, ...logs.map(f => path.join(tempDir, f))];
-        let windowsPaths = linuxPaths;
-        if (process.platform !== 'win32' && hasWine()) {
-          try {
-            windowsPaths = await toWindowsPath(linuxPaths);
-          } catch (e) { console.warn('Path conversion failed', e); }
-        }
+        const nativeDotnet = process.platform !== 'win32' ? getNativeDotnetPath(depsDir) : null;
+        const useNative = nativeDotnet && fs.existsSync(nativeDotnet);
 
-        // windowsPaths[0] is conf, rest are logs
-        const confPath = windowsPaths[0];
-        const logPaths = windowsPaths.slice(1);
-
-        // Use 'dotnet' directly to bypass the exe shim which fails to find runtime on Wine
         let cmdToRun = cliExe;
-        let argsToRun = ['-c', confPath, ...logPaths];
+        let argsToRun = [];
 
-        if (process.platform !== 'win32' && hasWine()) {
+        if (useNative) {
+          send('Using Native Linux .NET Runtime');
           const dllPath = cliExe.replace(/\.exe$/i, '.dll');
-          if (fs.existsSync(dllPath)) {
-            cmdToRun = 'dotnet.exe';
-            let winDllPath = dllPath;
+          cmdToRun = nativeDotnet;
+          // Use Linux paths directly
+          const linuxPaths = [eiConf, ...logs.map(f => path.join(tempDir, f))];
+          argsToRun = [dllPath, '-c', linuxPaths[0], ...linuxPaths.slice(1)];
+        } else {
+          // Legacy/Windows Logic
+          const linuxPaths = [eiConf, ...logs.map(f => path.join(tempDir, f))];
+          let windowsPaths = linuxPaths;
+          if (process.platform !== 'win32' && hasWine()) {
             try {
-              const converted = await toWindowsPath(dllPath);
-              if (converted && converted.length > 0) winDllPath = converted[0];
-            } catch (e) { console.warn('DLL path conversion failed', e); }
-            argsToRun = [winDllPath, '-c', confPath, ...logPaths];
+              windowsPaths = await toWindowsPath(linuxPaths);
+            } catch (e) { console.warn('Path conversion failed', e); }
+          }
+
+          const confPath = windowsPaths[0];
+          const logPaths = windowsPaths.slice(1);
+
+          argsToRun = ['-c', confPath, ...logPaths];
+
+          if (process.platform !== 'win32' && hasWine()) {
+            const dllPath = cliExe.replace(/\.exe$/i, '.dll');
+            if (fs.existsSync(dllPath)) {
+              cmdToRun = 'dotnet.exe';
+              let winDllPath = dllPath;
+              try {
+                const converted = await toWindowsPath(dllPath);
+                if (converted && converted.length > 0) winDllPath = converted[0];
+              } catch (e) { console.warn('DLL path conversion failed', e); }
+              argsToRun = [winDllPath, '-c', confPath, ...logPaths];
+            }
           }
         }
 
@@ -803,7 +816,7 @@ ipcMain.handle('start-parse', async (event, data) => {
     const generated = await fs.promises.readdir(tempDir);
     for (const f of generated) {
       if (f.toLowerCase().endsWith('.json.gz')) {
-        await fs.promises.rename(path.join(tempDir, f), path.join(processedDir, f));
+        await moveFile(path.join(tempDir, f), path.join(processedDir, f));
         send(`Moved processed log: ${f}`);
       }
     }
@@ -815,16 +828,74 @@ ipcMain.handle('start-parse', async (event, data) => {
         if (fs.existsSync(processedDir) && (await fs.promises.readdir(processedDir)).length > 0) {
           send('Running GW2 EI Log Combiner');
           try {
-            const combArgs = ['-i', processedDir, '-c', combConf];
-            if (opts.description) {
-              combArgs.push('-d', opts.description);
+            const nativeDotnet = process.platform !== 'win32' ? getNativeDotnetPath(depsDir) : null;
+            const useNative = nativeDotnet && fs.existsSync(nativeDotnet);
+
+            let cmdToRun = combExe;
+            let argsToRun = [];
+
+            // Base Linux args (valid if native or if no path conversion needed yet)
+            let currentProcessedDir = processedDir;
+            let currentCombConf = combConf;
+
+            if (useNative) {
+              // Native Mode: Use Linux paths + Native Runtime
+              send('Using Native Linux .NET Runtime for Combiner');
+              const dllPath = combExe.replace(/\.exe$/i, '.dll');
+              if (fs.existsSync(dllPath)) {
+                cmdToRun = nativeDotnet;
+                argsToRun = [dllPath, '-i', currentProcessedDir, '-c', currentCombConf];
+              } else {
+                // Fallback if DLL missing? Should not happen.
+                argsToRun = ['-i', currentProcessedDir, '-c', currentCombConf];
+              }
+            } else {
+              // Legacy/Wine Mode
+              // If path conversion ran earlier (lines 681), processedDir/combConf are already Windows paths.
+              // But if they weren't converted (e.g. no wine detected or platform=win32), they are raw.
+
+              // Note: The previous logic relied on configOutDir/configInputDir being converted.
+              // But processedDir variable itself was NOT updated in the previous code block?
+              // Let's re-check lines 681..
+              // "if (converted) { configOutDir = converted[0]; configInputDir = converted[1]; }"
+              // processedDir was NOT reassigned.
+
+              // So if Wine, we MUST convert processedDir and combConf here if they aren't already.
+              if (process.platform !== 'win32' && hasWine()) {
+                try {
+                  const wins = await toWindowsPath([processedDir, combConf]);
+                  if (wins && wins.length === 2) {
+                    currentProcessedDir = wins[0];
+                    currentCombConf = wins[1];
+                  }
+                } catch (e) { console.warn('Combiner path conversion failed', e); }
+              }
+
+              argsToRun = ['-i', currentProcessedDir, '-c', currentCombConf];
+
+              // Try to use dotnet.exe shim if possible for Wine stability
+              if (process.platform !== 'win32' && hasWine()) {
+                const dllPath = combExe.replace(/\.exe$/i, '.dll');
+                if (fs.existsSync(dllPath)) {
+                  cmdToRun = 'dotnet.exe';
+                  let winDllPath = dllPath;
+                  try {
+                    const converted = await toWindowsPath(dllPath);
+                    if (converted && converted.length > 0) winDllPath = converted[0];
+                  } catch (e) { }
+                  argsToRun = [winDllPath, '-i', currentProcessedDir, '-c', currentCombConf];
+                }
+              }
             }
-            const prettyCombCmd = [
-              combExe,
-              ...combArgs.map(arg => (/[\s]/.test(arg) ? `"${arg}"` : arg))
-            ].join(' ');
+
+            if (opts.description) {
+              argsToRun.push('-d', opts.description);
+            }
+
+            const prettyCombCmd = `${cmdToRun} ${argsToRun.map(a => /[\s]/.test(a) ? `"${a}"` : a).join(' ')}`;
             send(`GW2 EI Log Combiner command: ${prettyCombCmd}`);
-            await runProcess(combExe, combArgs, tempDir, wc, false, c => child = c, '\r\n');
+
+            await runProcess(cmdToRun, argsToRun, tempDir, wc, false, c => child = c, '\r\n');
             step('final', 'GW2 EI Log Combiner', 1, null, 1, 1);
           } catch (e) {
             step('final', 'GW2 EI Log Combiner', 1, 'Error', 1, 1);
@@ -873,7 +944,7 @@ ipcMain.handle('start-parse', async (event, data) => {
     for (const file of outputs) {
       if (file.toLowerCase().endsWith('.json') || file.toLowerCase().endsWith('.tid')) {
         const dest = path.join(parsedDir, file);
-        await fs.promises.rename(path.join(outDir, file), dest);
+        await moveFile(path.join(outDir, file), dest);
         outputFiles.push(dest);
         send(`Output: ${file}`);
       }
@@ -902,10 +973,7 @@ async function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, i
     throw error;
   }
 
-  // LOGGING: Debug what exactly is being executed
-  const debugCmdString = `${resolved.cmd} ${resolved.args.map(a => /\s/.test(a) ? `"${a}"` : a).join(' ')}`;
-  console.log(`[runProcess] Spawning: ${debugCmdString}`);
-  wc.send('parse-progress', `[DEBUG] Command: ${debugCmdString}`);
+
 
   return new Promise((resolve, reject) => {
     const child = spawn(resolved.cmd, resolved.args, {
@@ -953,4 +1021,18 @@ async function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, i
       reject(new Error(`${cmd} exited with code ${code}`));
     });
   });
+}
+
+// Helper to handle cross-device moves (EXDEV)
+async function moveFile(source, target) {
+  try {
+    await fs.promises.rename(source, target);
+  } catch (error) {
+    if (error.code === 'EXDEV') {
+      await fs.promises.copyFile(source, target);
+      await fs.promises.unlink(source);
+    } else {
+      throw error;
+    }
+  }
 }

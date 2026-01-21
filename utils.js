@@ -40,7 +40,8 @@ async function editEIConfig(template, dest, outDir, token, opts = {}) {
     if (l.startsWith('OutLocation=')) {
       // FORCE empty OutLocation on Linux/Wine to prevent crashes due to invalid paths/permissions.
       // CLI will default to input directory, which is safe and what we want.
-      if (process.platform !== 'win32') return 'OutLocation=';
+      // UPDATE: With Native .NET, an empty location is failing validation. We must provide a valid path.
+      if (process.platform !== 'win32') return `OutLocation=${outDir || '.'}`;
       return `OutLocation=${outDir || ''}`;
     }
     if (l.startsWith('DPSReportUserToken=')) return `DPSReportUserToken=${token || ''}`;
