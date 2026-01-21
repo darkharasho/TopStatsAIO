@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8" />
   <title>Top Stats AIO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
+  <!-- Titlebar -->
   <div id="titlebar">
     <div id="title-left">
       <img src="media/TopStatsAIO-Logo.png" id="title-logo" alt="Top Stats AIO Logo" />
@@ -18,224 +24,279 @@
       <button id="close" class="win-button" aria-label="Close">&#x2715;</button>
     </div>
   </div>
-  <div id="copy-toast"></div>
+
+  <div id="copy-toast">Copied to clipboard!</div>
+
+  <!-- Main Window -->
   <div id="main-window">
     <div id="folder-actions">
       <button id="choose-folder">Select Folder</button>
-      <span id="selected-folder" class="folder-label"></span>
+      <span id="selected-folder" class="folder-label">No folder selected</span>
       <input id="selected-folder-input" class="folder-label hidden" type="text" />
       <div id="action-buttons">
         <span id="update-notice" aria-label="Update available" class="action-icon hidden">&#9888;</span>
         <span id="settings" aria-label="Settings" class="action-icon">&#9881;</span>
       </div>
     </div>
+
     <div id="container">
+      <!-- File Picker Card -->
       <div id="file-tree" class="card">
         <div class="card-header">
-          <h3 class="card-title">File Picker</h3>
+          <h3 class="card-title">
+            File Picker
+          </h3>
           <div class="card-actions">
             <button id="select-all" class="small-btn">Select All</button>
             <span id="refresh-files" class="action-icon" aria-label="Refresh">&#8635;</span>
           </div>
         </div>
-        <div id="file-tree-loading" class="loading hidden">Loading...</div>
+        <div id="file-tree-loading" class="loading hidden">Scanning directory...</div>
         <div id="file-tree-list"></div>
-        <div id="progress-container" class="hidden"><div id="progress"></div></div>
+        <div id="progress-container" class="hidden">
+          <div id="progress"></div>
+        </div>
       </div>
+
+      <!-- Selected Files Card -->
       <div id="selected-files" class="card">
         <div class="card-header">
-          <h3 class="card-title">Selected Files</h3>
-          <button id="unselect-all" class="small-btn">Unselect All</button>
+          <h3 class="card-title">
+            Selected Logs
+          </h3>
+          <div class="card-actions">
+            <button id="unselect-all" class="small-btn">Clear</button>
+          </div>
         </div>
         <ul id="selected-list" class="file-root"></ul>
       </div>
     </div>
-    <div id="actions" class="card">
+
+    <div id="actions">
       <div id="date-section">
         <input type="datetime-local" id="date-filter" />
         <button id="date-select">Select Since</button>
       </div>
       <input type="text" id="description" placeholder="Optional Description" />
-      <button id="parse-btn" class="parse-btn">Parse</button>
+      <button id="parse-btn" class="parse-btn">Parse Logs</button>
     </div>
   </div>
-    <div id="parse-window">
-      <h2 class="parse-header">Parsing Logs</h2>
-      <div id="parse-steps"></div>
-      <div id="parse-output" class="parse-output"></div>
-      <div class="parse-actions">
-        <button id="parse-cancel">Cancel</button>
-        <button id="parse-close" disabled>Back</button>
-        <button id="parse-open-folder" disabled>Open Folder</button>
-        <button id="parse-upload" disabled>Upload</button>
+
+  <!-- Parse Window -->
+  <div id="parse-window">
+    <div class="parse-header-row">
+      <h2 class="parse-header">Processing Logs</h2>
+      <div id="parse-progress-container">
+        <div id="parse-progress-bar"></div>
       </div>
     </div>
-    <div id="upload-window">
-      <div id="upload-actions">
-        <div id="upload-nav">
-          <button id="upload-back" class="nav-btn" aria-label="Back" title="Back">⮜</button>
-          <button id="upload-forward" class="nav-btn" aria-label="Forward" title="Forward">⮞</button>
-        </div>
-        <button id="upload-home" class="nav-btn" aria-label="Home" title="Home">&#x2302;</button>
-        <button id="upload-refresh" class="nav-btn" aria-label="Refresh" title="Refresh">&#x21bb;</button>
-        <div id="upload-url-wrapper">
-          <input id="upload-url-display" class="folder-label" />
-          <span id="upload-copy" aria-label="Copy Link" title="Copy Link">🔗</span>
-        </div>
-        <button id="upload-close" class="nav-btn" aria-label="Close" title="Close">&#x2715;</button>
+    <div class="parse-content">
+      <div id="parse-steps"></div>
+      <div class="parse-output">
+        <div id="parse-output"></div>
       </div>
-      <div id="upload-loading"></div>
-      <webview id="upload-frame" partition="persist:upload" allowpopups></webview>
-      <div id="tiddly-guide" class="hidden">
-        <span id="tiddly-guide-text"></span>
+    </div>
+    <div class="parse-actions">
+      <button id="parse-cancel">Cancel</button>
+      <button id="parse-close" disabled>Back</button>
+      <button id="parse-open-folder" disabled>Open Folder</button>
+      <button id="parse-upload" disabled>Upload</button>
+    </div>
+  </div>
+
+  <!-- Upload Window -->
+  <div id="upload-window" class="hidden">
+    <div id="upload-actions">
+      <div id="upload-nav">
+        <button id="upload-back" class="nav-btn" aria-label="Back" title="Back">⮜</button>
+        <button id="upload-forward" class="nav-btn" aria-label="Forward" title="Forward">⮞</button>
+      </div>
+      <button id="upload-home" class="nav-btn" aria-label="Home" title="Home">&#x2302;</button>
+      <button id="upload-refresh" class="nav-btn" aria-label="Refresh" title="Refresh">&#x21bb;</button>
+      <div id="upload-url-wrapper">
+        <input id="upload-url-display" class="folder-label" readonly />
+        <span id="upload-copy" aria-label="Copy Link" title="Copy Link">🔗</span>
+      </div>
+      <button id="upload-close" class="nav-btn" aria-label="Close" title="Close">&#x2715;</button>
+    </div>
+    <div id="upload-loading"></div>
+    <webview id="upload-frame" partition="persist:upload" allowpopups></webview>
+    <div id="tiddly-guide" class="hidden">
+      <span id="tiddly-guide-text"></span>
+      <div>
         <button id="tiddly-setup" class="hidden">Setup</button>
         <button id="tiddly-refresh" class="hidden">Refresh</button>
         <button id="tiddly-use-url" class="hidden">Use URL</button>
       </div>
-      <div id="upload-status"></div>
     </div>
+    <div id="upload-status"></div>
+  </div>
+
+  <!-- Settings Window -->
   <div id="settings-window">
     <button id="close-settings" aria-label="Close">&#x2715;</button>
     <h2 class="settings-header">Settings</h2>
+    <p class="config-hint" style="margin-bottom: 24px;">Customize your experience and manage integrations</p>
+
     <div id="settings-grid">
       <div id="settings-left">
-        <div class="card" id="dependency-card">
-          <h3 class="card-title">Download Dependencies</h3>
+        <!-- Dependencies Card -->
+        <div class="card" id="dependency-card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 16px;">
+            Core Dependencies
+          </h3>
           <div class="dep-row">
-            <button id="download-cli">GW2 EI CLI</button>
-            <span id="cli-version" class="dep-version"></span>
+            <span>GW2 EI CLI</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="cli-version" class="dep-version">Checking...</span>
+              <button id="download-cli" class="small-btn">Update</button>
+            </div>
           </div>
           <div class="dep-row">
-            <button id="download-combiner">GW2 EI Log Combiner</button>
-            <span id="combiner-version" class="dep-version"></span>
+            <span>GW2 EI Log Combiner</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="combiner-version" class="dep-version">Checking...</span>
+              <button id="download-combiner" class="small-btn">Update</button>
+            </div>
           </div>
           <div class="dep-row">
-            <button id="download-parser">ArcDPS Top Stats Parser</button>
-            <span id="parser-version" class="dep-version"></span>
+            <span>ArcDPS Top Stats Parser</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span id="parser-version" class="dep-version">Checking...</span>
+              <button id="download-parser" class="small-btn">Update</button>
+            </div>
           </div>
         </div>
-        <div class="card" id="optional-config-card">
-          <h3 class="card-title">Optional Configuration</h3>
+
+        <!-- Integration Card -->
+        <div class="card" id="optional-config-card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 16px;">
+            Integration
+          </h3>
           <div class="config-row">
-            <label for="dps-user-token">DPSReportUserToken</label>
-            <input type="text" id="dps-user-token" class="config-input" />
+            <label for="dps-user-token">DPS Report User Token</label>
+            <input type="text" id="dps-user-token" class="config-input" placeholder="Enter your token..." />
           </div>
           <div class="config-row">
             <label for="upload-url">Upload URL</label>
-            <input type="text" id="upload-url" class="config-input" />
-            <button id="upload-login" class="small-btn" style="margin-left:auto;">Login</button>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="upload-url" class="config-input" style="flex: 1;" placeholder="https://..." />
+              <button id="setup-tiddlyhost" class="small-btn">Set up Tiddlyhost</button>
+            </div>
           </div>
         </div>
-        <div class="card" id="combiner-config-card">
-          <h3 class="card-title">GW2 EI Log Combiner</h3>
+
+        <!-- Combiner Config Link -->
+        <div class="card" id="combiner-config-card"
+          style="padding: 20px; background: linear-gradient(135deg, rgba(110, 193, 228, 0.1), transparent); border-color: rgba(110, 193, 228, 0.2);">
+          <h3 class="card-title" style="color: var(--brand-primary); margin-bottom: 8px;">
+            Log Combiner Configuration
+          </h3>
           <p class="config-hint">Configure guild, output, and Discord options in a dedicated view.</p>
-          <button id="open-combiner-settings" class="small-btn" type="button">Open Log Combiner Settings</button>
+          <button id="open-combiner-settings" class="small-btn" type="button"
+            style="background: var(--brand-primary); color: white; border: none; padding: 8px 16px;"><span
+              class="btn-icon">⚙</span>Open Log Combiner
+            Settings</button>
         </div>
-        <div class="card" id="elite-insights-card">
-          <h3 class="card-title">Elite Insights</h3>
-          <div class="config-row">
-            <label><input type="checkbox" id="ei-anonymize" /> Anonymize Players</label>
-          </div>
+
+        <!-- Elite Insights Card -->
+        <div class="card" id="elite-insights-card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 12px;">
+            Elite Insights
+          </h3>
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="ei-anonymize" />
+            <span>Anonymize Players</span>
+          </label>
         </div>
       </div>
+
       <div id="settings-right">
-        <div class="card" id="theme-card">
-          <h3 class="card-title">Theme</h3>
-          <div class="dep-row">
-            <button id="theme-dark" class="theme-btn">Dark</button>
-            <button id="theme-light" class="theme-btn">Light</button>
-            <button id="theme-acrylic" class="theme-btn">Acrylic</button>
+        <!-- Theme Card -->
+        <div class="card" id="theme-card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 16px;">
+            Appearance
+          </h3>
+
+          <!-- Window Mode Selector -->
+          <div class="theme-mode-row">
+            <button id="theme-dark" class="theme-btn">
+              <span class="theme-icon">🌙</span>
+              <span>Dark</span>
+            </button>
+            <button id="theme-light" class="theme-btn">
+              <span class="theme-icon">☀️</span>
+              <span>Light</span>
+            </button>
+            <button id="theme-acrylic" class="theme-btn selected">
+              <span class="theme-icon">✨</span>
+              <span>Acrylic</span>
+            </button>
           </div>
-          <div class="dep-row">
-            <details id="gradient-drawer">
-              <summary id="gradient-summary" class="gradient-text gradient-default">Blue/Purple</summary>
-              <div id="gradient-options">
-                <label>
-                  <input type="radio" name="gradient-theme" value="default" checked />
-                  <span class="gradient-text gradient-default">Blue/Purple</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="grey" />
-                  <span class="gradient-text gradient-grey">Grey</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="sunset" />
-                  <span class="gradient-text gradient-sunset">Sunset</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="forest" />
-                  <span class="gradient-text gradient-forest">Forest</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="ocean" />
-                  <span class="gradient-text gradient-ocean">Ocean</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="rose" />
-                  <span class="gradient-text gradient-rose">Rose</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="peach" />
-                  <span class="gradient-text gradient-peach">Peach</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="lavender" />
-                  <span class="gradient-text gradient-lavender">Lavender</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="midnight" />
-                  <span class="gradient-text gradient-midnight">Midnight</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="mint" />
-                  <span class="gradient-text gradient-mint">Mint</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="sky" />
-                  <span class="gradient-text gradient-sky">Sky</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="blush" />
-                  <span class="gradient-text gradient-blush">Blush</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="sand" />
-                  <span class="gradient-text gradient-sand">Sand</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="melon" />
-                  <span class="gradient-text gradient-melon">Melon</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="coral" />
-                  <span class="gradient-text gradient-coral">Coral</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="berry" />
-                  <span class="gradient-text gradient-berry">Berry</span>
-                </label>
-                <label>
-                  <input type="radio" name="gradient-theme" value="lagoon" />
-                  <span class="gradient-text gradient-lagoon">Lagoon</span>
-                </label>
-              </div>
-            </details>
+
+          <!-- Color Theme Grid -->
+          <div class="theme-color-section">
+            <label class="theme-section-label">Accent Color</label>
+            <div class="theme-color-grid">
+              <label class="theme-swatch" data-theme="default" title="Blue/Purple">
+                <input type="radio" name="gradient-theme" value="default" checked />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #6ec1e4, #8e44ad);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="ocean" title="Ocean">
+                <input type="radio" name="gradient-theme" value="ocean" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #4facfe, #00f2fe);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="forest" title="Forest">
+                <input type="radio" name="gradient-theme" value="forest" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #a8e063, #228b22);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="sunset" title="Sunset">
+                <input type="radio" name="gradient-theme" value="sunset" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #ffeb3b, #f44336);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="rose" title="Rose">
+                <input type="radio" name="gradient-theme" value="rose" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #ff9a9e, #fad0c4);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="berry" title="Berry">
+                <input type="radio" name="gradient-theme" value="berry" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #a18cd1, #fbc2eb);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="coral" title="Coral">
+                <input type="radio" name="gradient-theme" value="coral" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #ff9966, #ff5e62);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="lagoon" title="Lagoon">
+                <input type="radio" name="gradient-theme" value="lagoon" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #64b3f4, #c2e59c);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="mint" title="Mint">
+                <input type="radio" name="gradient-theme" value="mint" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #a8ff78, #78ffd6);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="lavender" title="Lavender">
+                <input type="radio" name="gradient-theme" value="lavender" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #e0c3fc, #8ec5fc);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="peach" title="Peach">
+                <input type="radio" name="gradient-theme" value="peach" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #f6d365, #fda085);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="midnight" title="Midnight">
+                <input type="radio" name="gradient-theme" value="midnight" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #667eea, #764ba2);"></span>
+              </label>
+              <label class="theme-swatch" data-theme="grey" title="Monochrome">
+                <input type="radio" name="gradient-theme" value="grey" />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #d3d3d3, #a6a6a6);"></span>
+              </label>
+            </div>
           </div>
         </div>
-        <div class="card" id="parser-selection-card">
-          <h3 class="card-title">Parser Selection</h3>
-          <div class="dep-row">
-            <label><input type="radio" name="parser" id="parser-topstats" value="topstats" /> ArcDPS Top Stats Parser</label>
-          </div>
-          <div class="dep-row">
-            <label><input type="radio" name="parser" id="parser-combiner" value="combiner" /> GW2 EI Log Combiner</label>
-          </div>
-          <div class="dep-row">
-            <button id="open-parser-folder">Open Parser Folder</button>
-          </div>
-        </div>
-        <div class="card" id="site-setup-card">
-          <h3 class="card-title">Site Setup</h3>
+
+        <!-- Tiddlyhost Card -->
+        <div class="card" id="site-setup-card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 8px;">Site Setup</h3>
           <p class="config-hint">Optional: store your Tiddlyhost login to auto-fill the sign-in form.</p>
           <div class="config-row">
             <label for="tiddlyhost-username">Tiddlyhost Username</label>
@@ -245,84 +306,137 @@
             <label for="tiddlyhost-password">Tiddlyhost Password</label>
             <input type="password" id="tiddlyhost-password" class="config-input" autocomplete="current-password" />
           </div>
-          <div class="config-row">
-            <button id="setup-tiddlyhost">Set up Tiddlyhost</button>
+          <button id="upload-login" style="width: 100%;">Login</button>
+        </div>
+
+        <!-- Parser Selection Card -->
+        <div class="card" id="parser-selection-card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 12px;">Parser Selection</h3>
+          <div class="dep-row">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" name="parser" id="parser-topstats" value="topstats" />
+              <span>ArcDPS Top Stats Parser</span>
+            </label>
           </div>
+          <div class="dep-row">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="radio" name="parser" id="parser-combiner" value="combiner" />
+              <span>GW2 EI Log Combiner</span>
+            </label>
+          </div>
+          <button id="open-parser-folder" style="width: 100%; margin-top: 8px;">Open Parser Folder</button>
         </div>
       </div>
     </div>
   </div>
+  </div>
+
+
+
+
+
+  <!-- Combiner Settings Window -->
   <div id="combiner-settings-window">
     <div class="combiner-settings-header">
       <button id="combiner-settings-back" class="nav-btn" aria-label="Back" title="Back">⮜</button>
       <div>
-        <h2 class="settings-header">GW2 EI Log Combiner</h2>
+        <h2 class="settings-header">Log Combiner Configuration</h2>
         <p class="config-hint">Adjust combiner output, Discord integration, and support role tracking.</p>
       </div>
     </div>
+
     <div id="combiner-settings-grid">
       <div id="combiner-settings-left">
-        <div class="card">
-          <h3 class="card-title">Guild &amp; Discord</h3>
+        <!-- Guild & Discord Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 16px;">
+            Guild &amp; Discord
+          </h3>
           <div class="config-row">
             <label for="combiner-guild-name">Guild Name</label>
             <input type="text" id="combiner-guild-name" class="config-input" />
           </div>
           <div class="config-row">
             <label for="combiner-guild-id">Guild ID</label>
-            <input type="text" id="combiner-guild-id" class="config-input" />
-            <button id="combiner-guild-lookup" class="small-btn" type="button" style="margin-left:auto;">Lookup</button>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="combiner-guild-id" class="config-input" style="flex: 1;" />
+              <button id="combiner-guild-lookup" class="small-btn" type="button"><span
+                  class="btn-icon">🔍</span>Lookup</button>
+            </div>
           </div>
           <div class="config-row">
             <label for="combiner-api-key">API Key</label>
             <input type="text" id="combiner-api-key" class="config-input" />
           </div>
+          <div class="config-row">
+            <label for="combiner-webhook-url">Webhook URL</label>
+            <input type="text" id="combiner-webhook-url" class="config-input"
+              placeholder="https://discord.com/api/webhooks/..." />
+          </div>
         </div>
-        <div class="card">
-          <h3 class="card-title">Support Professions</h3>
+
+        <!-- Support Professions Card -->
+        <div class="card" style="padding: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 class="card-title" style="margin: 0;">
+              Support Professions
+            </h3>
+            <button id="add-supported-prof" class="small-btn" type="button">Add
+              Profession</button>
+          </div>
           <p class="config-hint">Track up to five boons per profession in the Discord webhook.</p>
           <div id="supported-profs-message" class="supported-profs-message hidden"></div>
           <div id="supported-profs"></div>
-          <button id="add-supported-prof" class="small-btn" type="button">Add Profession</button>
         </div>
-        <div class="card">
-          <h3 class="card-title">Boon Weights</h3>
+
+        <!-- Boon Weights Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 12px;">
+            Boon Weights
+          </h3>
           <p class="config-hint">Higher values increase the boon score contribution. Default is 1.</p>
           <div id="boon-weights" class="weights-grid"></div>
         </div>
-        <div class="card">
-          <h3 class="card-title">Condition Weights</h3>
+
+        <!-- Condition Weights Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 12px;">
+            Condition Weights
+          </h3>
           <p class="config-hint">Higher values increase the condition score contribution. Default is 1.</p>
           <div id="condition-weights" class="weights-grid"></div>
         </div>
       </div>
+
       <div id="combiner-settings-right">
-        <div class="card">
-          <h3 class="card-title">Output Options</h3>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-glicko" /> Enable Glicko DB Update</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-fight-charts" /> Generate Fight Charts</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-hide-columns" /> Hide Columns</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-boons-detailed" /> Include Boons Detailed Tab</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-offensive-detailed" /> Include Offensive Detailed Tab</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-defenses-detailed" /> Include Defenses Detailed Tab</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-support-detailed" /> Include Support Detailed Tab</label>
-          </div>
+        <!-- Output Options Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 16px;">
+            Output Options
+          </h3>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-glicko" /> Enable Glicko
+            DB Update</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-fight-charts" />
+            Generate
+            Fight Charts</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-hide-columns" /> Hide
+            Columns</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-boons-detailed" />
+            Include
+            Boons Detailed Tab</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-offensive-detailed" />
+            Include Offensive Detailed Tab</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-defenses-detailed" />
+            Include Defenses Detailed Tab</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-support-detailed" />
+            Include Support Detailed Tab</label>
         </div>
-        <div class="card">
-          <h3 class="card-title">File Outputs</h3>
+
+        <!-- File Outputs Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 16px;">
+            File Outputs
+          </h3>
           <div class="config-row">
             <label for="combiner-input-directory">Input Directory</label>
             <input type="text" id="combiner-input-directory" class="config-input" />
@@ -343,12 +457,10 @@
             <label for="combiner-db-path">DB Path</label>
             <input type="text" id="combiner-db-path" class="config-input" />
           </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-write-all-json" /> Write All Data to JSON</label>
-          </div>
-          <div class="config-row">
-            <label><input type="checkbox" id="combiner-write-excel" /> Write Excel Output</label>
-          </div>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-write-all-json" /> Write
+            All Data to JSON</label>
+          <label class="dep-row" style="cursor: pointer;"><input type="checkbox" id="combiner-write-excel" /> Write
+            Excel Output</label>
           <div class="config-row">
             <label for="combiner-excel-filename">Excel Output Filename</label>
             <input type="text" id="combiner-excel-filename" class="config-input" />
@@ -370,31 +482,41 @@
             </select>
           </div>
         </div>
-        <div class="card">
-          <h3 class="card-title">Discord Notes</h3>
-          <div class="config-row">
-            <label for="combiner-webhook-url">Webhook URL</label>
-            <input type="text" id="combiner-webhook-url" class="config-input" placeholder="https://discord.com/api/webhooks/..." />
-          </div>
+
+        <!-- Discord Notes Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 12px;">
+            Discord Notes
+          </h3>
           <div class="config-row column">
             <label for="combiner-discord-notes">Additional Notes</label>
-            <textarea id="combiner-discord-notes" class="config-input config-textarea" rows="3" placeholder="Optional message to include in Discord posts."></textarea>
+            <textarea id="combiner-discord-notes" class="config-input config-textarea" rows="3"
+              placeholder="Optional message to include in Discord posts."></textarea>
           </div>
         </div>
-        <div class="card">
-          <h3 class="card-title">Account Filters</h3>
+
+        <!-- Account Filters Card -->
+        <div class="card" style="padding: 20px;">
+          <h3 class="card-title" style="margin-bottom: 12px;">
+            Account Filters
+          </h3>
           <div class="config-row column">
             <label for="combiner-blacklist-accounts">Account Blacklist (comma separated)</label>
-            <input type="text" id="combiner-blacklist-accounts" class="config-input" placeholder="account.1234, another.5678" />
+            <input type="text" id="combiner-blacklist-accounts" class="config-input"
+              placeholder="account.1234, another.5678" />
           </div>
         </div>
       </div>
     </div>
   </div>
-    <ul id="context-menu" class="hidden">
-      <li id="context-select-all">Select All</li>
-      <li id="context-unselect-all">Unselect All</li>
-    </ul>
-    <script src="renderer.js"></script>
-  </body>
-  </html>
+
+  <!-- Context Menu -->
+  <ul id="context-menu" class="hidden">
+    <li id="context-select-all">Select All</li>
+    <li id="context-unselect-all">Unselect All</li>
+  </ul>
+
+  <script src="renderer.js"></script>
+</body>
+
+</html>
