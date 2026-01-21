@@ -1,6 +1,6 @@
 {
   "name": "topstatsaio",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -9,10 +9,11 @@
     "test": "jest",
     "dist": "node scripts/build-win.js",
     "dist:linux": "node scripts/build-linux.js",
+    "dist:all": "node scripts/build-win.js && node scripts/build-linux.js --no-clean",
     "clear-settings": "node scripts/clear-settings.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Darkharasho <darkharasho@users.noreply.github.com>",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
@@ -32,11 +33,12 @@
         "nsis",
         "portable"
       ],
-      "icon": "media/TopStatsAIO-Logo.png"
+      "icon": "media/icon.ico"
     },
     "linux": {
       "target": [
         "AppImage",
+        "deb",
         "flatpak"
       ],
       "category": "Utility",

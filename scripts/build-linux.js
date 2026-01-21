@@ -17,11 +17,13 @@ function hasFlatpakBuilder() {
   }
 }
 
-fs.rmSync(distDir, { recursive: true, force: true });
-fs.mkdirSync(distDir);
+if (!process.argv.includes('--no-clean')) {
+  fs.rmSync(distDir, { recursive: true, force: true });
+  fs.mkdirSync(distDir);
+}
 
 const flatpakAvailable = hasFlatpakBuilder();
-const linuxTargets = flatpakAvailable ? 'AppImage,flatpak' : 'AppImage';
+const linuxTargets = flatpakAvailable ? 'AppImage deb flatpak' : 'AppImage deb';
 
 if (!flatpakAvailable) {
   console.warn('flatpak-builder not found; building AppImage only.');

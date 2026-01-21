@@ -29,9 +29,11 @@ function run(cmd, opts = {}) {
   execSync(cmd, { stdio: 'inherit', ...opts });
 }
 
-// clean dist
-fs.rmSync(distDir, { recursive: true, force: true });
-fs.mkdirSync(distDir);
+// clean dist if not disabled
+if (!process.argv.includes('--no-clean')) {
+  fs.rmSync(distDir, { recursive: true, force: true });
+  fs.mkdirSync(distDir);
+}
 
 // build portable using electron-packager
 run(`npx electron-packager . TopStatsAIO --platform=win32 --arch=x64 --icon=media/TopStatsAIO-Logo.png --out=dist --overwrite`);

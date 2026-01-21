@@ -277,7 +277,10 @@ const allowDevUpdates = process.argv.includes('--dev-update');
 
 function isInstalled() {
   const p = process.execPath.toLowerCase();
-  return p.includes('program files') || p.includes(path.join('appdata', 'local', 'programs').toLowerCase());
+  if (process.platform === 'win32') {
+    return p.includes('program files') || p.includes(path.join('appdata', 'local', 'programs').toLowerCase());
+  }
+  return p.startsWith('/opt/') || p.startsWith('/usr/');
 }
 
 function showUpdatePrompt(parent) {
@@ -313,11 +316,14 @@ async function checkForAppUpdates(parent) {
       const assets = rel.assets || [];
       const portable = collectAssetInfo(assets, /standalone.*\.zip$/i);
       const installer = collectAssetInfo(assets, /setup.*\.exe$/i);
-      const mode = resolveUpdateMode(isInstalled(), { portable, installer });
+      const deb = collectAssetInfo(assets, /.*\.deb$/i);
+      const appimage = collectAssetInfo(assets, /.*\.AppImage$/i);
+      const isAppImage = !!process.env.APPIMAGE;
+      const mode = resolveUpdateMode(isInstalled(), { portable, installer, deb, appimage }, isAppImage);
       pendingUpdate = {
         version: latest,
         releaseUrl: rel.html_url,
-        assets: { portable, installer },
+        assets: { portable, installer, deb, appimage },
         mode
       };
       if (parent && parent.webContents) {
@@ -369,20 +375,50 @@ async function applyPortableUpdate(wc) {
 async function performAppUpdate(wc) {
   if (!pendingUpdate) return;
   try {
-    if (pendingUpdate.mode === 'link' || process.platform !== 'win32') {
+    if (pendingUpdate.mode === 'link') {
       await shell.openExternal(pendingUpdate.releaseUrl);
       return;
     }
     if (pendingUpdate.mode === 'portable') {
       await applyPortableUpdate(wc);
-    } else {
+    } else if (pendingUpdate.mode === 'installer') {
       await applyInstallerUpdate(wc);
+    } else if (pendingUpdate.mode === 'deb' || pendingUpdate.mode === 'appimage') {
+      await applyLinuxUpdate(wc);
     }
   } catch (e) {
     logError('Failed to apply update:', e);
     wc && wc.send('update-progress', { stage: 'error', error: e.message });
     dialog.showErrorBox('Update failed', e.message);
   }
+}
+
+async function applyLinuxUpdate(wc) {
+  const asset = pendingUpdate.mode === 'appimage' ? pendingUpdate.assets.appimage : pendingUpdate.assets.deb;
+  if (!asset) throw new Error('Linux update asset not available');
+
+  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
+
+  const destPath = path.join(tmpDir, asset.name);
+  await downloadUpdateAsset(asset, destPath, p => send('download', p));
+  send('apply', 1);
+
+  if (pendingUpdate.mode === 'appimage') {
+    await fs.promises.chmod(destPath, 0o755);
+  }
+
+  // Open the file - standard handler should take care of it (GDebi/Software Center for deb, running for AppImage)
+  const err = await shell.openPath(destPath);
+  if (err) throw new Error(err);
+
+  // If we launched the new AppImage, we should probably quit?
+  // But shell.openPath is async and might return immediately.
+  // Quitting immediately might be jarring effectively crashing the user if the open failed silently or takes time.
+  // But for deb installer, we want to stay open until user runs it? No, usually installers want app closed.
+  // For AppImage, we want to launch new one.
+
+  setTimeout(() => app.quit(), 1000);
 }
 
 app.whenReady().then(() => {
