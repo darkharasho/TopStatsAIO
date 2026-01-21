@@ -2065,6 +2065,26 @@ function applyGradient(name) {
       c1 = '#64b3f4';
       c2 = '#c2e59c';
       break;
+    case 'neon':
+      c1 = '#00f5d4';
+      c2 = '#f72585';
+      break;
+    case 'aurora':
+      c1 = '#43e97b';
+      c2 = '#38f9d7';
+      break;
+    case 'ember':
+      c1 = '#ff6b35';
+      c2 = '#f7931e';
+      break;
+    case 'frost':
+      c1 = '#74ebd5';
+      c2 = '#acb6e5';
+      break;
+    case 'dusk':
+      c1 = '#9d50bb';
+      c2 = '#6e48aa';
+      break;
     default:
       c1 = '#6ec1e4';
       c2 = '#8e44ad';
