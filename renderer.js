@@ -1137,6 +1137,32 @@ async function checkDeps() {
   const needCli = info.cli.needsUpdate;
   const needComb = info.combiner.needsUpdate;
   const needParser = info.parser.needsUpdate;
+  const hasCli = !!info.cli.current;
+  const hasComb = !!info.combiner.current;
+  const hasParser = !!info.parser.current;
+
+  // Show/hide buttons and set text based on install status
+  if (!hasCli || needCli) {
+    downloadCliBtn.classList.remove('hidden');
+    downloadCliBtn.textContent = hasCli ? 'Update' : 'Download';
+  } else {
+    downloadCliBtn.classList.add('hidden');
+  }
+
+  if (!hasComb || needComb) {
+    downloadCombinerBtn.classList.remove('hidden');
+    downloadCombinerBtn.textContent = hasComb ? 'Update' : 'Download';
+  } else {
+    downloadCombinerBtn.classList.add('hidden');
+  }
+
+  if (!hasParser || needParser) {
+    downloadParserBtn.classList.remove('hidden');
+    downloadParserBtn.textContent = hasParser ? 'Update' : 'Download';
+  } else {
+    downloadParserBtn.classList.add('hidden');
+  }
+
   downloadCliBtn.classList.toggle('notify', needCli);
   downloadCombinerBtn.classList.toggle('notify', needComb);
   downloadParserBtn.classList.toggle('notify', needParser);

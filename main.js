@@ -239,6 +239,24 @@ async function downloadDependency(which) {
 async function checkDependencies() {
   ensureDeps(depsDir);
   const versions = readVersions(versionsFile);
+
+  // Verify actual file existence
+  const cliDir = path.join(depsDir, 'eicli');
+  const cliExe1 = path.join(cliDir, 'GuildWars2EliteInsights-CLI.exe');
+  const cliExe2 = path.join(cliDir, 'gw2eicli.exe');
+  const hasCli = fs.existsSync(cliExe1) || fs.existsSync(cliExe2);
+
+  const combDir = path.join(depsDir, 'logcombiner');
+  const hasComb = fs.existsSync(combDir);
+
+  const parserDir = path.join(depsDir, 'topstatsparser');
+  const hasParser = fs.existsSync(parserDir);
+
+  // Clear cached versions if files don't exist
+  if (!hasCli) versions.cli = null;
+  if (!hasComb) versions.combiner = null;
+  if (!hasParser) versions.parser = null;
+
   const [cliRel, combRel, parserRel] = await Promise.all([
     getLatest('baaron4/GW2-Elite-Insights-Parser'),
     getLatest('Drevarr/GW2_EI_log_combiner'),
@@ -248,9 +266,21 @@ async function checkDependencies() {
   const combVer = combRel.tag_name || combRel.name;
   const parserVer = parserRel.tag_name || parserRel.name;
   return {
-    cli: { current: versions.cli, latest: cliVer, needsUpdate: versions.cli !== cliVer },
-    combiner: { current: versions.combiner, latest: combVer, needsUpdate: versions.combiner !== combVer },
-    parser: { current: versions.parser, latest: parserVer, needsUpdate: versions.parser !== parserVer }
+    cli: {
+      current: versions.cli,
+      latest: cliVer,
+      needsUpdate: !hasCli || (versions.cli !== cliVer)
+    },
+    combiner: {
+      current: versions.combiner,
+      latest: combVer,
+      needsUpdate: !hasComb || (versions.combiner !== combVer)
+    },
+    parser: {
+      current: versions.parser,
+      latest: parserVer,
+      needsUpdate: !hasParser || (versions.parser !== parserVer)
+    }
   };
 }
 
