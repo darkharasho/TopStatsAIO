@@ -25,7 +25,7 @@ const openCombinerSettingsBtn = document.getElementById('open-combiner-settings'
 const combinerSettingsBackBtn = document.getElementById('combiner-settings-back');
 const darkBtn = document.getElementById('theme-dark');
 const lightBtn = document.getElementById('theme-light');
-const acrylicBtn = document.getElementById('theme-acrylic');
+
 const downloadCliBtn = document.getElementById('download-cli');
 const downloadCombinerBtn = document.getElementById('download-combiner');
 const downloadParserBtn = document.getElementById('download-parser');
@@ -687,7 +687,7 @@ function updateDescriptionVisibility() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-acrylicBtn.addEventListener('click', () => window.electronAPI.setTheme('acrylic'));
+
 gradientRadios.forEach(radio => {
   radio.addEventListener('change', () => {
     if (radio.checked) {
@@ -1266,10 +1266,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     startLoad(saved);
   }
   await checkDeps();
-
-  // Platform specific class
-  const platform = window.electronAPI.getPlatform();
-  document.body.classList.add(`platform-${platform}`);
 });
 
 chooseFolderBtn.addEventListener('click', async () => {
@@ -1985,19 +1981,13 @@ async function startParse() {
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
-  document.body.classList.toggle('acrylic', theme === 'acrylic');
+  // Acrylic removed, treat as default dark if not light
   if (theme === 'light') {
     lightBtn.classList.add('selected');
     darkBtn.classList.remove('selected');
-    acrylicBtn.classList.remove('selected');
-  } else if (theme === 'acrylic') {
-    acrylicBtn.classList.add('selected');
-    darkBtn.classList.remove('selected');
-    lightBtn.classList.remove('selected');
   } else {
     darkBtn.classList.add('selected');
     lightBtn.classList.remove('selected');
-    acrylicBtn.classList.remove('selected');
   }
   localStorage.setItem('theme', theme);
 }

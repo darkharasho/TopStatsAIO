@@ -100,11 +100,8 @@ process.on('uncaughtException', logError);
 process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
 
-// Enable transparency on Linux
-if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('enable-transparent-visuals');
-  app.commandLine.appendSwitch('disable-gpu');
-}
+// Enable transparency on Linux - REMOVED
+
 
 // Redirect any popup attempts from webviews into the same view instead of
 // spawning a separate BrowserWindow. This ensures navigation happens within the
@@ -295,13 +292,10 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1100,
     height: 800,
-    backgroundColor: '#00000000',
-    transparent: true,
-    ...(useMica ? { backgroundMaterial: appTheme === 'acrylic' ? 'acrylic' : 'mica', visualEffectState: 'active' } : {}),
+    backgroundColor: '#2d2d2d',
+    ...(useMica ? { backgroundMaterial: 'mica', visualEffectState: 'active' } : {}),
     roundedCorners: true,
     titleBarStyle: 'hidden',
-    frame: false, // Required for reliable Linux transparency
-    hasShadow: false, // Let compositor handle shadows/blur
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', process.platform === 'win32' ? 'TopStatsAIO-Logo.ico' : 'TopStatsAIO-Logo.png'),
     webPreferences: {
