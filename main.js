@@ -406,17 +406,16 @@ async function applyLinuxUpdate(wc) {
 
   if (pendingUpdate.mode === 'appimage') {
     await fs.promises.chmod(destPath, 0o755);
+    // Use spawn for AppImage to bypass DE security restrictions ("launching executables not allowed")
+    spawn(destPath, [], {
+      detached: true,
+      stdio: 'ignore'
+    }).unref();
+  } else {
+    // For .deb, use shell.openPath to trigger system installer (GDebi/Discover)
+    const err = await shell.openPath(destPath);
+    if (err) throw new Error(err);
   }
-
-  // Open the file - standard handler should take care of it (GDebi/Software Center for deb, running for AppImage)
-  const err = await shell.openPath(destPath);
-  if (err) throw new Error(err);
-
-  // If we launched the new AppImage, we should probably quit?
-  // But shell.openPath is async and might return immediately.
-  // Quitting immediately might be jarring effectively crashing the user if the open failed silently or takes time.
-  // But for deb installer, we want to stay open until user runs it? No, usually installers want app closed.
-  // For AppImage, we want to launch new one.
 
   setTimeout(() => app.quit(), 1000);
 }
