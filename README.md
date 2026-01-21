@@ -115,6 +115,30 @@ versioned files like:
 - Matching `.blockmap` files for both artifacts so the auto-updater can stream
   block-aware downloads and resume partial transfers
 
+## Linux Package (Flatpak + AppImage)
+
+Run `npm run dist:linux` on a Linux host to produce AppImage artifacts. If
+`flatpak-builder` is installed, it will also output Flatpak bundles via
+`electron-builder`.
+
+```bash
+npm run dist:linux
+```
+
+Install `flatpak-builder` with your distro package manager before running the
+Flatpak build:
+
+```bash
+# Ubuntu/Debian
+sudo apt install flatpak-builder
+
+# Fedora
+sudo dnf install flatpak-builder
+
+# Arch
+sudo pacman -S flatpak-builder
+```
+
 
 ## My App Disappeared, What Happened?
 

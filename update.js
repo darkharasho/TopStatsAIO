@@ -9,7 +9,7 @@ api.setLogger = (logger) => {
   if (typeof logger === 'function') {
     logError = logger;
   } else {
-    logError = () => {};
+    logError = () => { };
   }
 };
 
@@ -71,7 +71,7 @@ api.downloadWithBlockMap = async function downloadWithBlockMap(url, blockMapUrl,
   try {
     const stat = await fs.promises.stat(dest);
     existing = Math.min(stat.size, total || stat.size);
-  } catch {}
+  } catch { }
   const headers = { 'User-Agent': 'TopStatsAIO' };
   if (existing > 0 && total && existing < total) {
     headers.Range = `bytes=${existing}-`;
@@ -148,14 +148,19 @@ api.collectAssetInfo = function collectAssetInfo(assets, pattern) {
   };
 };
 
-api.resolveUpdateMode = function resolveUpdateMode(installedCopy, available) {
+api.resolveUpdateMode = function resolveUpdateMode(installedCopy, available, isAppImage) {
+  if (isAppImage && available.appimage) return 'appimage';
   if (installedCopy) {
     if (available.installer) return 'installer';
+    if (available.deb) return 'deb';
+    if (available.appimage) return 'appimage';
     if (available.portable) return 'portable';
     return 'link';
   }
-  if (available.portable) return 'portable';
+  if (available.appimage) return 'appimage';
   if (available.installer) return 'installer';
+  if (available.deb) return 'deb';
+  if (available.portable) return 'portable';
   return 'link';
 };
 

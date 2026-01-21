@@ -1,6 +1,6 @@
 {
   "name": "topstatsaio",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -8,10 +8,12 @@
     "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
+    "dist:linux": "node scripts/build-linux.js",
+    "dist:all": "node scripts/build-win.js && node scripts/build-linux.js --no-clean",
     "clear-settings": "node scripts/clear-settings.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Darkharasho <darkharasho@users.noreply.github.com>",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
@@ -19,6 +21,12 @@
     "electron-builder": "^24.13.3",
     "electron-packager": "^17.1.2",
     "jest": "^29.7.0"
+  },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/"
+    ]
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
@@ -31,7 +39,23 @@
         "nsis",
         "portable"
       ],
+      "icon": "media/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "flatpak"
+      ],
+      "category": "Utility",
       "icon": "media/TopStatsAIO-Logo.png"
+    },
+    "flatpak": {
+      "runtime": "org.freedesktop.Platform",
+      "runtimeVersion": "23.08",
+      "sdk": "org.freedesktop.Sdk",
+      "base": "org.electronjs.Electron2.BaseApp",
+      "baseVersion": "23.08"
     },
     "nsis": {
       "oneClick": false,

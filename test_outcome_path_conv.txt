@@ -1,0 +1,18 @@
+PASS __tests__/wineUtils.test.js
+  wineUtils
+    ensureWinetricks
+      ✓ returns existing winetricks path (2 ms)
+      ✓ returns "winetricks" if in PATH
+      ✓ downloads winetricks if not found (1 ms)
+    ensureWineDotnet
+      ✓ does nothing if already ready
+      ✓ installs dotnet if missing (1 ms)
+    resolveWindowsCommand
+      ✓ resolves simple exe on linux (1 ms)
+      ✓ throws if wine not installed (6 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        0.204 s, estimated 1 s
+Ran all test suites matching /__tests__\/wineUtils.test.js/i.
