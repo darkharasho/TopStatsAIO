@@ -1,16 +1,18 @@
 {
   "name": "topstatsaio",
-  "version": "2.6.0",
+  "version": "2.5.0",
   "description": "",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start:update": "electron . --dev-update",
     "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
     "dist:linux": "node scripts/build-linux.js",
     "dist:all": "node scripts/build-win.js && node scripts/build-linux.js --no-clean",
-    "clear-settings": "node scripts/clear-settings.js"
+    "clear-settings": "node scripts/clear-settings.js",
+    "fake-update": "electron . --fake-update"
   },
   "keywords": [],
   "author": "Darkharasho <darkharasho@users.noreply.github.com>",

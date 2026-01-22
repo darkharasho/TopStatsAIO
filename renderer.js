@@ -8,7 +8,7 @@ const dateFilterInput = document.getElementById('date-filter');
 const dateSelectBtn = document.getElementById('date-select');
 const unselectAllBtn = document.getElementById('unselect-all');
 const settingsBtn = document.getElementById('settings');
-const updateNoticeBtn = document.getElementById('update-notice');
+
 const selectAllBtn = document.getElementById('select-all');
 const refreshBtn = document.getElementById('refresh-files');
 const contextMenu = document.getElementById('context-menu');
@@ -587,7 +587,7 @@ document.getElementById('maximize').addEventListener('click', () => window.elect
 document.getElementById('close').addEventListener('click', () => window.electronAPI.close());
 titlebar.addEventListener('wheel', e => e.preventDefault(), { passive: false });
 settingsBtn.addEventListener('click', openSettings);
-updateNoticeBtn.addEventListener('click', () => window.electronAPI.showUpdatePrompt());
+
 selectAllBtn.addEventListener('click', () => {
   fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
     const p = li.dataset.path;
@@ -1181,14 +1181,7 @@ async function checkDeps() {
   }
 }
 window.electronAPI.onThemeChanged(applyTheme);
-window.electronAPI.onShowUpdateNotice(() => {
-  updateNoticeBtn.classList.remove('hidden');
-  updateNoticeBtn.classList.add('notify');
-});
-window.electronAPI.onHideUpdateNotice(() => {
-  updateNoticeBtn.classList.add('hidden');
-  updateNoticeBtn.classList.remove('notify');
-});
+
 window.electronAPI.onTreeStart(data => {
   const container = folderLists.get(data.path);
   if (container) {
@@ -2113,4 +2106,65 @@ function applyGradient(name) {
 function hexToRgb(hex) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '110, 193, 228';
+}
+
+// Update Notification Logic
+const updateNotification = document.getElementById('update-notification');
+const updateSpinner = document.getElementById('update-spinner');
+const updateStatusText = document.getElementById('update-status-text');
+const restartBtn = document.getElementById('restart-btn');
+
+if (window.electronAPI) {
+  window.electronAPI.onCheckingForUpdate(() => {
+    updateNotification.classList.remove('hidden');
+    updateStatusText.textContent = 'Checking for updates...';
+    updateSpinner.classList.remove('hidden');
+    restartBtn.classList.add('hidden');
+  });
+
+  window.electronAPI.onUpdateAvailable((info) => {
+    updateNotification.classList.remove('hidden');
+    updateStatusText.textContent = 'Update found!';
+    updateSpinner.classList.remove('hidden');
+    restartBtn.classList.add('hidden');
+  });
+
+  window.electronAPI.onUpdateNotAvailable(() => {
+    updateStatusText.textContent = 'Up to date';
+    updateSpinner.classList.add('hidden');
+    setTimeout(() => {
+      updateNotification.classList.add('hidden');
+    }, 3000);
+  });
+
+  window.electronAPI.onDownloadProgress((progressObj) => {
+    updateNotification.classList.remove('hidden');
+    const percent = Math.round(progressObj.percent);
+    updateStatusText.textContent = `Downloading... ${percent}%`;
+    updateSpinner.classList.remove('hidden');
+  });
+
+  window.electronAPI.onUpdateDownloaded((info) => {
+    updateNotification.classList.remove('hidden');
+    updateStatusText.textContent = 'Ready to Install';
+    updateSpinner.classList.add('hidden');
+    restartBtn.classList.remove('hidden');
+  });
+
+  window.electronAPI.onUpdateError((err) => {
+    updateNotification.classList.remove('hidden');
+    updateStatusText.textContent = 'Update Error';
+    updateSpinner.classList.add('hidden');
+    setTimeout(() => {
+      updateNotification.classList.add('hidden');
+    }, 5000);
+  });
+}
+
+if (restartBtn) {
+  restartBtn.addEventListener('click', () => {
+    if (window.electronAPI) {
+      window.electronAPI.restartApp();
+    }
+  });
 }

@@ -2212,3 +2212,54 @@ body.light #tiddly-guide-text {
         flex-direction: column;
     }
 }
+/* Update Notification Badge */
+.update-notification {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border-subtle);
+    border-radius: 9999px; /* Pill shape */
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-primary);
+    transition: var(--transition-base);
+    backdrop-filter: blur(8px);
+}
+
+.update-notification.hidden {
+    display: none;
+}
+
+.update-notification .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--text-muted);
+    border-top-color: var(--brand-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#restart-btn {
+    background: var(--accent-bg);
+    color: var(--brand-primary);
+    border: 1px solid var(--accent-border);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#restart-btn:hover {
+    background: var(--accent-bg-strong);
+}
+
+#restart-btn.hidden {
+    display: none;
+}
