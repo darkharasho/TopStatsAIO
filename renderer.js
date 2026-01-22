@@ -1232,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(theme);
   window.electronAPI.setTheme(theme);
   await loadTiddlyhostCredentials();
-  const grad = localStorage.getItem('gradientTheme') || 'default';
+  const grad = localStorage.getItem('gradientTheme') || 'neon';
   applyGradient(grad);
   const savedRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
   if (savedRadio) {
@@ -1606,21 +1606,6 @@ function renderSelected() {
 }
 
 function updateStep({ id, title, progress, error, success, current = 0, total = 0 }) {
-  // Update the main progress bar with OVERALL progress
-  const progressBar = document.getElementById('parse-progress-bar');
-  if (progressBar) {
-    const stepIndex = PARSE_STEPS_CONFIG.findIndex(s => s.id === id);
-    if (stepIndex !== -1) {
-      // Calculate overall progress: (completed steps + current step progress) / total steps
-      // Cap step progress at 1 for calculation
-      const safeProgress = Math.min(Math.max(progress || 0, 0), 1);
-      const overallProgress = (stepIndex + safeProgress) / PARSE_STEPS_CONFIG.length;
-      progressBar.style.width = `${Math.floor(overallProgress * 100)}%`;
-    } else if (id === 'complete' && (success || progress >= 1)) {
-      progressBar.style.width = '100%';
-    }
-  }
-
   const step = parseSteps.querySelector(`[data-step-id="${id}"]`);
   if (!step) return;
 
@@ -1729,9 +1714,6 @@ function openParseWindow() {
   parseUploadBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
-
-  const progressBar = document.getElementById('parse-progress-bar');
-  if (progressBar) progressBar.style.width = '0%';
 }
 
 function closeParseWindow() {

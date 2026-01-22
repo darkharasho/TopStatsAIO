@@ -933,6 +933,57 @@ body.light #date-filter {
 
 #parse-btn {
     margin-left: auto;
+    background: var(--brand-gradient);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px var(--glow-primary);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+#parse-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 30px var(--glow-primary);
+}
+
+#parse-btn:active {
+    transform: translateY(0);
+}
+
+#open-combiner-settings {
+    background: var(--brand-gradient) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px var(--glow-primary);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+#open-combiner-settings:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 30px var(--glow-primary);
+}
+
+#open-combiner-settings:active {
+    transform: translateY(0);
 }
 
 /* ============ Context Menu ============ */
@@ -1443,21 +1494,7 @@ body.acrylic #parse-window {
     margin: 0;
 }
 
-#parse-progress-container {
-    height: 6px;
-    background: var(--bg-input);
-    border-radius: 3px;
-    overflow: hidden;
-}
 
-#parse-progress-bar {
-    height: 100%;
-    width: 0;
-    background: var(--brand-gradient);
-    border-radius: 3px;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 10px var(--glow-primary);
-}
 
 .parse-content {
     display: flex;
@@ -1663,6 +1700,22 @@ body.light .parse-step.active {
 body.light .step-icon {
     background: #f1f5f9;
     border-color: #e2e8f0;
+}
+
+body.light .step-title {
+    color: #1e293b;
+}
+
+body.light .parse-step.active .step-title {
+    color: #0f172a;
+}
+
+body.light .step-status {
+    color: #64748b;
+}
+
+body.light .step-count {
+    color: #64748b;
 }
 
 /* Terminal Output - REVAMPED FOR MODERN AESTHETIC */

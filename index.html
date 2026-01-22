@@ -86,9 +86,6 @@
   <div id="parse-window">
     <div class="parse-header-row">
       <h2 class="parse-header">Processing Logs</h2>
-      <div id="parse-progress-container">
-        <div id="parse-progress-bar"></div>
-      </div>
     </div>
     <div class="parse-content">
       <div id="parse-steps"></div>
@@ -235,8 +232,12 @@
           <div class="theme-color-section">
             <label class="theme-section-label">Accent Color</label>
             <div class="theme-color-grid">
+              <label class="theme-swatch" data-theme="neon" title="Neon">
+                <input type="radio" name="gradient-theme" value="neon" checked />
+                <span class="swatch-color" style="background: linear-gradient(135deg, #00f5d4, #f72585);"></span>
+              </label>
               <label class="theme-swatch" data-theme="default" title="Blue/Purple">
-                <input type="radio" name="gradient-theme" value="default" checked />
+                <input type="radio" name="gradient-theme" value="default" />
                 <span class="swatch-color" style="background: linear-gradient(135deg, #6ec1e4, #8e44ad);"></span>
               </label>
               <label class="theme-swatch" data-theme="ocean" title="Ocean">
@@ -286,10 +287,6 @@
               <label class="theme-swatch" data-theme="grey" title="Monochrome">
                 <input type="radio" name="gradient-theme" value="grey" />
                 <span class="swatch-color" style="background: linear-gradient(135deg, #d3d3d3, #a6a6a6);"></span>
-              </label>
-              <label class="theme-swatch" data-theme="neon" title="Neon">
-                <input type="radio" name="gradient-theme" value="neon" />
-                <span class="swatch-color" style="background: linear-gradient(135deg, #00f5d4, #f72585);"></span>
               </label>
               <label class="theme-swatch" data-theme="aurora" title="Aurora">
                 <input type="radio" name="gradient-theme" value="aurora" />
