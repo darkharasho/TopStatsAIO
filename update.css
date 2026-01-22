@@ -1,20 +1,140 @@
+/* Update Window Styles - Modern Design */
+
 :root {
-  --text-color:#fff;
-  --bg-btn:#1e1e1e;
-  --bg-btn-hover:#2d2d2d;
-  --btn-border:#6ec1e4;
-  --btn-border-hover:#8e44ad;
+  --brand-primary: #6ec1e4;
+  --brand-secondary: #8e44ad;
+  --brand-gradient: linear-gradient(135deg, #6ec1e4, #8e44ad);
+  --bg-base: #0a0a0a;
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
 }
+
 body.light {
-  --text-color:#000;
-  --bg-btn:#f3f3f3;
-  --bg-btn-hover:#e5e5e5;
+  --bg-base: #f8fafc;
+  --bg-card: rgba(0, 0, 0, 0.02);
+  --border-subtle: rgba(0, 0, 0, 0.1);
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
 }
-body { margin:0; padding:20px; font-family:'Segoe UI', sans-serif; color:var(--text-color); background:transparent; -webkit-user-select:none; user-select:none; }
-input, textarea { -webkit-user-select:text; user-select:text; }
-h2 { margin-top:0; font-size:18px; }
-#hint { font-size:13px; margin-top:4px; opacity:0.8; }
-#buttons { margin-top:20px; text-align:right; }
-button { background:var(--bg-btn); color:var(--text-color); border:1px solid var(--btn-border); padding:6px 12px; margin-left:10px; border-radius:4px; cursor:pointer; }
-button:hover { background:var(--bg-btn-hover); border-color:var(--btn-border-hover); }
-button:focus { outline:none; box-shadow:0 0 0 1px var(--btn-border); border-color:var(--btn-border); }
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  padding: 32px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 12px;
+}
+
+#msg {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+#buttons {
+  display: flex;
+  gap: 12px;
+}
+
+button {
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+
+body.light button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+#download {
+  background: var(--brand-gradient);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 15px rgba(110, 193, 228, 0.3);
+}
+
+#download:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(110, 193, 228, 0.4);
+}
+
+#progress {
+  width: 100%;
+  max-width: 280px;
+}
+
+progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+progress::-webkit-progress-bar {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+progress::-webkit-progress-value {
+  background: var(--brand-gradient);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+body.light progress::-webkit-progress-bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+#status {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}

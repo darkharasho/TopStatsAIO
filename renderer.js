@@ -25,7 +25,7 @@ const openCombinerSettingsBtn = document.getElementById('open-combiner-settings'
 const combinerSettingsBackBtn = document.getElementById('combiner-settings-back');
 const darkBtn = document.getElementById('theme-dark');
 const lightBtn = document.getElementById('theme-light');
-const acrylicBtn = document.getElementById('theme-acrylic');
+
 const downloadCliBtn = document.getElementById('download-cli');
 const downloadCombinerBtn = document.getElementById('download-combiner');
 const downloadParserBtn = document.getElementById('download-parser');
@@ -101,6 +101,13 @@ const tiddlyRefreshBtn = document.getElementById('tiddly-refresh');
 const tiddlyUseUrlBtn = document.getElementById('tiddly-use-url');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
+const PARSE_STEPS_CONFIG = [
+  { id: 'copy', title: 'Copying Logs', icon: '1' },
+  { id: 'cli', title: 'EI CLI Analysis', icon: '2' },
+  { id: 'final', title: 'Processing Stats', icon: '3' },
+  { id: 'complete', title: 'Finalizing', icon: '4' }
+];
+
 const selected = new Map();
 let currentFolder = '';
 let rootList;
@@ -286,7 +293,7 @@ function saveSupportProfs() {
     const payload = supportProfs.map(entry => cloneSupportProfEntry(entry));
     localStorage.setItem(SUPPORT_PROFS_STORAGE_KEY, JSON.stringify(payload));
     localStorage.removeItem(LEGACY_SUPPORT_PROFS_STORAGE_KEY);
-  } catch {}
+  } catch { }
 }
 
 function loadWeights(storageKey, keys) {
@@ -316,7 +323,7 @@ function loadWeights(storageKey, keys) {
 function saveWeights(storageKey, weights) {
   try {
     localStorage.setItem(storageKey, JSON.stringify(weights));
-  } catch {}
+  } catch { }
 }
 
 function renderWeightInputs(container, weights, storageKey) {
@@ -353,7 +360,7 @@ async function loadTiddlyhostCredentials() {
     };
     if (tiddlyhostUsernameInput) tiddlyhostUsernameInput.value = tiddlyhostCredentials.username;
     if (tiddlyhostPasswordInput) tiddlyhostPasswordInput.value = tiddlyhostCredentials.password;
-  } catch {}
+  } catch { }
 }
 
 function saveTiddlyhostCredentials() {
@@ -383,10 +390,10 @@ function getSupportProfsForOptions() {
       const seen = new Set();
       const boons = Array.isArray(entry.boons)
         ? entry.boons.filter(id => {
-            if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
-            seen.add(id);
-            return true;
-          }).slice(0, 5)
+          if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        }).slice(0, 5)
         : [];
       if (!boons.length) return null;
       return { name, boons };
@@ -523,7 +530,7 @@ function navigateUploadFrame(url) {
       uploadFrame.loadURL(url);
       return;
     }
-  } catch {}
+  } catch { }
   uploadFrame.src = url;
 }
 
@@ -666,6 +673,7 @@ function closeSettings() {
   if (combinerSettingsWindow) {
     combinerSettingsWindow.classList.remove('active');
   }
+  document.getElementById('title-text').textContent = 'Top Stats AIO';
 }
 
 function updateDescriptionVisibility() {
@@ -679,7 +687,7 @@ function updateDescriptionVisibility() {
 
 darkBtn.addEventListener('click', () => window.electronAPI.setTheme('dark'));
 lightBtn.addEventListener('click', () => window.electronAPI.setTheme('light'));
-acrylicBtn.addEventListener('click', () => window.electronAPI.setTheme('acrylic'));
+
 gradientRadios.forEach(radio => {
   radio.addEventListener('change', () => {
     if (radio.checked) {
@@ -750,7 +758,7 @@ tiddlySetupBtn.addEventListener('click', async () => {
           tiddlyRefreshBtn.classList.remove('hidden');
           tiddlySetupStage = 1;
         })
-        .catch(() => {});
+        .catch(() => { });
     }, 1000);
   }
 });
@@ -787,6 +795,12 @@ uploadLoginBtn.addEventListener('click', () => {
 });
 setupTiddlyhostBtn.addEventListener('click', () => {
   openUploadWindow('https://tiddlyhost.com/', [], true);
+});
+tiddlyhostUsernameInput.addEventListener('input', () => {
+  saveTiddlyhostCredentials();
+});
+tiddlyhostPasswordInput.addEventListener('input', () => {
+  saveTiddlyhostCredentials();
 });
 combinerGuildNameInput.addEventListener('input', () => {
   localStorage.setItem('combinerGuildName', combinerGuildNameInput.value);
@@ -951,7 +965,7 @@ function showToast(message) {
 uploadCopyBtn.addEventListener('click', () => {
   navigator.clipboard.writeText(uploadUrlBar.value)
     .then(() => showToast('Address Copied to Clipboard'))
-    .catch(() => {});
+    .catch(() => { });
 });
 uploadUrlBar.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
@@ -1002,7 +1016,7 @@ uploadFrame.addEventListener('dom-ready', () => {
   setTimeout(() => {
     uploadFrame
       .insertCSS('html, body { height: auto !important; overflow: auto !important; }')
-      .catch(() => {});
+      .catch(() => { });
   }, 100);
 
   // Capture attempts to open a new window and redirect within the current frame
@@ -1017,7 +1031,7 @@ uploadFrame.addEventListener('dom-ready', () => {
         return { action: 'deny' };
       });
     }
-  } catch {}
+  } catch { }
 
   uploadFrame.focus();
 });
@@ -1042,11 +1056,58 @@ function updateUploadNav() {
 }
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
-  line.textContent = msg;
   line.classList.add('parse-line');
-  if (msg.toLowerCase().includes('error')) {
-    line.classList.add('error');
+
+  // Format timestamp
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+
+  // Determine message type and apply styling
+  const msgLower = msg.toLowerCase();
+  let icon = '';
+  let cssClass = '';
+
+  if (msgLower.includes('error') || msgLower.includes('failed') || msgLower.includes('exception')) {
+    icon = '✗';
+    cssClass = 'log-error';
+  } else if (msgLower.includes('warning') || msgLower.includes('warn')) {
+    icon = '⚠';
+    cssClass = 'log-warn';
+  } else if (msgLower.includes('success') || msgLower.includes('completed') || msgLower.includes('done')) {
+    icon = '✓';
+    cssClass = 'log-success';
+  } else if (msgLower.includes('copied') || msgLower.includes('copying') || msgLower.includes('running')) {
+    icon = '→';
+    cssClass = 'log-info';
+  } else if (msgLower.includes('config') || msgLower.includes('created') || msgLower.includes('prepared')) {
+    icon = '●';
+    cssClass = 'log-dim';
+  } else {
+    icon = '·';
+    cssClass = '';
   }
+
+  // Build formatted line
+  const timestamp = document.createElement('span');
+  timestamp.className = 'timestamp-span';
+  timestamp.textContent = ts;
+
+  const iconSpan = document.createElement('span');
+  iconSpan.className = 'icon-span';
+  iconSpan.textContent = icon;
+
+  const content = document.createElement('span');
+  content.className = 'content-span';
+  content.textContent = msg;
+
+  if (cssClass) {
+    line.classList.add(cssClass);
+  }
+
+  line.appendChild(timestamp);
+  line.appendChild(iconSpan);
+  line.appendChild(content);
+
   parseOutput.appendChild(line);
   parseOutput.scrollTop = parseOutput.scrollHeight;
 });
@@ -1058,13 +1119,50 @@ window.electronAPI.onParseComplete(result => {
   parseUploadBtn.dataset.files = JSON.stringify(files);
   parseCloseBtn.disabled = false;
   parseCancelBtn.disabled = true;
-  updateStep({ id: 'complete', title: success ? 'Completed' : 'Failed', progress: 1, error: success ? null : 'Error', success });
+
+  if (!success) {
+    // If failed/cancelled, mark all non-success steps as error
+    PARSE_STEPS_CONFIG.forEach(config => {
+      const step = parseSteps.querySelector(`[data-step-id="${config.id}"]`);
+      if (step && !step.classList.contains('success')) {
+        updateStep({ id: config.id, title: config.title, progress: 1, error: 'Cancelled' });
+      }
+    });
+  } else {
+    updateStep({ id: 'complete', title: 'Completed', progress: 1, success: true });
+  }
 });
 async function checkDeps() {
   const info = await window.electronAPI.checkDependencies();
   const needCli = info.cli.needsUpdate;
   const needComb = info.combiner.needsUpdate;
   const needParser = info.parser.needsUpdate;
+  const hasCli = !!info.cli.current;
+  const hasComb = !!info.combiner.current;
+  const hasParser = !!info.parser.current;
+
+  // Show/hide buttons and set text based on install status
+  if (!hasCli || needCli) {
+    downloadCliBtn.classList.remove('hidden');
+    downloadCliBtn.textContent = hasCli ? 'Update' : 'Download';
+  } else {
+    downloadCliBtn.classList.add('hidden');
+  }
+
+  if (!hasComb || needComb) {
+    downloadCombinerBtn.classList.remove('hidden');
+    downloadCombinerBtn.textContent = hasComb ? 'Update' : 'Download';
+  } else {
+    downloadCombinerBtn.classList.add('hidden');
+  }
+
+  if (!hasParser || needParser) {
+    downloadParserBtn.classList.remove('hidden');
+    downloadParserBtn.textContent = hasParser ? 'Update' : 'Download';
+  } else {
+    downloadParserBtn.classList.add('hidden');
+  }
+
   downloadCliBtn.classList.toggle('notify', needCli);
   downloadCombinerBtn.classList.toggle('notify', needComb);
   downloadParserBtn.classList.toggle('notify', needParser);
@@ -1134,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(theme);
   window.electronAPI.setTheme(theme);
   await loadTiddlyhostCredentials();
-  const grad = localStorage.getItem('gradientTheme') || 'default';
+  const grad = localStorage.getItem('gradientTheme') || 'neon';
   applyGradient(grad);
   const savedRadio = document.querySelector(`input[name="gradient-theme"][value="${grad}"]`);
   if (savedRadio) {
@@ -1508,64 +1606,109 @@ function renderSelected() {
 }
 
 function updateStep({ id, title, progress, error, success, current = 0, total = 0 }) {
-  if (id !== currentStepId) {
-    parseSteps.innerHTML = '';
-    currentStepId = id;
-    const step = document.createElement('div');
-    step.classList.add('parse-step');
-    const titleEl = document.createElement('div');
-    titleEl.classList.add('step-title');
-    const bar = document.createElement('div');
-    bar.classList.add('step-bar');
-    const fill = document.createElement('div');
-    fill.classList.add('step-fill');
-    bar.appendChild(fill);
-    const meta = document.createElement('div');
-    meta.classList.add('step-meta');
-    const countEl = document.createElement('div');
-    countEl.classList.add('step-count');
-    const status = document.createElement('div');
-    status.classList.add('step-status');
-    meta.appendChild(countEl);
-    meta.appendChild(status);
-    step.appendChild(titleEl);
-    step.appendChild(bar);
-    step.appendChild(meta);
-    parseSteps.appendChild(step);
-  }
-  const step = parseSteps.querySelector('.parse-step');
+  const step = parseSteps.querySelector(`[data-step-id="${id}"]`);
   if (!step) return;
+
   step.classList.remove('error', 'success');
-  step.querySelector('.step-title').textContent = title;
-  step.querySelector('.step-fill').style.width = `${Math.floor((progress || 0) * 100)}%`;
-  const countEl = step.querySelector('.step-count');
-  if (total > 0) {
-    countEl.textContent = `${current}/${total}`;
+  // Only remove active if it's NOT the current step
+  if (id !== currentStepId) {
+    step.classList.remove('active');
   } else {
-    countEl.textContent = '';
+    step.classList.add('active');
   }
-  const status = step.querySelector('.step-status');
+
+  // If progress implies activity (even 0% if it's current), enforce active
+  if ((progress >= 0 && progress < 1 && !error && !success) || id === currentStepId) {
+    step.classList.add('active');
+  }
+
+  // Find and update current step index for "active" highlight logic
+  if (progress > 0 && progress < 1) {
+    currentStepId = id;
+    // Highlight active step
+    parseSteps.querySelectorAll('.parse-step').forEach(s => s.classList.remove('active'));
+    step.classList.add('active');
+  }
+
   if (error) {
     step.classList.add('error');
-    status.textContent = error;
-  } else {
-    status.textContent = '';
-    if (success) {
-      step.classList.add('success');
+    step.querySelector('.step-status').textContent = error;
+  } else if (success || progress >= 1) {
+    step.classList.add('success');
+    step.querySelector('.step-status').textContent = 'Completed';
+    step.querySelector('.step-icon').textContent = '✓';
+
+    // Auto-activate next step to show ongoing progress
+    const currentIndex = PARSE_STEPS_CONFIG.findIndex(s => s.id === id);
+    if (currentIndex !== -1 && currentIndex < PARSE_STEPS_CONFIG.length - 1) {
+      const nextId = PARSE_STEPS_CONFIG[currentIndex + 1].id;
+      const nextStep = parseSteps.querySelector(`[data-step-id="${nextId}"]`);
+      if (nextStep) {
+        // Only activate if not already handled
+        if (!nextStep.classList.contains('active') && !nextStep.classList.contains('success')) {
+          nextStep.classList.add('active');
+          nextStep.querySelector('.step-status').textContent = 'Preparing...';
+          // Highlight active step
+          parseSteps.querySelectorAll('.parse-step').forEach(s => s.classList.remove('active'));
+          nextStep.classList.add('active');
+          currentStepId = nextId;
+        }
+      }
     }
+  } else {
+    step.querySelector('.step-status').textContent = title;
   }
-  if (progress >= 1 && !error && id !== 'complete') {
-    currentStepId = null;
+
+  const fill = step.querySelector('.step-fill');
+  if (fill) fill.style.width = `${Math.floor((progress || 0) * 100)}%`;
+
+  const countEl = step.querySelector('.step-count');
+  if (countEl) {
+    if (total > 0) {
+      countEl.textContent = `${current}/${total}`;
+    } else {
+      countEl.textContent = '';
+    }
   }
 }
 
 function openParseWindow() {
   mainWindowEl.classList.add('fade-out');
   parseWindow.classList.add('active');
-  document.getElementById('title-text').textContent = 'Parse';
+  document.getElementById('title-text').textContent = 'Processing';
   parseOutput.innerHTML = '';
-  parseSteps.innerHTML = '';
   currentStepId = null;
+
+  // Render initial steps outline
+  parseSteps.innerHTML = '';
+  PARSE_STEPS_CONFIG.forEach(config => {
+    const step = document.createElement('div');
+    step.classList.add('parse-step');
+    step.dataset.stepId = config.id;
+
+    step.innerHTML = `
+      <div class="step-header">
+        <div class="step-icon">${config.icon}</div>
+        <div class="step-title">${config.title}</div>
+      </div>
+      <div class="step-bar"><div class="step-fill"></div></div>
+      <div class="step-meta">
+        <div class="step-count"></div>
+        <div class="step-status">Pending...</div>
+      </div>
+    `;
+    parseSteps.appendChild(step);
+  });
+
+  // Initialize first step as active immediately
+  const firstId = PARSE_STEPS_CONFIG[0].id;
+  currentStepId = firstId;
+  const firstStep = parseSteps.querySelector(`[data-step-id="${firstId}"]`);
+  if (firstStep) {
+    firstStep.classList.add('active');
+    firstStep.querySelector('.step-status').textContent = 'Preparing...';
+  }
+
   parseOpenFolderBtn.disabled = true;
   parseUploadBtn.disabled = true;
   parseUploadBtn.dataset.files = '[]';
@@ -1700,6 +1843,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
     parseWindow.classList.remove('active');
   }
   uploadWindow.classList.add('active');
+  uploadWindow.classList.remove('hidden');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
   if (!tiddlyMode && syncInput) {
@@ -1721,10 +1865,10 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
   }
   const dropScript = payload.length ? makeDropScript(payload, isSetup) : null;
   const handleFinish = () => {
-    if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(()=>{});
+    if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(() => { });
     if (loginDetails && isTiddlyhostSignIn(uploadFrame.getURL())) {
       const loginScript = makeTiddlyhostLoginScript(loginDetails);
-      uploadFrame.executeJavaScript(loginScript, true).catch(() => {});
+      uploadFrame.executeJavaScript(loginScript, true).catch(() => { });
     }
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
@@ -1744,6 +1888,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
 
 function closeUploadWindow() {
   uploadWindow.classList.remove('active');
+  uploadWindow.classList.add('hidden');
   if (previousWindow === 'settings') {
     settingsWindow.classList.add('active');
     document.getElementById('title-text').textContent = 'Settings';
@@ -1818,19 +1963,13 @@ async function startParse() {
 
 function applyTheme(theme) {
   document.body.classList.toggle('light', theme === 'light');
-  document.body.classList.toggle('acrylic', theme === 'acrylic');
+  // Acrylic removed, treat as default dark if not light
   if (theme === 'light') {
     lightBtn.classList.add('selected');
     darkBtn.classList.remove('selected');
-    acrylicBtn.classList.remove('selected');
-  } else if (theme === 'acrylic') {
-    acrylicBtn.classList.add('selected');
-    darkBtn.classList.remove('selected');
-    lightBtn.classList.remove('selected');
   } else {
     darkBtn.classList.add('selected');
     lightBtn.classList.remove('selected');
-    acrylicBtn.classList.remove('selected');
   }
   localStorage.setItem('theme', theme);
 }
@@ -1848,7 +1987,7 @@ function applyGradient(name) {
       break;
     case 'forest':
       c1 = '#a8e063';
-      c2 = '#05621f';
+      c2 = '#228b22';
       break;
     case 'ocean':
       c1 = '#4facfe';
@@ -1867,8 +2006,8 @@ function applyGradient(name) {
       c2 = '#8ec5fc';
       break;
     case 'midnight':
-      c1 = '#000428';
-      c2 = '#004e92';
+      c1 = '#667eea';
+      c2 = '#764ba2';
       break;
     case 'mint':
       c1 = '#a8ff78';
@@ -1902,16 +2041,65 @@ function applyGradient(name) {
       c1 = '#64b3f4';
       c2 = '#c2e59c';
       break;
+    case 'neon':
+      c1 = '#00f5d4';
+      c2 = '#f72585';
+      break;
+    case 'aurora':
+      c1 = '#43e97b';
+      c2 = '#38f9d7';
+      break;
+    case 'ember':
+      c1 = '#ff6b35';
+      c2 = '#f7931e';
+      break;
+    case 'frost':
+      c1 = '#74ebd5';
+      c2 = '#acb6e5';
+      break;
+    case 'dusk':
+      c1 = '#9d50bb';
+      c2 = '#6e48aa';
+      break;
     default:
       c1 = '#6ec1e4';
       c2 = '#8e44ad';
   }
+  // Set comprehensive CSS variables for theme colors
+  const root = document.documentElement;
+
+  // Gradient and border variables
   const grad = `linear-gradient(to bottom right, ${c1}, ${c2}) 1`;
-  document.documentElement.style.setProperty('--card-border', grad);
-  document.documentElement.style.setProperty('--btn-border', c1);
-  document.documentElement.style.setProperty('--btn-border-hover', c2);
+  root.style.setProperty('--card-border', grad);
+  root.style.setProperty('--btn-border', c1);
+  root.style.setProperty('--btn-border-hover', c2);
   const barGrad = `linear-gradient(to right, ${c1}, ${c2})`;
-  document.documentElement.style.setProperty('--progress-bar', barGrad);
+  root.style.setProperty('--progress-bar', barGrad);
+
+  // Brand color variables for UI elements
+  root.style.setProperty('--brand-primary', c1);
+  root.style.setProperty('--brand-primary-rgb', hexToRgb(c1));
+  root.style.setProperty('--brand-secondary', c2);
+  root.style.setProperty('--brand-secondary-rgb', hexToRgb(c2));
+  root.style.setProperty('--brand-gradient', `linear-gradient(135deg, ${c1}, ${c2})`);
+
+  // Glow and accent colors - MORE PROMINENT VALUES
+  root.style.setProperty('--glow-primary', `rgba(${hexToRgb(c1)}, 0.45)`);
+  root.style.setProperty('--glow-secondary', `rgba(${hexToRgb(c2)}, 0.4)`);
+  root.style.setProperty('--accent-bg', `rgba(${hexToRgb(c1)}, 0.15)`);
+  root.style.setProperty('--accent-bg-strong', `rgba(${hexToRgb(c1)}, 0.25)`);
+  root.style.setProperty('--accent-border', `rgba(${hexToRgb(c1)}, 0.45)`);
+
+  // Background tinting for colorful UI
+  root.style.setProperty('--bg-tinted', `rgba(${hexToRgb(c1)}, 0.06)`);
+  root.style.setProperty('--card-bg-tinted', `linear-gradient(180deg, rgba(${hexToRgb(c1)}, 0.08) 0%, transparent 50%)`);
+
+  // Border glow for window - MORE PROMINENT
+  root.style.setProperty('--window-glow', `0 0 80px rgba(${hexToRgb(c1)}, 0.25), 0 0 120px rgba(${hexToRgb(c2)}, 0.18)`);
+
+  // Shadow with color
+  root.style.setProperty('--shadow-glow', `0 0 25px rgba(${hexToRgb(c1)}, 0.25)`);
+
   if (gradientSummary) {
     gradientSummary.classList.remove(
       ...Array.from(gradientSummary.classList).filter(c => c.startsWith('gradient-') && c !== 'gradient-text')
@@ -1919,4 +2107,10 @@ function applyGradient(name) {
     gradientSummary.classList.add('gradient-text', `gradient-${name}`);
   }
   localStorage.setItem('gradientTheme', name);
+}
+
+// Helper function to convert hex to RGB
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '110, 193, 228';
 }

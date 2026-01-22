@@ -97,7 +97,11 @@ function log(...args) {
 setLogger(logError);
 
 process.on('uncaughtException', logError);
+process.on('uncaughtException', logError);
 process.on('unhandledRejection', logError);
+
+// Enable transparency on Linux - REMOVED
+
 
 // Redirect any popup attempts from webviews into the same view instead of
 // spawning a separate BrowserWindow. This ensures navigation happens within the
@@ -239,6 +243,24 @@ async function downloadDependency(which) {
 async function checkDependencies() {
   ensureDeps(depsDir);
   const versions = readVersions(versionsFile);
+
+  // Verify actual file existence
+  const cliDir = path.join(depsDir, 'eicli');
+  const cliExe1 = path.join(cliDir, 'GuildWars2EliteInsights-CLI.exe');
+  const cliExe2 = path.join(cliDir, 'gw2eicli.exe');
+  const hasCli = fs.existsSync(cliExe1) || fs.existsSync(cliExe2);
+
+  const combDir = path.join(depsDir, 'logcombiner');
+  const hasComb = fs.existsSync(combDir);
+
+  const parserDir = path.join(depsDir, 'topstatsparser');
+  const hasParser = fs.existsSync(parserDir);
+
+  // Clear cached versions if files don't exist
+  if (!hasCli) versions.cli = null;
+  if (!hasComb) versions.combiner = null;
+  if (!hasParser) versions.parser = null;
+
   const [cliRel, combRel, parserRel] = await Promise.all([
     getLatest('baaron4/GW2-Elite-Insights-Parser'),
     getLatest('Drevarr/GW2_EI_log_combiner'),
@@ -248,9 +270,21 @@ async function checkDependencies() {
   const combVer = combRel.tag_name || combRel.name;
   const parserVer = parserRel.tag_name || parserRel.name;
   return {
-    cli: { current: versions.cli, latest: cliVer, needsUpdate: versions.cli !== cliVer },
-    combiner: { current: versions.combiner, latest: combVer, needsUpdate: versions.combiner !== combVer },
-    parser: { current: versions.parser, latest: parserVer, needsUpdate: versions.parser !== parserVer }
+    cli: {
+      current: versions.cli,
+      latest: cliVer,
+      needsUpdate: !hasCli || (versions.cli !== cliVer)
+    },
+    combiner: {
+      current: versions.combiner,
+      latest: combVer,
+      needsUpdate: !hasComb || (versions.combiner !== combVer)
+    },
+    parser: {
+      current: versions.parser,
+      latest: parserVer,
+      needsUpdate: !hasParser || (versions.parser !== parserVer)
+    }
   };
 }
 
@@ -258,8 +292,9 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1100,
     height: 800,
-    backgroundColor: useMica ? '#00000000' : '#2d2d2d',
-    ...(useMica ? { backgroundMaterial: appTheme === 'acrylic' ? 'acrylic' : 'mica', visualEffectState: 'active' } : {}),
+    backgroundColor: '#2d2d2d',
+    ...(useMica ? { backgroundMaterial: 'mica', visualEffectState: 'active' } : {}),
+    roundedCorners: true,
     titleBarStyle: 'hidden',
     title: 'Top Stats AIO',
     icon: path.join(__dirname, 'media', process.platform === 'win32' ? 'TopStatsAIO-Logo.ico' : 'TopStatsAIO-Logo.png'),

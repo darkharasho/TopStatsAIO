@@ -7,11 +7,10 @@ Your one stop shop for generating top stats. This program uses both Elite Insigh
 
 ---
 
-<img width="750" alt="image" src="https://github.com/user-attachments/assets/cec60373-5ae8-4afd-90fe-458016560340" />
+<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/56a0e4b7-29d7-4cac-aae0-e68e8dcd0205" />
 
-<img width="750" alt="image" src="https://github.com/user-attachments/assets/38195b55-af42-419d-8b53-51554faa0006" />
 
-<img width="750" alt="image" src="https://github.com/user-attachments/assets/a1389ad3-1803-46aa-a49c-784fdf4064eb" />
+<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/d7fee11b-8937-418b-b19b-7447a914b178" />
 
 ---
 
@@ -27,9 +26,6 @@ The primary directive of this application is to increase the user friendliness o
 - Open a built-in viewer that loads a configured Upload URL and automatically drops your parsed files for upload
 
 ## Setup
-
-![electron_DwDsPULMCL](https://github.com/user-attachments/assets/95609427-4bf6-46c9-b1ec-6fb51058d9a2)
-
 
 ### 1. Download the TopStatsAIO
 1. Head to the Releases [TopStatsAIO Releases](https://github.com/darkharasho/TopStatsAIO/releases) and download either the installer or the standalone zip
