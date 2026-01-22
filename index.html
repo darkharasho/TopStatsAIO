@@ -109,18 +109,43 @@
   <div id="upload-window" class="hidden">
     <div id="upload-actions">
       <div id="upload-nav">
-        <button id="upload-back" class="nav-btn" aria-label="Back" title="Back">⮜</button>
-        <button id="upload-forward" class="nav-btn" aria-label="Forward" title="Forward">⮞</button>
+        <button id="upload-back" class="nav-btn" aria-label="Back" title="Back"><svg xmlns="http://www.w3.org/2000/svg"
+            fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg></button>
+        <button id="upload-forward" class="nav-btn" aria-label="Forward" title="Forward"><svg
+            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg></button>
       </div>
-      <button id="upload-home" class="nav-btn" aria-label="Home" title="Home">&#x2302;</button>
-      <button id="upload-refresh" class="nav-btn" aria-label="Refresh" title="Refresh">&#x21bb;</button>
+      <button id="upload-home" class="nav-btn" aria-label="Home" title="Home"><svg xmlns="http://www.w3.org/2000/svg"
+          fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+        </svg></button>
+      <button id="upload-refresh" class="nav-btn" aria-label="Refresh" title="Refresh"><svg
+          xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg></button>
       <div id="upload-url-wrapper">
         <input id="upload-url-display" class="folder-label" readonly />
-        <span id="upload-copy" aria-label="Copy Link" title="Copy Link">🔗</span>
+        <span id="upload-copy" aria-label="Copy Link" title="Copy Link"><svg xmlns="http://www.w3.org/2000/svg"
+            fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+          </svg></span>
       </div>
-      <button id="upload-close" class="nav-btn" aria-label="Close" title="Close">&#x2715;</button>
+      <button id="upload-close" class="nav-btn" aria-label="Close" title="Close"><svg xmlns="http://www.w3.org/2000/svg"
+          fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg></button>
     </div>
-    <div id="upload-loading"></div>
+    <div id="upload-loading">
+      <div class="spinner-large"></div>
+      <div id="upload-loading-text" class="config-hint" style="font-weight: 500;">Loading...</div>
+    </div>
+    <div id="webview-progress" class="upload-progress-bar" style="width: 0%;"></div>
     <webview id="upload-frame" partition="persist:upload" allowpopups></webview>
     <div id="tiddly-guide" class="hidden">
       <span id="tiddly-guide-text"></span>
@@ -325,6 +350,14 @@
             <input type="password" id="tiddlyhost-password" class="config-input" autocomplete="current-password" />
           </div>
           <button id="upload-login" style="width: 100%;">Login</button>
+          <div style="margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
+            <p class="config-hint" style="margin-bottom: 8px;">Update your site with the latest Glass Skin.</p>
+            <button id="upload-import-skin" style="width: 100%; position: relative;">
+              Import / Update Skin
+              <span id="skin-update-badge" class="hidden"
+                style="position: absolute; right: 10px; background: #f43f5e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7em;">New!</span>
+            </button>
+          </div>
         </div>
 
         <!-- Parser Selection Card -->
