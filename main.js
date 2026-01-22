@@ -117,20 +117,82 @@ app.on('web-contents-created', (event, contents) => {
   }
 });
 
-async function fetchJson(url) {
+
+function getApiCachePath() {
+  return path.join(app.getPath('userData'), 'api-cache.json');
+}
+
+function loadApiCache() {
   try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'TopStatsAIO',
-        Accept: 'application/vnd.github+json'
-      }
-    });
+    const data = fs.readFileSync(getApiCachePath(), 'utf8');
+    return JSON.parse(data);
+  } catch {
+    return {};
+  }
+}
+
+function saveApiCache(cache) {
+  try {
+    fs.writeFileSync(getApiCachePath(), JSON.stringify(cache, null, 2), 'utf8');
+  } catch { }
+}
+
+async function fetchJson(url) {
+  const cache = loadApiCache();
+  const cachedEntry = cache[url];
+
+  const headers = {
+    'User-Agent': 'TopStatsAIO',
+    Accept: 'application/vnd.github+json'
+  };
+
+  if (cachedEntry && cachedEntry.etag) {
+    headers['If-None-Match'] = cachedEntry.etag;
+  }
+  if (cachedEntry && cachedEntry.lastModified) {
+    headers['If-Modified-Since'] = cachedEntry.lastModified;
+  }
+
+  try {
+    const res = await fetch(url, { headers });
+
+    // 304 Not Modified - Return cached data
+    if (res.status === 304 && cachedEntry) {
+      console.log(`[Cache Hit] 304 Not Modified for ${url}`);
+      return cachedEntry.data;
+    }
+
     if (!res.ok) {
+      // 403 Forbidden (Rate Limit) or other errors - Fallback to cache if available
+      if ((res.status === 403 || res.status >= 500) && cachedEntry) {
+        console.warn(`[Cache Fallback] API Error ${res.status} for ${url}. Using cached data.`);
+        return cachedEntry.data;
+      }
+
       const text = await res.text().catch(() => '');
       throw new Error(`Fetch failed: ${res.status} ${res.statusText}\n${text}`);
     }
-    return await res.json();
+
+    const data = await res.json();
+
+    // Store new cache entry
+    const newEntry = {
+      etag: res.headers.get('etag'),
+      lastModified: res.headers.get('last-modified'),
+      data: data,
+      timestamp: Date.now()
+    };
+
+    cache[url] = newEntry;
+    saveApiCache(cache);
+
+    return data;
   } catch (err) {
+    // Network failure - Fallback to cache
+    if (cachedEntry) {
+      console.warn(`[Cache Fallback] Network Error for ${url}: ${err.message}. Using cached data.`);
+      return cachedEntry.data;
+    }
     throw new Error(`Fetch failed: ${err.message}`);
   }
 }
@@ -308,7 +370,7 @@ function createWindow() {
   return win;
 }
 
-const allowDevUpdates = process.argv.includes('--dev-update');
+
 
 function isInstalled() {
   const p = process.execPath.toLowerCase();
@@ -318,35 +380,148 @@ function isInstalled() {
   return p.startsWith('/opt/') || p.startsWith('/usr/');
 }
 
-function showUpdatePrompt(parent) {
+// Simplified auto-update logic for slide-out UI
+async function autoStartDownload(wc) {
   if (!pendingUpdate) return;
-  const prompt = new BrowserWindow({
-    parent,
-    modal: true,
-    width: 360,
-    height: 230,
-    resizable: false,
-    frame: false,
-    backgroundColor: useMica ? '#00000000' : '#2d2d2d',
-    ...(useMica ? { backgroundMaterial: appTheme === 'acrylic' ? 'acrylic' : 'mica', visualEffectState: 'active' } : {}),
-    titleBarStyle: 'hidden',
-    show: false,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+
+  // Update renderer that update is available
+  wc.send('update-available', { version: pendingUpdate.version });
+
+  try {
+    const send = (stage, progress) => {
+      // Map stages to renderer expectations if needed, or just send progress
+      if (stage === 'download') {
+        wc.send('download-progress', { percent: progress * 100 });
+      }
+    };
+
+    const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
+    pendingUpdate.tmpDir = tmpDir; // Store for restart phase
+
+    let asset;
+    let destPath;
+
+    if (pendingUpdate.mode === 'portable') {
+      asset = pendingUpdate.assets.portable || pendingUpdate.assets.installer;
+      const zipName = asset.name && asset.name.toLowerCase().endsWith('.zip') ? asset.name : 'update.zip';
+      destPath = path.join(tmpDir, zipName);
+    } else if (pendingUpdate.mode === 'installer') {
+      asset = pendingUpdate.assets.installer;
+      destPath = path.join(tmpDir, asset.name || 'setup.exe');
+    } else if (pendingUpdate.mode === 'deb' || pendingUpdate.mode === 'appimage') {
+      asset = pendingUpdate.mode === 'appimage' ? pendingUpdate.assets.appimage : pendingUpdate.assets.deb;
+      destPath = path.join(tmpDir, asset.name);
+    } else {
+      // Link, just show notice?
+      return;
     }
-  });
-  const mode = pendingUpdate.mode || 'link';
-  prompt.loadFile('update.html', {
-    query: { version: pendingUpdate.version, mode, url: pendingUpdate.releaseUrl || '' }
-  });
-  prompt.once('ready-to-show', () => prompt.show());
+
+    if (!asset) throw new Error('Update asset not found');
+
+    pendingUpdate.localPath = destPath;
+    await downloadUpdateAsset(asset, destPath, p => send('download', p));
+
+    // Download complete
+    wc.send('update-downloaded', { version: pendingUpdate.version });
+
+  } catch (e) {
+    logError('Auto-download failed:', e);
+    wc.send('update-error', { message: e.message });
+  }
+}
+
+async function performRestartAndInstall() {
+  if (!pendingUpdate || !pendingUpdate.localPath) return;
+
+  if (fakeUpdateMode && pendingUpdate.localPath === 'MOCK_PATH') {
+    log('Fake update install triggered. Quitting app...');
+    app.quit();
+    return;
+  }
+
+  try {
+    if (pendingUpdate.mode === 'portable') {
+      // Basic portable apply logic
+      const tmpDir = pendingUpdate.tmpDir;
+      const extractDir = path.join(tmpDir, 'payload');
+      await fs.promises.mkdir(extractDir, { recursive: true });
+      const zip = new AdmZip(pendingUpdate.localPath);
+      zip.extractAllTo(extractDir, true);
+      const payloadRoot = await findPayloadRoot(extractDir);
+      const scriptPath = await createPortableUpdateScript(payloadRoot, path.dirname(process.execPath), tmpDir);
+      spawn('cmd.exe', ['/c', 'start', '', scriptPath], { detached: true, windowsHide: true });
+      app.quit();
+    } else if (pendingUpdate.mode === 'installer') {
+      const err = await shell.openPath(pendingUpdate.localPath);
+      if (err) throw new Error(err);
+      app.quit();
+    } else if (pendingUpdate.mode === 'appimage') {
+      await fs.promises.chmod(pendingUpdate.localPath, 0o755);
+      spawn(pendingUpdate.localPath, [], { detached: true, stdio: 'ignore' }).unref();
+      app.quit();
+    } else if (pendingUpdate.mode === 'deb') {
+      const err = await shell.openPath(pendingUpdate.localPath);
+      if (err) throw new Error(err);
+      app.quit(); // Optional? Usually system installer handles it
+    }
+  } catch (e) {
+    logError('Install failed:', e);
+    if (mainWindow) {
+      mainWindow.webContents.send('update-error', { message: e.message });
+    }
+  }
+}
+
+
+const fakeUpdateMode = process.argv.includes('--fake-update');
+
+const allowDevUpdates = process.argv.includes('--dev-update') || fakeUpdateMode;
+
+async function simulateFakeDownload(wc) {
+  if (!pendingUpdate) return;
+
+  // 1. Checking state
+  wc.send('checking-for-update');
+  await new Promise(r => setTimeout(r, 1500));
+
+  wc.send('update-available', { version: pendingUpdate.version });
+
+  // Simulate steps 0% to 100%
+  const steps = [10, 25, 45, 60, 80, 95, 100];
+  for (const p of steps) {
+    await new Promise(r => setTimeout(r, 600)); // Delay between steps
+    wc.send('download-progress', { percent: p });
+  }
+
+  wc.send('update-downloaded', { version: pendingUpdate.version });
 }
 
 async function checkForAppUpdates(parent) {
+  if (fakeUpdateMode) {
+    log('Fake update mode active. Simulating update...');
+    pendingUpdate = {
+      version: '9.9.9',
+      releaseUrl: 'https://github.com/darkharasho/TopStatsAIO/releases/tag/v9.9.9',
+      assets: { portable: { name: 'FakeUpdate.zip', browser_download_url: '' } },
+      mode: 'portable',
+      localPath: 'MOCK_PATH' // flag for restart handler
+    };
+
+    if (parent && parent.webContents) {
+      simulateFakeDownload(parent.webContents);
+    }
+    return;
+  }
+
   try {
+    if (parent && parent.webContents) {
+      parent.webContents.send('checking-for-update');
+    }
+
     const rel = await getLatest('darkharasho/TopStatsAIO');
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();
+
     if (latest && semver.gt(latest, current)) {
       const assets = rel.assets || [];
       const portable = collectAssetInfo(assets, /standalone.*\.zip$/i);
@@ -361,99 +536,29 @@ async function checkForAppUpdates(parent) {
         assets: { portable, installer, deb, appimage },
         mode
       };
+
+      // Auto-start download for seamless experience
       if (parent && parent.webContents) {
-        parent.webContents.send('show-update-notice');
+        autoStartDownload(parent.webContents);
       }
-      showUpdatePrompt(parent);
+    } else {
+      if (parent && parent.webContents) {
+        parent.webContents.send('update-not-available');
+      }
     }
   } catch (err) {
     logError('Update check failed:', err);
-  }
-}
-
-async function applyInstallerUpdate(wc) {
-  if (!pendingUpdate.assets || !pendingUpdate.assets.installer) {
-    throw new Error('Installer asset not available');
-  }
-  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
-  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
-  const asset = pendingUpdate.assets.installer;
-  const setupPath = path.join(tmpDir, asset.name || 'setup.exe');
-  await downloadUpdateAsset(asset, setupPath, p => send('download', p));
-  send('apply', 1);
-  const err = await shell.openPath(setupPath);
-  if (err) throw new Error(err);
-  app.quit();
-}
-
-async function applyPortableUpdate(wc) {
-  if (!pendingUpdate.assets) throw new Error('No update assets available');
-  const asset = pendingUpdate.assets.portable || pendingUpdate.assets.installer;
-  if (!asset) throw new Error('Portable package not available');
-  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-portable-'));
-  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
-  const zipName = asset.name && asset.name.toLowerCase().endsWith('.zip') ? asset.name : 'update.zip';
-  const zipPath = path.join(tmpDir, zipName);
-  await downloadUpdateAsset(asset, zipPath, p => send('download', p));
-  send('apply', 0.2);
-  const extractDir = path.join(tmpDir, 'payload');
-  await fs.promises.mkdir(extractDir, { recursive: true });
-  const zip = new AdmZip(zipPath);
-  zip.extractAllTo(extractDir, true);
-  const payloadRoot = await findPayloadRoot(extractDir);
-  const scriptPath = await createPortableUpdateScript(payloadRoot, path.dirname(process.execPath), tmpDir);
-  send('apply', 1);
-  spawn('cmd.exe', ['/c', 'start', '', scriptPath], { detached: true, windowsHide: true });
-  app.quit();
-}
-
-async function performAppUpdate(wc) {
-  if (!pendingUpdate) return;
-  try {
-    if (pendingUpdate.mode === 'link') {
-      await shell.openExternal(pendingUpdate.releaseUrl);
-      return;
+    if (parent && parent.webContents) {
+      // Optionally notify user of error or just silent fail
+      // parent.webContents.send('update-error', { message: err.message });
     }
-    if (pendingUpdate.mode === 'portable') {
-      await applyPortableUpdate(wc);
-    } else if (pendingUpdate.mode === 'installer') {
-      await applyInstallerUpdate(wc);
-    } else if (pendingUpdate.mode === 'deb' || pendingUpdate.mode === 'appimage') {
-      await applyLinuxUpdate(wc);
-    }
-  } catch (e) {
-    logError('Failed to apply update:', e);
-    wc && wc.send('update-progress', { stage: 'error', error: e.message });
-    dialog.showErrorBox('Update failed', e.message);
   }
 }
 
-async function applyLinuxUpdate(wc) {
-  const asset = pendingUpdate.mode === 'appimage' ? pendingUpdate.assets.appimage : pendingUpdate.assets.deb;
-  if (!asset) throw new Error('Linux update asset not available');
-
-  const tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'tsa-update-'));
-  const send = (stage, progress) => wc && wc.send('update-progress', { stage, progress });
-
-  const destPath = path.join(tmpDir, asset.name);
-  await downloadUpdateAsset(asset, destPath, p => send('download', p));
-  send('apply', 1);
-
-  if (pendingUpdate.mode === 'appimage') {
-    await fs.promises.chmod(destPath, 0o755);
-    // Use spawn for AppImage to bypass DE security restrictions ("launching executables not allowed")
-    spawn(destPath, [], {
-      detached: true,
-      stdio: 'ignore'
-    }).unref();
-  } else {
-    // For .deb, use shell.openPath to trigger system installer (GDebi/Discover)
-    const err = await shell.openPath(destPath);
-    if (err) throw new Error(err);
-  }
-
-  setTimeout(() => app.quit(), 1000);
-}
+// IPC Handlers for new update flow
+ipcMain.on('restart-app', () => {
+  performRestartAndInstall();
+});
 
 app.whenReady().then(() => {
   console.log('DEBUG: User Data Path:', app.getPath('userData'));
@@ -672,20 +777,6 @@ ipcMain.handle('set-tiddlyhost-credentials', async (event, creds) => {
 ipcMain.on('cancel-parse', () => {
   if (currentParseCancel) currentParseCancel();
 });
-
-ipcMain.on('update-later', () => {
-  if (mainWindow) mainWindow.webContents.send('show-update-notice');
-});
-
-ipcMain.on('update-downloaded', () => {
-  if (mainWindow) mainWindow.webContents.send('hide-update-notice');
-});
-
-ipcMain.handle('show-update-prompt', () => {
-  if (mainWindow) showUpdatePrompt(mainWindow);
-});
-
-ipcMain.handle('perform-update', (e) => performAppUpdate(e.sender));
 
 ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;

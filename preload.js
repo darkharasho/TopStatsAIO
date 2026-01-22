@@ -35,5 +35,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (e, data) => cb(data)),
   getTiddlyhostCredentials: () => ipcRenderer.invoke('get-tiddlyhost-credentials'),
   setTiddlyhostCredentials: (creds) => ipcRenderer.invoke('set-tiddlyhost-credentials', creds),
+  // Auto-Updater API
+  onCheckingForUpdate: (callback) => ipcRenderer.on('checking-for-update', (event) => callback()),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (event, info) => callback(info)),
+  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', (event, info) => callback(info)),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, progress) => callback(progress)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info)),
+  onUpdateError: (callback) => ipcRenderer.on('update-error', (event, err) => callback(err)),
+  restartApp: () => ipcRenderer.send('restart-app'),
+
   getPlatform: () => process.platform,
 });

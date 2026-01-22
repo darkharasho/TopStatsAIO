@@ -34,7 +34,11 @@
       <span id="selected-folder" class="folder-label">No folder selected</span>
       <input id="selected-folder-input" class="folder-label hidden" type="text" />
       <div id="action-buttons">
-        <span id="update-notice" aria-label="Update available" class="action-icon hidden">&#9888;</span>
+        <div id="update-notification" class="update-notification hidden">
+          <div id="update-spinner" class="spinner"></div>
+          <span id="update-status-text">Checking...</span>
+          <button id="restart-btn" class="hidden">Restart</button>
+        </div>
         <span id="settings" aria-label="Settings" class="action-icon">&#9881;</span>
       </div>
     </div>
