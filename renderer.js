@@ -79,6 +79,7 @@ const parseSteps = document.getElementById('parse-steps');
 const parseOpenFolderBtn = document.getElementById('parse-open-folder');
 const parseUploadBtn = document.getElementById('parse-upload');
 const parseCloseBtn = document.getElementById('parse-close');
+
 const parseCancelBtn = document.getElementById('parse-cancel');
 const versionText = document.getElementById('version-text');
 const uploadWindow = document.getElementById('upload-window');
@@ -99,6 +100,8 @@ const tiddlyGuideText = document.getElementById('tiddly-guide-text');
 const tiddlySetupBtn = document.getElementById('tiddly-setup');
 const tiddlyRefreshBtn = document.getElementById('tiddly-refresh');
 const tiddlyUseUrlBtn = document.getElementById('tiddly-use-url');
+const uploadImportSkinBtn = document.getElementById('upload-import-skin');
+const skinUpdateBadge = document.getElementById('skin-update-badge');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const PARSE_STEPS_CONFIG = [
@@ -125,6 +128,10 @@ let supportProfsMessageTimeout = null;
 let boonWeightsState = {};
 let conditionWeightsState = {};
 let tiddlyhostCredentials = { username: '', password: '' };
+let pendingSkinImport = null;
+const webviewProgress = document.getElementById('webview-progress');
+const uploadLoadingText = document.getElementById('upload-loading-text');
+let uploadStuckTimer = null;
 
 const SUPPORTED_BOONS = [
   { id: 'b740', label: 'Might' },
@@ -525,13 +532,32 @@ function getLoginTargetUrl(url) {
 
 function navigateUploadFrame(url) {
   if (!url) return;
-  try {
-    if (typeof uploadFrame.loadURL === 'function') {
-      uploadFrame.loadURL(url);
-      return;
+
+  const doNav = (attempts = 0) => {
+    try {
+      // First, check if we're even correctly referencing the frame
+      if (!uploadFrame) return;
+
+      // Try setting src directly as a fallback/initial attempt
+      // but loadURL is better as it always triggers a fresh reload.
+      if (typeof uploadFrame.loadURL === 'function') {
+        uploadFrame.loadURL(url);
+      } else {
+        uploadFrame.src = url;
+      }
+    } catch (e) {
+      // If unattached, retry with backoff. 10 attempts over ~1.5s
+      const msg = (e.message || '').toLowerCase();
+      if (msg.includes('attached') && attempts < 10) {
+        setTimeout(() => doNav(attempts + 1), 100 + (attempts * 50));
+      } else {
+        console.warn('Navigation failed, trying direct src assignment:', e);
+        try { uploadFrame.src = url; } catch { }
+      }
     }
-  } catch { }
-  uploadFrame.src = url;
+  };
+
+  doNav();
 }
 
 
@@ -746,7 +772,11 @@ if (tiddlyhostPasswordInput) {
   tiddlyhostPasswordInput.addEventListener('input', saveTiddlyhostCredentials);
 }
 tiddlySetupBtn.addEventListener('click', async () => {
-  const payload = await window.electronAPI.getExampleOutput('combiner');
+  const combinerPayload = await window.electronAPI.getExampleOutput('combiner');
+  const skinPayload = await window.electronAPI.getSkinContent();
+  const payload = [...(combinerPayload || [])];
+  if (skinPayload) payload.push(skinPayload);
+
   if (payload && payload.length) {
     const dropScript = makeDropScript(payload, true);
     setTimeout(() => {
@@ -793,6 +823,50 @@ uploadLoginBtn.addEventListener('click', () => {
   const loginUrl = hasCredentials ? 'https://tiddlyhost.com/users/sign_in' : (getLoginTargetUrl(url) || url);
   openUploadWindow(loginUrl, [], false, { syncInput: false, loginDetails: hasCredentials ? tiddlyhostCredentials : null });
 });
+
+if (uploadImportSkinBtn) {
+  uploadImportSkinBtn.addEventListener('click', async () => {
+    let url = localStorage.getItem('uploadUrl') || uploadUrlInput.value;
+    if (!url || !url.includes('tiddlyhost.com')) {
+      alert('Please configure a valid Tiddlyhost Upload URL first.');
+      return;
+    }
+    url = normalizeUrl(url);
+    if (!url) {
+      alert('Invalid Upload URL format.');
+      return;
+    }
+
+    uploadImportSkinBtn.disabled = true;
+    const originalText = uploadImportSkinBtn.childNodes[0].textContent;
+    uploadImportSkinBtn.childNodes[0].textContent = 'Loading Skin...';
+
+    try {
+      const skin = await window.electronAPI.getSkinContent();
+      if (!skin) throw new Error('Could not load skin content.');
+
+      // Close skin import window re-enables button
+      const finalize = () => {
+        uploadImportSkinBtn.disabled = false;
+        uploadImportSkinBtn.childNodes[0].textContent = originalText;
+      };
+
+      openUploadWindow(url, [skin], false, {
+        callback: () => {
+          if (skin.version) {
+            localStorage.setItem('skinVersion', skin.version);
+            if (skinUpdateBadge) skinUpdateBadge.classList.add('hidden');
+          }
+          finalize();
+        }
+      });
+    } catch (e) {
+      alert('Failed to import skin: ' + e.message);
+      uploadImportSkinBtn.disabled = false;
+      uploadImportSkinBtn.childNodes[0].textContent = originalText;
+    }
+  });
+}
 setupTiddlyhostBtn.addEventListener('click', () => {
   openUploadWindow('https://tiddlyhost.com/', [], true);
 });
@@ -927,6 +1001,8 @@ parseUploadBtn.addEventListener('click', async () => {
   const payload = await window.electronAPI.uploadParsedFiles(files);
   openUploadWindow(url, payload, false);
 });
+
+
 parseCancelBtn.addEventListener('click', () => {
   parseCancelBtn.disabled = true;
   window.electronAPI.cancelParse();
@@ -980,19 +1056,56 @@ uploadUrlBar.addEventListener('keydown', e => {
     }
   }
 });
+const setUploadProgress = (percent) => {
+  if (webviewProgress) {
+    webviewProgress.style.width = percent + '%';
+    if (percent >= 100) {
+      setTimeout(() => {
+        if (!uploadIsLoading && webviewProgress) webviewProgress.style.width = '0%';
+      }, 800);
+    }
+  }
+};
+
 uploadFrame.addEventListener('did-start-loading', () => {
   uploadIsLoading = true;
-  uploadRefreshBtn.innerHTML = '&#x2715;';
+  uploadRefreshBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>';
+  uploadRefreshBtn.title = 'Stop Loading';
+  uploadRefreshBtn.ariaLabel = 'Stop Loading';
+  uploadRefreshBtn.classList.add('loading');
   uploadStatus.textContent = '';
   uploadStatus.classList.remove('error');
   uploadLoading.classList.add('active');
+  if (uploadLoadingText) uploadLoadingText.textContent = 'Loading page...';
   uploadFrame.style.visibility = 'hidden';
+  setUploadProgress(15);
+
+  // Clear any existing stuck timer
+  if (uploadStuckTimer) clearTimeout(uploadStuckTimer);
+
+  // Set a timer to check if we're "stuck" (e.g. 10 seconds with no progress)
+  uploadStuckTimer = setTimeout(() => {
+    if (uploadIsLoading && uploadLoadingText) {
+      uploadLoadingText.textContent = 'Still loading... This site might be slow.';
+      uploadStatus.textContent = 'Request is taking longer than usual.';
+    }
+  }, 12000);
 });
 uploadFrame.addEventListener('did-stop-loading', () => {
   uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
+  uploadRefreshBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>';
+  uploadRefreshBtn.title = 'Refresh';
+  uploadRefreshBtn.ariaLabel = 'Refresh';
+  uploadRefreshBtn.classList.remove('loading');
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
+  setUploadProgress(100);
+
+  if (uploadStuckTimer) {
+    clearTimeout(uploadStuckTimer);
+    uploadStuckTimer = null;
+  }
+
   updateUploadNav();
   if (tiddlyMode && tiddlySetupStage === 2) {
     tiddlyGuideText.textContent = 'Congrats! Tiddlywiki successfully set up. Set your upload URL to this page?';
@@ -1013,36 +1126,56 @@ uploadFrame.addEventListener('new-window', e => {
   }
 });
 uploadFrame.addEventListener('dom-ready', () => {
-  setTimeout(() => {
-    uploadFrame
-      .insertCSS('html, body { height: auto !important; overflow: auto !important; }')
-      .catch(() => { });
-  }, 100);
-
-  // Capture attempts to open a new window and redirect within the current frame
+  // Defensive check for attachment
   try {
-    const wc = uploadFrame.getWebContents();
-    if (wc && wc.setWindowOpenHandler) {
-      wc.setWindowOpenHandler(({ url }) => {
-        navigateUploadFrame(url);
-        uploadUrlBar.value = url;
-        updateUploadNav();
-        if (tiddlyMode) updateTiddlyGuide(url);
-        return { action: 'deny' };
-      });
-    }
-  } catch { }
+    // Methods like insertCSS and executeJavaScript require the webview to be attached
+    setTimeout(() => {
+      try {
+        if (uploadFrame && typeof uploadFrame.insertCSS === 'function') {
+          uploadFrame
+            .insertCSS('html, body { height: auto !important; overflow: auto !important; }')
+            .catch(() => { });
+        }
+      } catch (err) {
+        console.warn('Deferred WebView interaction failed:', err);
+      }
+    }, 250);
 
-  uploadFrame.focus();
+    // Capture attempts to open a new window and redirect within the current frame
+    if (typeof uploadFrame.getWebContents === 'function') {
+      const wc = uploadFrame.getWebContents();
+      if (wc && wc.setWindowOpenHandler) {
+        wc.setWindowOpenHandler(({ url }) => {
+          navigateUploadFrame(url);
+          uploadUrlBar.value = url;
+          updateUploadNav();
+          if (tiddlyMode) updateTiddlyGuide(url);
+          return { action: 'deny' };
+        });
+      }
+    }
+  } catch (err) {
+    console.error('WebView dom-ready handler error:', err);
+  }
+
+  try { uploadFrame.focus(); } catch { }
 });
 uploadFrame.addEventListener('did-fail-load', e => {
   uploadIsLoading = false;
-  uploadRefreshBtn.innerHTML = '&#x21bb;';
+  uploadRefreshBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>';
+  uploadRefreshBtn.classList.remove('loading');
   uploadLoading.classList.remove('active');
   uploadFrame.style.visibility = 'visible';
+  setUploadProgress(0);
+
+  if (uploadStuckTimer) {
+    clearTimeout(uploadStuckTimer);
+    uploadStuckTimer = null;
+  }
+
   updateUploadNav();
   if (e.errorCode !== -3) {
-    uploadStatus.textContent = `Failed to load: ${e.errorDescription}`;
+    uploadStatus.textContent = `Failed to load: ${e.errorDescription} (${e.errorCode})`;
     uploadStatus.classList.add('error');
   }
 });
@@ -1051,8 +1184,16 @@ uploadFrame.addEventListener('did-finish-load', () => {
 });
 
 function updateUploadNav() {
-  uploadBackBtn.disabled = !uploadFrame.canGoBack();
-  uploadForwardBtn.disabled = !uploadFrame.canGoForward();
+  try {
+    // canGoBack/Forward throw "must be attached to DOM" if called prematurely
+    if (uploadFrame && typeof uploadFrame.canGoBack === 'function') {
+      uploadBackBtn.disabled = !uploadFrame.canGoBack();
+      uploadForwardBtn.disabled = !uploadFrame.canGoForward();
+    }
+  } catch {
+    uploadBackBtn.disabled = true;
+    uploadForwardBtn.disabled = true;
+  }
 }
 window.electronAPI.onParseProgress(msg => {
   const line = document.createElement('div');
@@ -1116,7 +1257,9 @@ window.electronAPI.onParseComplete(result => {
   const { success, files = [] } = typeof result === 'object' ? result : { success: !!result, files: [] };
   parseOpenFolderBtn.disabled = !success;
   parseUploadBtn.disabled = !success;
+
   parseUploadBtn.dataset.files = JSON.stringify(files);
+
   parseCloseBtn.disabled = false;
   parseCancelBtn.disabled = true;
 
@@ -1178,6 +1321,21 @@ async function checkDeps() {
   parserVersionText.textContent = info.parser.current ? `Current: ${info.parser.current}` : 'Not installed';
   if (needParser) {
     parserVersionText.textContent += ` (Latest: ${info.parser.latest})`;
+  }
+}
+
+async function checkSkinVersion() {
+  if (!skinUpdateBadge) return;
+  const skin = await window.electronAPI.getSkinContent();
+  if (!skin || !skin.version) return;
+  const stored = localStorage.getItem('skinVersion');
+
+  // Simple check: if stored is different/missing, allow update.
+  // Or strictly if new version is greater. assuming semantic versioning isn't strictly needed for a single file yet, but let's just check inequality or simple gt.
+  if (!stored || skin.version !== stored) {
+    skinUpdateBadge.classList.remove('hidden');
+  } else {
+    skinUpdateBadge.classList.add('hidden');
   }
 }
 window.electronAPI.onThemeChanged(applyTheme);
@@ -1259,6 +1417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     startLoad(saved);
   }
   await checkDeps();
+  await checkSkinVersion();
 });
 
 chooseFolderBtn.addEventListener('click', async () => {
@@ -1704,7 +1863,9 @@ function openParseWindow() {
 
   parseOpenFolderBtn.disabled = true;
   parseUploadBtn.disabled = true;
+  parseSaveTailwindBtn.disabled = true;
   parseUploadBtn.dataset.files = '[]';
+  parseSaveTailwindBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
 }
@@ -1792,6 +1953,10 @@ function updateTiddlyGuide(url) {
     const pollId = tiddlySitePollId;
     const checkForNewSite = (attempts = 0) => {
       if (pollId !== tiddlySitePollId) return;
+      if (typeof uploadFrame.executeJavaScript !== 'function') {
+        setTimeout(() => checkForNewSite(attempts + 1), 1000);
+        return;
+      }
       uploadFrame.executeJavaScript('document.body.innerText').then(text => {
         if (pollId !== tiddlySitePollId) return;
         if (text.includes('less than a minute ago')) {
@@ -1858,7 +2023,16 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
   }
   const dropScript = payload.length ? makeDropScript(payload, isSetup) : null;
   const handleFinish = () => {
-    if (dropScript) uploadFrame.executeJavaScript(dropScript, true).catch(() => { });
+    if (dropScript) {
+      uploadFrame.executeJavaScript(dropScript, true)
+        .then(() => {
+          if (options.callback) options.callback();
+        })
+        .catch(() => { });
+    } else {
+      if (options.callback) options.callback();
+    }
+
     if (loginDetails && isTiddlyhostSignIn(uploadFrame.getURL())) {
       const loginScript = makeTiddlyhostLoginScript(loginDetails);
       uploadFrame.executeJavaScript(loginScript, true).catch(() => { });
@@ -1876,7 +2050,9 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
   navigateUploadFrame(url);
   if (tiddlyMode) updateTiddlyGuide(url);
-  updateUploadNav();
+
+  // Guard the initial nav state update to avoid attachment race conditions
+  setTimeout(updateUploadNav, 200);
 }
 
 function closeUploadWindow() {

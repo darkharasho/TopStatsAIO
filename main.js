@@ -7,6 +7,7 @@ const AdmZip = require('adm-zip');
 const semver = require('semver');
 const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
 const { downloadFile, downloadUpdateAsset, collectAssetInfo, resolveUpdateMode, setLogger } = require('./update');
+
 const {
   performPreFlightCheck,
   getWineDotnetAlerted,
@@ -773,6 +774,28 @@ ipcMain.handle('get-tiddlyhost-credentials', () => {
 ipcMain.handle('set-tiddlyhost-credentials', async (event, creds) => {
   return saveTiddlyhostCredentials(creds);
 });
+
+ipcMain.handle('get-skin-content', async () => {
+  try {
+    const skinPath = path.join(__dirname, 'TopStats_Full_Skin.json');
+    if (!fs.existsSync(skinPath)) return null;
+    const raw = await fs.promises.readFile(skinPath, 'utf8');
+    const json = JSON.parse(raw);
+    const versionTiddler = json.find(t => t.title === '$:/TopStats/Skin/Version');
+    const version = versionTiddler ? versionTiddler.text.trim() : '1.0.0';
+
+    return {
+      name: 'TopStats_Full_Skin.json',
+      data: Buffer.from(raw).toString('base64'),
+      version: version
+    };
+  } catch (e) {
+    logError('Failed to get skin content', e);
+    return null;
+  }
+});
+
+
 
 ipcMain.on('cancel-parse', () => {
   if (currentParseCancel) currentParseCancel();

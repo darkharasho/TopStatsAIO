@@ -43,6 +43,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (event, info) => callback(info)),
   onUpdateError: (callback) => ipcRenderer.on('update-error', (event, err) => callback(err)),
   restartApp: () => ipcRenderer.send('restart-app'),
+  saveTailwindReport: (files) => ipcRenderer.invoke('save-tailwind-report', files),
+  getSkinContent: () => ipcRenderer.invoke('get-skin-content'),
 
   getPlatform: () => process.platform,
 });
