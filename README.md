@@ -36,6 +36,11 @@ The primary directive of this application is to increase the user friendliness o
 3. Run TopStatsAIO.exe
 4. At the top, hit the `Select Folder` button and select the top level folder of your ArcDPS logs (by default its `Documents\Guild Wars 2\addons\arcdps\arcdps.cbtlogs`
 
+### Linux Installation (AppImage)
+For the best experience on Linux (Ubuntu, Mint, Fedora, etc.), we recommend using an AppImage manager like **[Gear Lever](https://flathub.org/en/apps/it.mijorus.gearlever)**.
+- **Why?** It automatically integrates the AppImage into your application menu, manages updates, and ensures icons appear correctly in your taskbar.
+- **How?** Install Gear Lever from Flathub, open it, and drag the downloaded `TwopStatsAIO...AppImage` into it.
+
 ### 2. Download Dependencies
 1. Run TopStatsAIO and click the Settings cog
 2. Click the download button for each of the options

@@ -32,7 +32,10 @@ let pendingUpdate = null;
 
 if (process.platform === 'linux') {
   // Ensure WM_CLASS matches the desktop entry so the panel shows the correct icon.
-  app.setName('TopStatsAIO');
+  // Using lowercase 'topstatsaio' to match default electron-builder package naming.
+  app.setName('topstatsaio');
+  // Explicitly set the desktop name to match the generated .desktop file
+  app.desktopName = 'topstatsaio.desktop';
 }
 
 protocol.registerSchemesAsPrivileged([

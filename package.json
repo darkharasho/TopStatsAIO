@@ -1,6 +1,6 @@
 {
   "name": "topstatsaio",
-  "version": "3.0.3",
+  "version": "3.0.5",
   "description": "",
   "main": "main.js",
   "scripts": {
@@ -52,7 +52,7 @@
       "category": "Utility",
       "icon": "media/TopStatsAIO-Logo.png",
       "desktop": {
-        "StartupWMClass": "TopStatsAIO"
+        "StartupWMClass": "topstatsaio"
       }
     },
     "flatpak": {
@@ -60,7 +60,21 @@
       "runtimeVersion": "23.08",
       "sdk": "org.freedesktop.Sdk",
       "base": "org.electronjs.Electron2.BaseApp",
-      "baseVersion": "23.08"
+      "baseVersion": "23.08",
+      "finishArgs": [
+        "--share=ipc",
+        "--socket=x11",
+        "--socket=wayland",
+        "--device=dri",
+        "--share=network",
+        "--talk-name=org.freedesktop.Notifications",
+        "--filesystem=host",
+        "--filesystem=xdg-config/TopStatsAIO:create",
+        "--filesystem=xdg-data/Steam",
+        "--filesystem=~/.steam",
+        "--filesystem=~/.local/share/Steam",
+        "--env=WINEPREFIX="
+      ]
     },
     "nsis": {
       "oneClick": false,
