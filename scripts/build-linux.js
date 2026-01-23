@@ -23,7 +23,7 @@ if (!process.argv.includes('--no-clean')) {
 }
 
 const flatpakAvailable = hasFlatpakBuilder();
-const linuxTargets = flatpakAvailable ? 'AppImage deb flatpak' : 'AppImage deb';
+const linuxTargets = flatpakAvailable ? 'AppImage flatpak' : 'AppImage';
 
 if (!flatpakAvailable) {
   console.warn('flatpak-builder not found; building AppImage only.');

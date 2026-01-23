@@ -362,7 +362,6 @@ body.upload-open {
 #action-buttons {
     display: flex;
     align-items: center;
-    gap: 8px;
     padding-left: 12px;
     border-left: 1px solid var(--border-subtle);
 }
@@ -2352,22 +2351,46 @@ body.light #tiddly-guide-text {
 /* Update Notification Badge */
 .update-notification {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: var(--bg-hover);
-    border: 1px solid var(--border-subtle);
-    border-radius: 9999px;
-    /* Pill shape */
+    align-items: stretch;
+    /* Stretch children to fill height */
+    gap: 0;
+    padding: 0;
+    background: rgba(30, 30, 35, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
     font-size: 13px;
     font-weight: 500;
     color: var(--text-primary);
-    transition: var(--transition-base);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+    /* Animation Properties */
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 300px;
+    opacity: 1;
+    margin-right: 8px;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .update-notification.hidden {
-    display: none;
+    /* Override display:none with allow-listed properties for animation */
+    display: flex !important;
+    max-width: 0;
+    padding: 0;
+    opacity: 0;
+    margin-right: 0;
+    border-width: 0;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+.update-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    flex: 1;
 }
 
 .update-notification .spinner {
@@ -2386,18 +2409,26 @@ body.light #tiddly-guide-text {
 }
 
 #restart-btn {
-    background: var(--accent-bg);
+    background: rgba(255, 255, 255, 0.05);
     color: var(--brand-primary);
-    border: 1px solid var(--accent-border);
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
+    border: none;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0 16px;
+    border-radius: 0;
+    font-size: 12px;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 #restart-btn:hover {
-    background: var(--accent-bg-strong);
+    background: var(--brand-primary);
+    color: white;
 }
 
 #restart-btn.hidden {
