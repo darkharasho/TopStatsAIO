@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadFolder: (dir, root) => ipcRenderer.invoke('load-folder', dir, root),
   getTheme: () => ipcRenderer.invoke('get-theme'),
   getAppVersion: () => ipcRenderer.invoke('get-version'),
+  getUiState: () => ipcRenderer.invoke('get-ui-state'),
+  setUiState: (patch) => ipcRenderer.invoke('set-ui-state', patch),
   setTheme: (theme) => ipcRenderer.send('set-theme', theme),
   downloadDependency: (which) => ipcRenderer.invoke('download-dependency', which),
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),

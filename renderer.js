@@ -1410,7 +1410,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   const ver = await window.electronAPI.getAppVersion();
   versionText.textContent = `v${ver}`;
-  const saved = localStorage.getItem('lastFolder');
+  let saved = localStorage.getItem('lastFolder');
+  try {
+    const uiState = await window.electronAPI.getUiState();
+    if (uiState && typeof uiState.lastFolder === 'string' && uiState.lastFolder.trim()) {
+      saved = uiState.lastFolder;
+    }
+  } catch { }
   const lastTime = localStorage.getItem('lastTimeFilter');
   const parserSel = localStorage.getItem('parserSelection') || 'combiner';
   if (parserSel === 'combiner') {
@@ -1473,6 +1479,12 @@ unselectAllBtn.addEventListener('click', () => {
 
 function startLoad(dir, loadEverything = true) {
   currentFolder = dir;
+  localStorage.setItem('lastFolder', currentFolder);
+  selectedFolderSpan.textContent = currentFolder;
+  selectedFolderInput.value = currentFolder;
+  if (window.electronAPI && window.electronAPI.setUiState) {
+    window.electronAPI.setUiState({ lastFolder: currentFolder });
+  }
   loadAll = loadEverything;
   fileTreeContainer.innerHTML = '';
   fileLoading.classList.remove('hidden');
