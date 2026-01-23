@@ -398,8 +398,8 @@ function applyTiddlyhostScrollFix() {
     if (!host.endsWith('tiddlyhost.com')) return;
     if (typeof uploadFrame.insertCSS !== 'function') return;
     uploadFrame.insertCSS(`
-      html, body { overflow: hidden !important; }
-      ::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+       /* html, body { overflow: hidden !important; } */
+       /* ::-webkit-scrollbar { width: 0 !important; height: 0 !important; } */
     `).catch(() => { });
   } catch { }
 }
@@ -472,7 +472,7 @@ eiAnonymizeCheckbox.checked = initialSettings.eiAnonymizePlayers;
 supportProfs = loadSupportProfs(localStorage);
 renderSupportProfs();
 boonWeightsState = loadWeights(localStorage, BOON_WEIGHTS_STORAGE_KEY, BOON_WEIGHT_KEYS);
-conditionWeightsState = loadWeights(localStorage, CONDITION_WEIGHTS_STORAGE_KEY, CONDITION_WEIGHTS_STORAGE_KEY);
+conditionWeightsState = loadWeights(localStorage, CONDITION_WEIGHTS_STORAGE_KEY, CONDITION_WEIGHT_KEYS);
 renderWeightInputs(boonWeightsContainer, boonWeightsState, BOON_WEIGHTS_STORAGE_KEY);
 renderWeightInputs(conditionWeightsContainer, conditionWeightsState, CONDITION_WEIGHTS_STORAGE_KEY);
 if (addSupportProfBtn) {
@@ -1339,16 +1339,25 @@ dateFilterInput.addEventListener('change', () => {
   }
 });
 
+
+
+
+
 dateSelectBtn.addEventListener('click', () => {
   const val = dateFilterInput.value;
   if (!val) return;
-  const ts = new Date(val).getTime();
-  if (isNaN(ts)) return;
+  const dateObj = new Date(val);
+  if (isNaN(dateObj.getTime())) return;
+  const since = dateObj.getTime();
+
   fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
-    const m = parseInt(li.dataset.mtime, 10);
-    if (m >= ts && !selected.has(li.dataset.path)) {
-      selected.set(li.dataset.path, { rel: li.dataset.rel, mtime: m });
-      li.classList.add('selected');
+    const p = li.dataset.path;
+    const mtime = parseInt(li.dataset.mtime, 10);
+    if (mtime >= since) {
+      if (!selected.has(p)) {
+        selected.set(p, { rel: li.dataset.rel, mtime: mtime });
+        li.classList.add('selected');
+      }
     }
   });
   renderSelected();

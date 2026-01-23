@@ -169,22 +169,6 @@
         }
     }
 
-    exports.SUPPORTED_BOONS = SUPPORTED_BOONS;
-    exports.SUPPORTED_BOON_IDS = SUPPORTED_BOON_IDS;
-    exports.DEFAULT_SUPPORT_PROFS = DEFAULT_SUPPORT_PROFS;
-    exports.SUPPORT_PROFS_STORAGE_KEY = SUPPORT_PROFS_STORAGE_KEY;
-    exports.LEGACY_SUPPORT_PROFS_STORAGE_KEY = LEGACY_SUPPORT_PROFS_STORAGE_KEY;
-    exports.normalizeUrl = normalizeUrl;
-    exports.isTiddlyhostSignIn = isTiddlyhostSignIn;
-    exports.makeTiddlyhostLoginScript = makeTiddlyhostLoginScript;
-    exports.cloneSupportProfEntry = cloneSupportProfEntry;
-    exports.loadSupportProfs = loadSupportProfs;
-    exports.saveSupportProfs = saveSupportProfs;
-    exports.loadWeights = loadWeights;
-    exports.saveWeights = saveWeights;
-    exports.getLoginTargetUrl = getLoginTargetUrl;
-
-
     function saveRendererSetting(storage, key, value) {
         try {
             if (value === null || value === undefined) {
@@ -245,6 +229,20 @@
         };
     }
 
+    exports.SUPPORTED_BOONS = SUPPORTED_BOONS;
+    exports.SUPPORTED_BOON_IDS = SUPPORTED_BOON_IDS;
+    exports.DEFAULT_SUPPORT_PROFS = DEFAULT_SUPPORT_PROFS;
+    exports.SUPPORT_PROFS_STORAGE_KEY = SUPPORT_PROFS_STORAGE_KEY;
+    exports.LEGACY_SUPPORT_PROFS_STORAGE_KEY = LEGACY_SUPPORT_PROFS_STORAGE_KEY;
+    exports.normalizeUrl = normalizeUrl;
+    exports.isTiddlyhostSignIn = isTiddlyhostSignIn;
+    exports.makeTiddlyhostLoginScript = makeTiddlyhostLoginScript;
+    exports.cloneSupportProfEntry = cloneSupportProfEntry;
+    exports.loadSupportProfs = loadSupportProfs;
+    exports.saveSupportProfs = saveSupportProfs;
+    exports.loadWeights = loadWeights;
+    exports.saveWeights = saveWeights;
+    exports.getLoginTargetUrl = getLoginTargetUrl;
     exports.saveRendererSetting = saveRendererSetting;
     exports.loadRendererSettings = loadRendererSettings;
 
