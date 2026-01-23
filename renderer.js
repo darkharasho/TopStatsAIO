@@ -287,7 +287,7 @@ function loadSupportProfs() {
     }
     if (!stored) return DEFAULT_SUPPORT_PROFS.map(cloneSupportProfEntry);
     const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
+    if (!Array.isArray(parsed)) {
       return DEFAULT_SUPPORT_PROFS.map(cloneSupportProfEntry);
     }
     return parsed.map(cloneSupportProfEntry);
