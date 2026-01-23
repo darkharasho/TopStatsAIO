@@ -531,6 +531,20 @@ function getLoginTargetUrl(url) {
   }
 }
 
+function applyTiddlyhostScrollFix() {
+  try {
+    const url = uploadFrame.getURL();
+    if (!url) return;
+    const host = new URL(url).hostname.toLowerCase();
+    if (!host.endsWith('tiddlyhost.com')) return;
+    if (typeof uploadFrame.insertCSS !== 'function') return;
+    uploadFrame.insertCSS(`
+      html, body { overflow: hidden !important; }
+      ::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+    `).catch(() => { });
+  } catch { }
+}
+
 function navigateUploadFrame(url) {
   if (!url) return;
 
@@ -2003,6 +2017,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
   }
   uploadWindow.classList.add('active');
   uploadWindow.classList.remove('hidden');
+  document.body.classList.add('upload-open');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
   if (!tiddlyMode && syncInput) {
@@ -2038,6 +2053,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
       const loginScript = makeTiddlyhostLoginScript(loginDetails);
       uploadFrame.executeJavaScript(loginScript, true).catch(() => { });
     }
+    applyTiddlyhostScrollFix();
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
@@ -2046,6 +2062,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
     uploadUrlBar.value = e.url;
     updateUploadNav();
     if (tiddlyMode) updateTiddlyGuide(e.url);
+    setTimeout(applyTiddlyhostScrollFix, 0);
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
@@ -2059,6 +2076,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
 function closeUploadWindow() {
   uploadWindow.classList.remove('active');
   uploadWindow.classList.add('hidden');
+  document.body.classList.remove('upload-open');
   if (previousWindow === 'settings') {
     settingsWindow.classList.add('active');
     document.getElementById('title-text').textContent = 'Settings';
