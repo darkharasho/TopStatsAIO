@@ -508,8 +508,25 @@ async function performRestartAndInstall() {
       if (err) throw new Error(err);
       app.quit();
     } else if (pendingUpdate.mode === 'appimage') {
-      await fs.promises.chmod(pendingUpdate.localPath, 0o755);
-      spawn(pendingUpdate.localPath, [], { detached: true, stdio: 'ignore' }).unref();
+      const originalPath = process.env.APPIMAGE;
+      if (originalPath && fs.existsSync(originalPath)) {
+        // Persistence Mode: Overwrite the running AppImage
+        const backupPath = `${originalPath}.old`;
+
+        // 1. Move running AppImage to backup
+        await fs.promises.rename(originalPath, backupPath);
+
+        // 2. Move new AppImage to original location
+        await fs.promises.chmod(pendingUpdate.localPath, 0o755);
+        await fs.promises.rename(pendingUpdate.localPath, originalPath);
+
+        // 3. Spawn the *new file* at the *original path*
+        spawn(originalPath, [], { detached: true, stdio: 'ignore', env: process.env }).unref();
+      } else {
+        // Fallback: Just restart temp file (standard behavior if environment is weird)
+        await fs.promises.chmod(pendingUpdate.localPath, 0o755);
+        spawn(pendingUpdate.localPath, [], { detached: true, stdio: 'ignore' }).unref();
+      }
       app.quit();
     } else if (pendingUpdate.mode === 'deb') {
       const err = await shell.openPath(pendingUpdate.localPath);
