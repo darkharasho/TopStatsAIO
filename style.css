@@ -1841,6 +1841,45 @@ body.light .step-count {
     color: var(--brand-primary);
 }
 
+/* Light Mode Overrides for Terminal */
+body.light .parse-output {
+    background: #ffffff;
+    border-color: #e2e8f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    background-image: none;
+    /* Remove bloom effect in light mode */
+}
+
+body.light #parse-output {
+    color: #374151;
+    /* Gray-700 */
+}
+
+body.light .parse-line {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.light .parse-line.log-success {
+    color: #15803d;
+    /* Green-700 */
+}
+
+body.light .parse-line.log-warn {
+    color: #b45309;
+    /* Amber-700 */
+}
+
+body.light .parse-line.log-error {
+    color: #b91c1c;
+    /* Red-700 */
+    background: rgba(239, 68, 68, 0.1);
+}
+
+body.light .parse-line.log-dim {
+    color: #9ca3af;
+    /* Gray-400 */
+}
+
 @keyframes fadeInLine {
     from {
         opacity: 0;
@@ -1955,9 +1994,11 @@ body.light .step-count {
     0% {
         box-shadow: 0 0 0 0 rgba(var(--brand-primary-rgb), 0.4);
     }
+
     70% {
         box-shadow: 0 0 0 10px rgba(var(--brand-primary-rgb), 0);
     }
+
     100% {
         box-shadow: 0 0 0 0 rgba(var(--brand-primary-rgb), 0);
     }
@@ -2246,12 +2287,7 @@ body.light #description:focus {
     box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.1);
 }
 
-body.light .parse-output {
-    background: #0f172a;
-    /* Keep terminal dark but use a more professional slate */
-    border: 1px solid #1e293b;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-}
+
 
 body.light .content-span {
     color: inherit;
@@ -2295,6 +2331,7 @@ body.light #tiddly-guide-text {
         flex-direction: column;
     }
 }
+
 /* Update Notification Badge */
 .update-notification {
     display: flex;
@@ -2303,7 +2340,8 @@ body.light #tiddly-guide-text {
     padding: 6px 12px;
     background: var(--bg-hover);
     border: 1px solid var(--border-subtle);
-    border-radius: 9999px; /* Pill shape */
+    border-radius: 9999px;
+    /* Pill shape */
     font-size: 13px;
     font-weight: 500;
     color: var(--text-primary);
@@ -2325,7 +2363,9 @@ body.light #tiddly-guide-text {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 #restart-btn {
