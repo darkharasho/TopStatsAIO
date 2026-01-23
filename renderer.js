@@ -685,11 +685,20 @@ selectedFolderInput.addEventListener('blur', () => {
 });
 closeSettingsBtn.addEventListener('click', closeSettings);
 if (openCombinerSettingsBtn) {
+  console.log('Attaching listener to openCombinerSettingsBtn');
   openCombinerSettingsBtn.addEventListener('click', () => {
-    settingsWindow.classList.remove('active');
-    combinerSettingsWindow.classList.add('active');
-    document.getElementById('title-text').textContent = 'Log Combiner Settings';
+    console.log('openCombinerSettingsBtn clicked');
+    if (settingsWindow) settingsWindow.classList.remove('active');
+    if (combinerSettingsWindow) {
+      combinerSettingsWindow.classList.add('active');
+    } else {
+      console.error('combinerSettingsWindow element not found');
+    }
+    const titleText = document.getElementById('title-text');
+    if (titleText) titleText.textContent = 'Log Combiner Settings';
   });
+} else {
+  console.error('openCombinerSettingsBtn element not found');
 }
 if (combinerSettingsBackBtn) {
   combinerSettingsBackBtn.addEventListener('click', () => {
@@ -774,17 +783,32 @@ openParserFolderBtn.addEventListener('click', () => {
   const sel = localStorage.getItem('parserSelection') || 'combiner';
   window.electronAPI.openParserFolder(sel);
 });
-dpsUserTokenInput.addEventListener('input', () => {
-  localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value);
-});
-uploadUrlInput.addEventListener('input', () => {
+// Utility: Debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+dpsUserTokenInput.addEventListener('input', debounce(() => {
+  localStorage.setItem('dpsReportUserToken', dpsUserTokenInput.value.trim());
+}, 500));
+
+uploadUrlInput.addEventListener('input', debounce(() => {
   localStorage.setItem('uploadUrl', uploadUrlInput.value.trim());
-});
+}, 500));
+
 if (tiddlyhostUsernameInput) {
-  tiddlyhostUsernameInput.addEventListener('input', saveTiddlyhostCredentials);
+  tiddlyhostUsernameInput.addEventListener('input', debounce(saveTiddlyhostCredentials, 500));
 }
 if (tiddlyhostPasswordInput) {
-  tiddlyhostPasswordInput.addEventListener('input', saveTiddlyhostCredentials);
+  tiddlyhostPasswordInput.addEventListener('input', debounce(saveTiddlyhostCredentials, 500));
 }
 tiddlySetupBtn.addEventListener('click', async () => {
   const combinerPayload = await window.electronAPI.getExampleOutput('combiner');
@@ -1437,8 +1461,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (saved) {
     startLoad(saved);
   }
-  await checkDeps();
-  await checkSkinVersion();
+  checkDeps().catch(console.error);
+  checkSkinVersion().catch(console.error);
 });
 
 chooseFolderBtn.addEventListener('click', async () => {

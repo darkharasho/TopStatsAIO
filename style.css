@@ -1058,6 +1058,10 @@ body.light #date-filter {
     padding: 40px;
 }
 
+#combiner-settings-window {
+    z-index: 105;
+}
+
 #settings-window.active,
 #combiner-settings-window.active {
     opacity: 1;
