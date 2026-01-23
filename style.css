@@ -1203,7 +1203,6 @@ body.acrylic #combiner-settings-window {
 .config-textarea,
 select,
 #dps-user-token {
-    pointer-events: auto !important;
     user-select: text !important;
     -webkit-user-select: text !important;
     cursor: text !important;
