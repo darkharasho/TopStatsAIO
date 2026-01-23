@@ -1202,6 +1202,10 @@ select,
     pointer-events: auto !important;
     user-select: text !important;
     -webkit-user-select: text !important;
+    cursor: text !important;
+    position: relative;
+    z-index: 10000;
+    -webkit-app-region: no-drag !important;
 }
 
 .config-textarea {
