@@ -1194,6 +1194,16 @@ body.acrylic #combiner-settings-window {
     box-shadow: 0 0 0 4px var(--accent-bg);
 }
 
+/* Ensure inputs are interactable even if container has pointer-issues */
+.config-input,
+.config-textarea,
+select,
+#dps-user-token {
+    pointer-events: auto !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
 .config-textarea {
     min-height: 80px;
     resize: vertical;
