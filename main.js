@@ -516,12 +516,28 @@ async function performRestartAndInstall() {
         // Persistence Mode: Overwrite the running AppImage
         const backupPath = `${originalPath}.old`;
 
-        // 1. Move running AppImage to backup
-        await fs.promises.rename(originalPath, backupPath);
+        // 1. Move running AppImage to backup (Same dir, so rename is safe)
+        try {
+          await fs.promises.rename(originalPath, backupPath);
+        } catch (e) {
+          logError('Failed to backup AppImage:', e);
+          // If backup fails, we might not want to proceed, or try to overwrite directly?
+          // Let's assume critical failure and abort to avoid corrupting both.
+          throw e;
+        }
 
         // 2. Move new AppImage to original location
+        // Use copyFile + unlink to handle EXDEV (cross-device) issues (Temp -> Home)
         await fs.promises.chmod(pendingUpdate.localPath, 0o755);
-        await fs.promises.rename(pendingUpdate.localPath, originalPath);
+        try {
+          await fs.promises.copyFile(pendingUpdate.localPath, originalPath);
+          await fs.promises.unlink(pendingUpdate.localPath);
+        } catch (e) {
+          logError('Failed to move new AppImage to dest:', e);
+          // Attempt to restore backup
+          try { await fs.promises.rename(backupPath, originalPath); } catch { }
+          throw e;
+        }
 
         // 3. Spawn the *new file* at the *original path*
         spawn(originalPath, [], { detached: true, stdio: 'ignore', env: process.env }).unref();
