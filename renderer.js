@@ -78,6 +78,7 @@ const parseOutput = document.getElementById('parse-output');
 const parseSteps = document.getElementById('parse-steps');
 const parseOpenFolderBtn = document.getElementById('parse-open-folder');
 const parseUploadBtn = document.getElementById('parse-upload');
+const parseSaveTailwindBtn = document.getElementById('parse-save-tailwind');
 const parseCloseBtn = document.getElementById('parse-close');
 
 const parseCancelBtn = document.getElementById('parse-cancel');
@@ -1863,9 +1864,9 @@ function openParseWindow() {
 
   parseOpenFolderBtn.disabled = true;
   parseUploadBtn.disabled = true;
-  parseSaveTailwindBtn.disabled = true;
+  if (parseSaveTailwindBtn) parseSaveTailwindBtn.disabled = true;
   parseUploadBtn.dataset.files = '[]';
-  parseSaveTailwindBtn.dataset.files = '[]';
+  if (parseSaveTailwindBtn) parseSaveTailwindBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
 }
@@ -2093,6 +2094,13 @@ async function startParse() {
     return;
   }
   openParseWindow();
+  console.log('[parse] startParse clicked', { fileCount: selected.size });
+  if (!window.electronAPI || typeof window.electronAPI.startParse !== 'function') {
+    const msg = 'IPC bridge unavailable. Preload failed to load or is blocked.';
+    alert(msg);
+    console.error(msg, window.electronAPI);
+    return;
+  }
   const files = Array.from(selected.keys());
   const options = {
     parser: localStorage.getItem('parserSelection') || 'combiner',

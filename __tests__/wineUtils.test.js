@@ -25,6 +25,7 @@ describe('wineUtils', () => {
     let existsSyncSpy;
     let chmodSyncSpy;
     let execSyncSpy;
+    let execFileSyncSpy;
     let spawnSpy;
 
     beforeEach(() => {
@@ -33,6 +34,7 @@ describe('wineUtils', () => {
         existsSyncSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
         chmodSyncSpy = jest.spyOn(fs, 'chmodSync').mockImplementation(() => { });
         execSyncSpy = jest.spyOn(child_process, 'execSync').mockImplementation(() => { });
+        execFileSyncSpy = jest.spyOn(child_process, 'execFileSync').mockImplementation(() => { });
 
         spawnSpy = jest.spyOn(child_process, 'spawn').mockImplementation((cmd, args) => {
             const listeners = {};
@@ -75,7 +77,7 @@ describe('wineUtils', () => {
         });
 
         test('returns false if no wine', async () => {
-            execSyncSpy.mockImplementation(() => { throw new Error('no wine'); });
+            execFileSyncSpy.mockImplementation(() => { throw new Error('no wine'); });
             const res = await performPreFlightCheck({ send: jest.fn() }, depsDir, userDataPath);
             expect(res).toBe(false);
         });
@@ -84,15 +86,17 @@ describe('wineUtils', () => {
             // Mock wine exists
             let regQueryCalls = 0;
             // Mock wine exists
-            execSyncSpy.mockImplementation((cmd) => {
-                if (cmd.includes('wine --version')) return;
-                if (cmd.includes('reg query')) {
+            execFileSyncSpy.mockImplementation((cmd, args) => {
+                if (cmd === 'wine' && args[0] === '--version') return;
+                if (cmd === 'wine' && args[0] === 'reg') {
                     regQueryCalls++;
                     // Fail the first time (check), succeed the second time (verify after install)
                     if (regQueryCalls === 1) throw new Error('missing 4.8');
                     return '4.8.something';
                 }
-                if (cmd.includes('dotnet --list-runtimes')) return ''; // missing 8 (ignored for this test logic flow as we verify 4.8 first)
+                if (cmd === 'wine' && args[0] === 'cmd' && args[2] === 'dotnet --list-runtimes') {
+                    return ''; // missing 8 (ignored for this test logic flow as we verify 4.8 first)
+                }
             });
 
             const wc = { send: jest.fn() };

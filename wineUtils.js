@@ -10,6 +10,7 @@ const { downloadFile } = require('./update');
 // -------------------------------------------------------------------------
 let cachedWineAvailable = null;
 let wineDotnetAlerted = false;
+let cachedWineBinary = null;
 
 // We'll cache the calculated WinePrefix to avoid re-computing it constantly,
 // though it usually depends on userDataPath which is stable.
@@ -48,12 +49,61 @@ function hasWine() {
         return cachedWineAvailable;
     }
     try {
-        cp.execSync('wine --version', { stdio: 'ignore' });
-        cachedWineAvailable = true;
+        cachedWineAvailable = !!resolveSystemWineBinary();
     } catch (error) {
         cachedWineAvailable = false;
     }
     return cachedWineAvailable;
+}
+
+/**
+ * Resolve a usable system wine binary, even if PATH is missing common locations.
+ */
+function resolveSystemWineBinary() {
+    if (cachedWineBinary !== null) return cachedWineBinary || null;
+
+    const candidates = [];
+    const envWine = process.env.TOPSTATS_WINE || process.env.WINE_BINARY || process.env.WINE;
+    if (envWine) candidates.push(envWine);
+    candidates.push('wine', 'wine64');
+
+    const fallbackPaths = [
+        '/usr/bin/wine',
+        '/usr/local/bin/wine',
+        '/bin/wine',
+        '/snap/bin/wine',
+        '/opt/wine-staging/bin/wine',
+        '/opt/wine/bin/wine'
+    ];
+
+    const seen = new Set();
+    const allCandidates = [...candidates, ...fallbackPaths].filter((c) => {
+        if (!c || seen.has(c)) return false;
+        seen.add(c);
+        return true;
+    });
+
+    for (const candidate of allCandidates) {
+        try {
+            if (candidate.includes(path.sep) && !fs.existsSync(candidate)) {
+                continue;
+            }
+            cp.execFileSync(candidate, ['--version'], { stdio: 'ignore' });
+            cachedWineBinary = candidate;
+            return candidate;
+        } catch {
+            // continue
+        }
+    }
+
+    cachedWineBinary = false;
+    return null;
+}
+
+function getWineToolPath(toolName) {
+    const wineBin = resolveSystemWineBinary();
+    if (!wineBin || wineBin === 'wine') return toolName;
+    return path.join(path.dirname(wineBin), toolName);
 }
 
 /**
@@ -203,13 +253,13 @@ function ensureWineReady(userDataPath) {
         try {
             // We only kill wineservers running on THIS prefix to be safe? 
             // Actually, `wineserver -k` kills the server associated with the current WINEPREFIX.
-            cp.execSync('wineserver -k', { stdio: 'ignore', env });
+            cp.execFileSync(getWineToolPath('wineserver'), ['-k'], { stdio: 'ignore', env });
         } catch (e) { /* ignore */ }
 
         // We use execSync for these quick checks/inits
-        cp.execSync('wineboot -u', { stdio: 'ignore', env });
+        cp.execFileSync(getWineToolPath('wineboot'), ['-u'], { stdio: 'ignore', env });
         // Start wineserver to ensure prompt readiness
-        cp.execSync('wineserver -w', { stdio: 'ignore', env });
+        cp.execFileSync(getWineToolPath('wineserver'), ['-w'], { stdio: 'ignore', env });
     } catch (e) {
         console.error('Failed to ensure wine readiness:', e);
         // Continue anyway, wine might just work
@@ -253,12 +303,15 @@ function checkInstalledRuntimes(wineEnv) {
         netDesktop8: false
     };
 
+    const wineBin = resolveSystemWineBinary() || 'wine';
+
     try {
         // Check .NET 4.8 via Registry
         // Key: HKLM\Software\Microsoft\NET Framework Setup\NDP\v4\Full
         // Value: Release >= 528040 (for 4.8)
-        cp.execSync(
-            'wine reg query "HKLM\\Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full" /v Release',
+        cp.execFileSync(
+            wineBin,
+            ['reg', 'query', 'HKLM\\Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full', '/v', 'Release'],
             { stdio: 'ignore', env: wineEnv }
         );
         status.net48 = true;
@@ -267,8 +320,9 @@ function checkInstalledRuntimes(wineEnv) {
     try {
         // Check .NET 8 Desktop Runtime via dotnet --list-runtimes
         // We look for "Microsoft.WindowsDesktop.App 8."
-        const output = cp.execSync(
-            'wine cmd /c "dotnet --list-runtimes"',
+        const output = cp.execFileSync(
+            wineBin,
+            ['cmd', '/c', 'dotnet --list-runtimes'],
             { env: wineEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
         );
         if (output.includes('Microsoft.WindowsDesktop.App 8.')) {
@@ -285,10 +339,11 @@ function checkInstalledRuntimes(wineEnv) {
 async function ensureWineDotnet(depsDir, wc, wineEnv) {
     // 1. Check what we already have
     const status = checkInstalledRuntimes(wineEnv);
+    const wineBin = resolveSystemWineBinary() || 'wine';
 
     // Diagnostic: Log dotnet info to see what Wine sees
     try {
-        const info = cp.execSync('wine cmd /c "dotnet --info"', { env: wineEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        const info = cp.execFileSync(wineBin, ['cmd', '/c', 'dotnet --info'], { env: wineEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
         wc.send('parse-progress', `[Diagnostic] dotnet --info:\n${info.trim()}`);
     } catch (e) {
         wc.send('parse-progress', `[Diagnostic] Failed to run dotnet --info: ${e.message}`);
@@ -359,7 +414,7 @@ async function toWindowsPath(paths) {
     // 1. Try winepath with timeout
     try {
         const result = await new Promise((resolve, reject) => {
-            const child = cp.spawn('winepath', ['-w', ...paths], {
+            const child = cp.spawn(getWineToolPath('winepath'), ['-w', ...paths], {
                 stdio: ['ignore', 'pipe', 'ignore'],
                 windowsHide: true,
                 timeout: WINEPATH_TIMEOUT
@@ -418,16 +473,13 @@ async function resolveWindowsCommand(cmd, args, wc, depsDir, userDataPath) {
         return { cmd, args, env: process.env };
     }
 
-    if (!hasWine()) {
-        const msg = 'Wine is not installed/found in PATH.';
-        wc.send('parse-progress', msg);
-        throw new Error(msg);
-    }
-
     const wineEnv = getWineEnv(userDataPath);
+    const systemWine = resolveSystemWineBinary();
 
     // Ensure Basic Wine State (sync checks)
-    ensureWineReady(userDataPath);
+    if (systemWine) {
+        ensureWineReady(userDataPath);
+    }
 
     // Convert the command itself to a Windows path to ensure dotNET is happy
     // about where it is running from (AppDomain.BaseDirectory).
@@ -460,7 +512,7 @@ async function resolveWindowsCommand(cmd, args, wc, depsDir, userDataPath) {
         protonBase = path.resolve(protonBin, '../../../');
     }
 
-    let finalCmd = 'wine';
+    let finalCmd = systemWine || 'wine';
     let finalArgs = [winCmd, ...args];
     let customEnv = { ...wineEnv };
     let useScript = false;
@@ -532,8 +584,8 @@ async function resolveWindowsCommand(cmd, args, wc, depsDir, userDataPath) {
         if (protonBin) {
             console.log(`[wineUtils] Using Raw Proton Wine: ${protonBin}`);
             finalCmd = protonBin;
-        } else if (!hasWine()) {
-            const msg = 'Wine is not installed/found in PATH and Proton was not detected.';
+        } else if (!systemWine) {
+            const msg = 'Wine is not installed/found in PATH (or standard locations) and Proton was not detected.';
             wc.send('parse-progress', msg);
             throw new Error(msg);
         }
@@ -661,6 +713,7 @@ function resetWineState() {
     cachedWineAvailable = null;
     cachedWinePrefix = null;
     wineDotnetAlerted = false;
+    cachedWineBinary = null;
 }
 
 module.exports = {

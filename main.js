@@ -805,6 +805,8 @@ ipcMain.handle('start-parse', async (event, data) => {
   const wc = event.sender;
   const files = data.files || [];
   const opts = data.options || {};
+  log('[parse] start-parse called', { fileCount: files.length, parser: opts.parser });
+  wc.send('parse-progress', 'Parse request received.');
   if (opts.parser === 'combiner') {
     const basePath = process.env.PORTABLE_EXECUTABLE_DIR || app.getPath('userData');
     if (!opts.dbPath) {
@@ -827,12 +829,15 @@ ipcMain.handle('start-parse', async (event, data) => {
   };
   try {
     send(`Created temp folder at ${tempDir}`);
+    log('[parse] temp dir created', tempDir);
     if (keepTempDirs) {
       send('Debug mode active: temporary folder will not be deleted automatically.');
     }
 
     if (process.platform !== 'win32') {
+      log('[parse] running preflight check', { depsDir, userData: app.getPath('userData') });
       const ready = await performPreFlightCheck(wc, depsDir, app.getPath('userData'));
+      log('[parse] preflight check complete', { ready });
       if (!ready) {
         wc.send('parse-complete', { success: false, files: [] });
         return;
@@ -1157,7 +1162,7 @@ async function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, i
     throw error;
   }
 
-
+  log('[parse] running process', { cmd: resolved.cmd, args: resolved.args, cwd, useShell });
 
   return new Promise((resolve, reject) => {
     const child = spawn(resolved.cmd, resolved.args, {
