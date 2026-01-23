@@ -78,6 +78,7 @@ const parseOutput = document.getElementById('parse-output');
 const parseSteps = document.getElementById('parse-steps');
 const parseOpenFolderBtn = document.getElementById('parse-open-folder');
 const parseUploadBtn = document.getElementById('parse-upload');
+const parseSaveTailwindBtn = document.getElementById('parse-save-tailwind');
 const parseCloseBtn = document.getElementById('parse-close');
 
 const parseCancelBtn = document.getElementById('parse-cancel');
@@ -528,6 +529,20 @@ function getLoginTargetUrl(url) {
   } catch {
     return null;
   }
+}
+
+function applyTiddlyhostScrollFix() {
+  try {
+    const url = uploadFrame.getURL();
+    if (!url) return;
+    const host = new URL(url).hostname.toLowerCase();
+    if (!host.endsWith('tiddlyhost.com')) return;
+    if (typeof uploadFrame.insertCSS !== 'function') return;
+    uploadFrame.insertCSS(`
+      html, body { overflow: hidden !important; }
+      ::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+    `).catch(() => { });
+  } catch { }
 }
 
 function navigateUploadFrame(url) {
@@ -1863,9 +1878,9 @@ function openParseWindow() {
 
   parseOpenFolderBtn.disabled = true;
   parseUploadBtn.disabled = true;
-  parseSaveTailwindBtn.disabled = true;
+  if (parseSaveTailwindBtn) parseSaveTailwindBtn.disabled = true;
   parseUploadBtn.dataset.files = '[]';
-  parseSaveTailwindBtn.dataset.files = '[]';
+  if (parseSaveTailwindBtn) parseSaveTailwindBtn.dataset.files = '[]';
   parseCloseBtn.disabled = true;
   parseCancelBtn.disabled = false;
 }
@@ -2002,6 +2017,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
   }
   uploadWindow.classList.add('active');
   uploadWindow.classList.remove('hidden');
+  document.body.classList.add('upload-open');
   document.getElementById('title-text').textContent = 'Upload';
   uploadUrlBar.value = url;
   if (!tiddlyMode && syncInput) {
@@ -2037,6 +2053,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
       const loginScript = makeTiddlyhostLoginScript(loginDetails);
       uploadFrame.executeJavaScript(loginScript, true).catch(() => { });
     }
+    applyTiddlyhostScrollFix();
     uploadFrame.focus();
     uploadFrame.removeEventListener('did-stop-loading', handleFinish);
   };
@@ -2045,6 +2062,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
     uploadUrlBar.value = e.url;
     updateUploadNav();
     if (tiddlyMode) updateTiddlyGuide(e.url);
+    setTimeout(applyTiddlyhostScrollFix, 0);
   };
   uploadFrame.addEventListener('did-navigate', uploadNavHandler);
   uploadFrame.addEventListener('did-navigate-in-page', uploadNavHandler);
@@ -2058,6 +2076,7 @@ function openUploadWindow(url, payload, isSetup, options = {}) {
 function closeUploadWindow() {
   uploadWindow.classList.remove('active');
   uploadWindow.classList.add('hidden');
+  document.body.classList.remove('upload-open');
   if (previousWindow === 'settings') {
     settingsWindow.classList.add('active');
     document.getElementById('title-text').textContent = 'Settings';
@@ -2093,6 +2112,13 @@ async function startParse() {
     return;
   }
   openParseWindow();
+  console.log('[parse] startParse clicked', { fileCount: selected.size });
+  if (!window.electronAPI || typeof window.electronAPI.startParse !== 'function') {
+    const msg = 'IPC bridge unavailable. Preload failed to load or is blocked.';
+    alert(msg);
+    console.error(msg, window.electronAPI);
+    return;
+  }
   const files = Array.from(selected.keys());
   const options = {
     parser: localStorage.getItem('parserSelection') || 'combiner',
