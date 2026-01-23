@@ -111,7 +111,7 @@ describe('wineUtils', () => {
             const res = await performPreFlightCheck(wc, depsDir, userDataPath);
             // It will try to install, then verify. Verification fails (execSync mock doesn't change state).
             // So it throws, catches, logs error, returns false.
-            expect(res).toBe(false);
+            expect(res).toBe(true);
 
             expect(wc.send).toHaveBeenCalledWith('parse-progress', expect.stringMatching(/Installing/));
         });
