@@ -50,7 +50,10 @@
         "flatpak"
       ],
       "category": "Utility",
-      "icon": "media/TopStatsAIO-Logo.png"
+      "icon": "media/TopStatsAIO-Logo.png",
+      "desktop": {
+        "StartupWMClass": "TopStatsAIO"
+      }
     },
     "flatpak": {
       "runtime": "org.freedesktop.Platform",

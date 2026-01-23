@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme, shell, dialog, safeStorage, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -29,6 +29,30 @@ let currentParseCancel = null;
 let appTheme = nativeTheme.themeSource;
 let mainWindow = null;
 let pendingUpdate = null;
+
+if (process.platform === 'linux') {
+  // Ensure WM_CLASS matches the desktop entry so the panel shows the correct icon.
+  app.setName('TopStatsAIO');
+}
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }
+]);
+
+// FIX: Ensure AppImage uses a stable User Data directory
+if (isLinux && process.env.APPIMAGE) {
+  const home = os.homedir();
+  const stableUserData = path.join(home, '.config', 'TopStatsAIO');
+  try {
+    if (!fs.existsSync(stableUserData)) {
+      fs.mkdirSync(stableUserData, { recursive: true });
+    }
+    app.setPath('userData', stableUserData);
+    console.log('Force-set User Data path for AppImage:', stableUserData);
+  } catch (e) {
+    console.error('Failed to set stable User Data path:', e);
+  }
+}
 
 if (keepTempDirs) {
   log('Debug flag detected; parser temporary folders will be preserved.');
@@ -394,7 +418,7 @@ function createWindow() {
     }
   });
 
-  win.loadFile('index.html');
+  win.loadURL('app://-/index.html');
   return win;
 }
 
@@ -595,6 +619,22 @@ app.whenReady().then(() => {
   depsDir = path.join(userData, 'dependencies');
   versionsFile = path.join(depsDir, 'versions.json');
   logFile = path.join(userData, 'debug.log');
+
+  protocol.registerFileProtocol('app', (request, callback) => {
+    try {
+      const url = new URL(request.url);
+      const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
+      const resolvedPath = path.normalize(path.join(__dirname, pathname));
+      if (!resolvedPath.startsWith(path.normalize(__dirname + path.sep))) {
+        callback({ error: -6 });
+        return;
+      }
+      callback({ path: resolvedPath });
+    } catch (error) {
+      logError('Failed to resolve app:// URL', error);
+      callback({ error: -324 });
+    }
+  });
 
   const win = createWindow();
   mainWindow = win;
