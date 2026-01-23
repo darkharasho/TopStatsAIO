@@ -19,6 +19,8 @@ const {
   isTiddlyhostSignIn,
   makeTiddlyhostLoginScript,
   cloneSupportProfEntry,
+  loadRendererSettings,
+  saveRendererSetting,
   loadSupportProfs,
   saveSupportProfs,
   loadWeights,
@@ -433,39 +435,40 @@ function navigateUploadFrame(url) {
 }
 
 
-dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
-uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
-combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
-combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
+
+const initialSettings = loadRendererSettings(localStorage);
+
+dpsUserTokenInput.value = initialSettings.dpsReportUserToken;
+uploadUrlInput.value = initialSettings.uploadUrl;
+combinerGuildNameInput.value = initialSettings.combinerGuildName;
+combinerGuildIdInput.value = initialSettings.combinerGuildId;
 function updateGuildLookupState() {
   combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
 }
 updateGuildLookupState();
-combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
-combinerWebhookInput.value = localStorage.getItem('combinerWebhookUrl') || '';
-combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
-combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
-combinerHideColumnsCheckbox.checked = localStorage.getItem('combinerHideColumns') === 'true';
-combinerBoonsDetailedCheckbox.checked = localStorage.getItem('combinerBoonsDetailed') === 'true';
-combinerOffensiveDetailedCheckbox.checked = localStorage.getItem('combinerOffensiveDetailed') === 'true';
-combinerDefensesDetailedCheckbox.checked = localStorage.getItem('combinerDefensesDetailed') === 'true';
-combinerSupportDetailedCheckbox.checked = localStorage.getItem('combinerSupportDetailed') === 'true';
-combinerBlacklistInput.value = localStorage.getItem('combinerBlacklistAccounts') || '';
-combinerInputDirectoryInput.value = localStorage.getItem('combinerInputDirectory') || 'd:/gw2logs/output';
-combinerOutputFilenameInput.value = localStorage.getItem('combinerOutputFilename') || '';
-combinerJsonOutputFilenameInput.value = localStorage.getItem('combinerJsonOutputFilename') || '';
-combinerDbFilenameInput.value = localStorage.getItem('combinerDbFilename') || 'Top_Stats.db';
-combinerDbPathInput.value = localStorage.getItem('combinerDbPath') || '.';
-const writeAllJsonStored = localStorage.getItem('combinerWriteAllJson');
-combinerWriteAllJsonCheckbox.checked = writeAllJsonStored ? writeAllJsonStored === 'true' : true;
-const writeExcelStored = localStorage.getItem('combinerWriteExcel');
-combinerWriteExcelCheckbox.checked = writeExcelStored ? writeExcelStored === 'true' : false;
-combinerExcelFilenameInput.value = localStorage.getItem('combinerExcelFilename') || 'Top_Stats.xlsx';
-combinerExcelPathInput.value = localStorage.getItem('combinerExcelPath') || '.';
-combinerSkillCastLimitInput.value = localStorage.getItem('combinerSkillCastLimit') || '40';
-combinerSortModeSelect.value = localStorage.getItem('combinerSortMode') || 'Total';
-combinerDiscordNotesInput.value = localStorage.getItem('combinerDiscordNotes') || '';
-eiAnonymizeCheckbox.checked = localStorage.getItem('eiAnonymizePlayers') === 'true';
+combinerApiKeyInput.value = initialSettings.combinerApiKey;
+combinerWebhookInput.value = initialSettings.combinerWebhookUrl;
+combinerGlickoCheckbox.checked = initialSettings.combinerGlickoUpdate;
+combinerFightChartsCheckbox.checked = initialSettings.combinerFightCharts;
+combinerHideColumnsCheckbox.checked = initialSettings.combinerHideColumns;
+combinerBoonsDetailedCheckbox.checked = initialSettings.combinerBoonsDetailed;
+combinerOffensiveDetailedCheckbox.checked = initialSettings.combinerOffensiveDetailed;
+combinerDefensesDetailedCheckbox.checked = initialSettings.combinerDefensesDetailed;
+combinerSupportDetailedCheckbox.checked = initialSettings.combinerSupportDetailed;
+combinerBlacklistInput.value = initialSettings.combinerBlacklistAccounts;
+combinerInputDirectoryInput.value = initialSettings.combinerInputDirectory;
+combinerOutputFilenameInput.value = initialSettings.combinerOutputFilename;
+combinerJsonOutputFilenameInput.value = initialSettings.combinerJsonOutputFilename;
+combinerDbFilenameInput.value = initialSettings.combinerDbFilename;
+combinerDbPathInput.value = initialSettings.combinerDbPath;
+combinerWriteAllJsonCheckbox.checked = initialSettings.combinerWriteAllJson;
+combinerWriteExcelCheckbox.checked = initialSettings.combinerWriteExcel;
+combinerExcelFilenameInput.value = initialSettings.combinerExcelFilename;
+combinerExcelPathInput.value = initialSettings.combinerExcelPath;
+combinerSkillCastLimitInput.value = initialSettings.combinerSkillCastLimit;
+combinerSortModeSelect.value = initialSettings.combinerSortMode;
+combinerDiscordNotesInput.value = initialSettings.combinerDiscordNotes;
+eiAnonymizeCheckbox.checked = initialSettings.eiAnonymizePlayers;
 supportProfs = loadSupportProfs(localStorage);
 renderSupportProfs();
 boonWeightsState = loadWeights(localStorage, BOON_WEIGHTS_STORAGE_KEY, BOON_WEIGHT_KEYS);
@@ -626,13 +629,13 @@ downloadParserBtn.addEventListener('click', async () => {
 });
 parserTopStatsRadio.addEventListener('change', () => {
   if (parserTopStatsRadio.checked) {
-    localStorage.setItem('parserSelection', 'topstats');
+    saveRendererSetting(localStorage, 'parserSelection', 'topstats');
     updateDescriptionVisibility();
   }
 });
 parserCombinerRadio.addEventListener('change', () => {
   if (parserCombinerRadio.checked) {
-    localStorage.setItem('parserSelection', 'combiner');
+    saveRendererSetting(localStorage, 'parserSelection', 'combiner');
     updateDescriptionVisibility();
   }
 });

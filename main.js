@@ -5,7 +5,7 @@ const os = require('os');
 const { execSync, spawn } = require('child_process');
 const AdmZip = require('adm-zip');
 const semver = require('semver');
-const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('./utils');
+const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig, loadApiCache, saveApiCache, loadUiState, saveUiState } = require('./utils');
 const { downloadFile, downloadUpdateAsset, collectAssetInfo, resolveUpdateMode, setLogger } = require('./update');
 
 const {
@@ -146,51 +146,7 @@ app.on('web-contents-created', (event, contents) => {
 });
 
 
-function getApiCachePath() {
-  return path.join(app.getPath('userData'), 'api-cache.json');
-}
 
-function getUiStatePath() {
-  return path.join(app.getPath('userData'), 'ui-state.json');
-}
-
-function loadApiCache() {
-  try {
-    const data = fs.readFileSync(getApiCachePath(), 'utf8');
-    return JSON.parse(data);
-  } catch {
-    return {};
-  }
-}
-
-function loadUiState() {
-  try {
-    const data = fs.readFileSync(getUiStatePath(), 'utf8');
-    const parsed = JSON.parse(data);
-    return parsed && typeof parsed === 'object' ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveApiCache(cache) {
-  try {
-    fs.writeFileSync(getApiCachePath(), JSON.stringify(cache, null, 2), 'utf8');
-  } catch { }
-}
-
-function saveUiState(patch = {}) {
-  const next = { ...loadUiState() };
-  if (typeof patch.lastFolder === 'string') {
-    next.lastFolder = patch.lastFolder;
-  }
-  try {
-    fs.writeFileSync(getUiStatePath(), JSON.stringify(next, null, 2), 'utf8');
-  } catch (e) {
-    logError('Failed to save UI state', e);
-  }
-  return next;
-}
 
 async function fetchJson(url) {
   const cache = loadApiCache();

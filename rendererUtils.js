@@ -184,4 +184,68 @@
     exports.saveWeights = saveWeights;
     exports.getLoginTargetUrl = getLoginTargetUrl;
 
+
+    function saveRendererSetting(storage, key, value) {
+        try {
+            if (value === null || value === undefined) {
+                storage.removeItem(key);
+            } else {
+                storage.setItem(key, String(value));
+            }
+        } catch { }
+    }
+
+    function loadRendererSettings(storage) {
+        const get = (key, def = '') => {
+            try {
+                const val = storage.getItem(key);
+                return val === null ? def : val;
+            } catch {
+                return def;
+            }
+        };
+        const getBool = (key, def = false) => {
+            try {
+                const val = storage.getItem(key);
+                return val === null ? def : val === 'true';
+            } catch {
+                return def;
+            }
+        };
+
+        return {
+            dpsReportUserToken: get('dpsReportUserToken'),
+            uploadUrl: get('uploadUrl'),
+            combinerGuildName: get('combinerGuildName'),
+            combinerGuildId: get('combinerGuildId'),
+            combinerApiKey: get('combinerApiKey'),
+            combinerWebhookUrl: get('combinerWebhookUrl'),
+            combinerGlickoUpdate: getBool('combinerGlickoUpdate'),
+            combinerFightCharts: getBool('combinerFightCharts'),
+            combinerHideColumns: getBool('combinerHideColumns'),
+            combinerBoonsDetailed: getBool('combinerBoonsDetailed'),
+            combinerOffensiveDetailed: getBool('combinerOffensiveDetailed'),
+            combinerDefensesDetailed: getBool('combinerDefensesDetailed'),
+            combinerSupportDetailed: getBool('combinerSupportDetailed'),
+            combinerBlacklistAccounts: get('combinerBlacklistAccounts'),
+            combinerInputDirectory: get('combinerInputDirectory', 'd:/gw2logs/output'),
+            combinerOutputFilename: get('combinerOutputFilename'),
+            combinerJsonOutputFilename: get('combinerJsonOutputFilename'),
+            combinerDbFilename: get('combinerDbFilename', 'Top_Stats.db'),
+            combinerDbPath: get('combinerDbPath', '.'),
+            combinerWriteAllJson: getBool('combinerWriteAllJson', true),
+            combinerWriteExcel: getBool('combinerWriteExcel', false),
+            combinerExcelFilename: get('combinerExcelFilename', 'Top_Stats.xlsx'),
+            combinerExcelPath: get('combinerExcelPath', '.'),
+            combinerSkillCastLimit: get('combinerSkillCastLimit', '40'),
+            combinerSortMode: get('combinerSortMode', 'Total'),
+            combinerDiscordNotes: get('combinerDiscordNotes'),
+            eiAnonymizePlayers: getBool('eiAnonymizePlayers'),
+            parserSelection: get('parserSelection')
+        };
+    }
+
+    exports.saveRendererSetting = saveRendererSetting;
+    exports.loadRendererSettings = loadRendererSettings;
+
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.rendererUtils = {}));
