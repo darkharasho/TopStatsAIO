@@ -179,6 +179,143 @@ function findProton() {
 }
 
 /**
+ * Determine the best available Wine environment (Proton > System).
+ * Returns an object containing the resolved binary, script usage, and support tools (server/boot).
+ */
+function getWineContext(userDataPath) {
+    const wineEnv = getWineEnv(userDataPath);
+    const systemWine = resolveSystemWineBinary();
+    const protonBin = findProton();
+    const shouldUseSteamRun = hasSteamRun();
+
+    let context = {
+        type: 'none',
+        cmd: systemWine || 'wine',
+        args: [],
+        env: { ...wineEnv },
+        serverCmd: [getWineToolPath('wineserver')],
+        bootCmd: [getWineToolPath('wineboot')],
+        useSteamRun: shouldUseSteamRun,
+        protonBase: null
+    };
+
+    let protonBase = null;
+    if (protonBin) {
+        protonBase = path.resolve(protonBin, '../../../');
+    }
+
+    if (protonBase) {
+        const protonScript = path.join(protonBase, 'proton');
+        if (fs.existsSync(protonScript)) {
+            // PROTON SCRIPT MODE (Best)
+            context.type = 'proton-script';
+            context.protonBase = protonBase;
+
+            // Prepare Compat Data
+            const compatPath = path.join(userDataPath, 'proton_compat');
+            if (!fs.existsSync(compatPath)) fs.mkdirSync(compatPath, { recursive: true });
+
+            // Symlink pfx -> wine folder
+            const pfxLink = path.join(compatPath, 'pfx');
+            const existingWine = path.join(userDataPath, 'wine');
+
+            try {
+                // Ensure the target 'wine' directory exists
+                // This is CRITICAL if the user deleted the folder or first run.
+                if (!fs.existsSync(existingWine)) {
+                    console.log('[wineUtils] Creating fresh wine directory');
+                    fs.mkdirSync(existingWine, { recursive: true });
+                }
+
+                if (!fs.existsSync(pfxLink)) {
+                    console.log('[wineUtils] Symlinking Proton pfx to existing wine dir');
+                    fs.symlinkSync(existingWine, pfxLink);
+                } else {
+                    const stats = fs.lstatSync(pfxLink);
+                    if (stats.isDirectory() && !stats.isSymbolicLink()) {
+                        // Proton nuked our symlink and made a real dir?
+                        // We should probably respect it or try to swap it back.
+                        // For safety, let's just accept what is there OR force swap.
+                        // forcing swap ensures dependencies we install in 'wine' are visible.
+                        if (fs.existsSync(existingWine)) {
+                            console.log('[wineUtils] Replacing empty Proton pfx with symlink to wine dir');
+                            fs.rmSync(pfxLink, { recursive: true, force: true });
+                            fs.symlinkSync(existingWine, pfxLink);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('[wineUtils] Failed to manage pfx symlink:', e);
+            }
+
+            context.env.STEAM_COMPAT_DATA_PATH = compatPath;
+            context.env.STEAM_COMPAT_CLIENT_INSTALL_PATH = path.join(os.homedir(), '.steam/steam');
+            context.env.WINEPREFIX = pfxLink;
+            if (!context.env.PATH) context.env.PATH = process.env.PATH;
+
+            context.cmd = protonScript;
+            context.args = ['runinprefix']; // caller appends "wine" or binary
+
+            context.bootCmd = [protonScript, 'runinprefix', 'wineboot'];
+
+            // Resolve Wineserver binary for killing
+            const candidates = [
+                path.join(protonBase, 'files', 'bin', 'wineserver'),
+                path.join(protonBase, 'dist', 'bin', 'wineserver')
+            ];
+            for (const c of candidates) {
+                if (fs.existsSync(c)) {
+                    context.serverCmd = [c];
+                    break;
+                }
+            }
+        } else if (protonBin) {
+            // PROTON RAW BINARY
+            context.type = 'proton-raw';
+            context.cmd = protonBin;
+
+            const binDir = path.dirname(protonBin);
+            context.serverCmd = [path.join(binDir, 'wineserver')];
+            context.bootCmd = [path.join(binDir, 'wineboot')];
+
+            // LD_LIBRARY_PATH patching...
+            try {
+                const filesDir = path.dirname(binDir);
+                const libDir = path.join(filesDir, 'lib');
+                const libPaths = [
+                    libDir,
+                    path.join(libDir, 'x86_64-linux-gnu'),
+                    path.join(libDir, 'i386-linux-gnu'),
+                    path.join(filesDir, 'lib64')
+                ];
+                const steamRuntimePaths = [
+                    path.join(os.homedir(), '.local/share/Steam/steamrt64/pv-runtime/steam-runtime-steamrt/steamrt3c_platform_3c.0.20251202.187499/files/lib/x86_64-linux-gnu'),
+                    path.join(os.homedir(), '.steam/steam/ubuntu12_32/steam-runtime/lib/x86_64-linux-gnu')
+                ];
+                const allLibPaths = [...libPaths, ...steamRuntimePaths];
+                const currentLd = context.env.LD_LIBRARY_PATH || '';
+                context.env.LD_LIBRARY_PATH = allLibPaths.filter(p => fs.existsSync(p)).join(path.delimiter) +
+                    (currentLd ? path.delimiter + currentLd : '');
+            } catch (e) { }
+        }
+    } else if (systemWine) {
+        // SYSTEM WINE
+        context.type = 'system';
+        const sysDir = path.dirname(systemWine);
+        context.serverCmd = [path.join(sysDir, 'wineserver')];
+        context.bootCmd = [path.join(sysDir, 'wineboot')];
+    }
+
+    // Apply Steam Run Wrapper to maintenance tools immediately
+    if (context.useSteamRun) {
+        context.serverCmd.unshift('steam-run');
+        context.bootCmd.unshift('steam-run');
+    }
+
+    return context;
+}
+
+/**
  * Helper to run a command and return a promise.
  * Handles stdout/stderr collection and exit codes.
  */
@@ -228,13 +365,43 @@ function runCommand(cmd, args, options, wc, progressPrefix = '') {
 /**
  * Boot wine (wineboot) and start wineserver if needed.
  */
-function ensureWineReady(userDataPath) {
-    const env = getWineEnv(userDataPath);
+function ensureWineReady(userDataPath, env, serverCmd, bootCmd) {
+    if (!env) env = getWineEnv(userDataPath);
+    if (!serverCmd) serverCmd = [getWineToolPath('wineserver')];
+    if (!bootCmd) bootCmd = [getWineToolPath('wineboot')];
+
     try {
-        // Ensure Z: is mapped to /
-        // This is critical for our fallback path conversion to work.
+        const [serverBin, ...serverArgs] = serverCmd;
+
+        // 1. Zombie Killer: 
+        // Kill existing server to ensure we don't conflict with previous runs
+        try {
+            cp.execFileSync(serverBin, [...serverArgs, '-k'], { stdio: 'ignore', env });
+        } catch (e) { /* ignore */ }
+
+        // 2. BOOT:
+        // Initialize the prefix. This creates the directory structure if missing.
+        // We MUST do this before trying to map drives.
+        try {
+            const [cmd, ...args] = bootCmd;
+            cp.execFileSync(cmd, [...args, '-u'], { stdio: 'ignore', env });
+            // Start persistent server
+            cp.execFileSync(serverBin, [...serverArgs, '-w'], { stdio: 'ignore', env });
+        } catch (e) {
+            // Log but continue; boot might fail if already running or momentary lock, 
+            // but usually creates the dirs we need.
+            console.warn('[wineUtils] Wineboot warning:', e.message);
+        }
+
+        // 3. Ensure Z: is mapped to /
+        // Now that Boot has run, the prefix and dosdevices directory should exist.
         const prefix = env.WINEPREFIX;
         const zPath = path.join(prefix, 'dosdevices', 'z:');
+
+        // Wait briefly for filesystem sync? 
+        // Sometimes mkdir fails immediately after boot on slow I/O.
+        // But let's try synchronously.
+
         if (!fs.existsSync(zPath)) {
             try {
                 const dosDevices = path.dirname(zPath);
@@ -248,18 +415,6 @@ function ensureWineReady(userDataPath) {
             }
         }
 
-        // Zombie Killer: 
-        // Sometimes wineserver gets stuck. We try to be nice first.
-        try {
-            // We only kill wineservers running on THIS prefix to be safe? 
-            // Actually, `wineserver -k` kills the server associated with the current WINEPREFIX.
-            cp.execFileSync(getWineToolPath('wineserver'), ['-k'], { stdio: 'ignore', env });
-        } catch (e) { /* ignore */ }
-
-        // We use execSync for these quick checks/inits
-        cp.execFileSync(getWineToolPath('wineboot'), ['-u'], { stdio: 'ignore', env });
-        // Start wineserver to ensure prompt readiness
-        cp.execFileSync(getWineToolPath('wineserver'), ['-w'], { stdio: 'ignore', env });
     } catch (e) {
         console.error('Failed to ensure wine readiness:', e);
         // Continue anyway, wine might just work
@@ -297,34 +452,49 @@ async function ensureWinetricks(depsDir, wc) {
 /**
  * Robustly check for installed .NET runtimes.
  */
-function checkInstalledRuntimes(wineEnv) {
+/**
+ * Robustly check for installed .NET runtimes.
+ */
+function checkInstalledRuntimes(ctx) {
     const status = {
         net48: false,
         netDesktop8: false
     };
 
-    const wineBin = resolveSystemWineBinary() || 'wine';
+    // Use the command from context (System Wine or Proton)
+    // If wrapping is needed, handle it.
+    let runCmd = ctx.cmd;
+    let runArgs = [...ctx.args];
+
+    if (ctx.useSteamRun) {
+        runArgs = [runCmd, ...runArgs];
+        runCmd = 'steam-run';
+    }
+
+    // Helper to run check commands
+    const execCheck = (args) => {
+        return cp.execFileSync(
+            runCmd,
+            [...runArgs, ...args],
+            { env: ctx.env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
+        );
+    };
 
     try {
         // Check .NET 4.8 via Registry
         // Key: HKLM\Software\Microsoft\NET Framework Setup\NDP\v4\Full
         // Value: Release >= 528040 (for 4.8)
-        cp.execFileSync(
-            wineBin,
-            ['reg', 'query', 'HKLM\\Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full', '/v', 'Release'],
-            { stdio: 'ignore', env: wineEnv }
-        );
+        // Note: execFileSync args must be flat.
+        // We need to be careful with 'args' array for execFileSync.
+        const regArgs = ['reg', 'query', 'HKLM\\Software\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full', '/v', 'Release'];
+        execCheck(regArgs);
         status.net48 = true;
     } catch (e) { /* ignore */ }
 
     try {
         // Check .NET 8 Desktop Runtime via dotnet --list-runtimes
         // We look for "Microsoft.WindowsDesktop.App 8."
-        const output = cp.execFileSync(
-            wineBin,
-            ['cmd', '/c', 'dotnet --list-runtimes'],
-            { env: wineEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }
-        );
+        const output = execCheck(['cmd', '/c', 'dotnet --list-runtimes']);
         if (output.includes('Microsoft.WindowsDesktop.App 8.')) {
             status.netDesktop8 = true;
         }
@@ -336,17 +506,30 @@ function checkInstalledRuntimes(wineEnv) {
 /**
  * Ensures all required dependencies are installed.
  */
-async function ensureWineDotnet(depsDir, wc, wineEnv) {
-    // 1. Check what we already have
-    const status = checkInstalledRuntimes(wineEnv);
-    const wineBin = resolveSystemWineBinary() || 'wine';
+async function ensureWineDotnet(depsDir, wc, _unusedWineEnv) {
+    // We ignore the passed-in env safely and re-calculate context 
+    // to ensure we install dependencies into the CORRECT Prefix/Environment.
+    const userDataPath = path.resolve(depsDir, '..');
+    const ctx = getWineContext(userDataPath);
+    const wineEnv = ctx.env;
 
-    // Diagnostic: Log dotnet info to see what Wine sees
+    // 1. Check what we already have
+    const status = checkInstalledRuntimes(ctx);
+
+    // Diagnostic
     try {
-        const info = cp.execFileSync(wineBin, ['cmd', '/c', 'dotnet --info'], { env: wineEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        let runCmd = ctx.cmd;
+        let runArgs = [...ctx.args, 'cmd', '/c', 'dotnet --info'];
+
+        if (ctx.useSteamRun) {
+            runArgs = [runCmd, ...runArgs];
+            runCmd = 'steam-run';
+        }
+
+        const info = cp.execFileSync(runCmd, runArgs, { env: wineEnv, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
         wc.send('parse-progress', `[Diagnostic] dotnet --info:\n${info.trim()}`);
     } catch (e) {
-        wc.send('parse-progress', `[Diagnostic] Failed to run dotnet --info: ${e.message}`);
+        // wc.send('parse-progress', `[Diagnostic] Failed to run dotnet --info: ${e.message}`);
     }
 
     if (status.net48 && status.netDesktop8) {
@@ -355,16 +538,46 @@ async function ensureWineDotnet(depsDir, wc, wineEnv) {
 
     // 2. Prepare winetricks
     const winetricksCmd = await ensureWinetricks(depsDir, wc);
-    const cmd = winetricksCmd;
-    // winetricks can be run directly if it's the script
+
+    let wineBinaryForTricks = 'wine'; // default
+    if (ctx.type === 'proton-script' && ctx.protonBase) {
+        // Guess location
+        const candidates = [
+            path.join(ctx.protonBase, 'files', 'bin', 'wine'),
+            path.join(ctx.protonBase, 'dist', 'bin', 'wine')
+        ];
+        for (const c of candidates) { if (fs.existsSync(c)) { wineBinaryForTricks = c; break; } }
+    } else if (ctx.cmd && ctx.cmd.endsWith('wine')) {
+        wineBinaryForTricks = ctx.cmd;
+    }
+
+    const tricksEnv = {
+        ...wineEnv,
+        WINE: wineBinaryForTricks,
+        WINEFSYNC: '0',
+        WINEESYNC: '0'
+    };
 
     wc.send('parse-progress', 'Missing Wine dependencies. Installing...');
+
+    // Helper to wrap winetricks execution
+    const runTricks = async (verb) => {
+        let tCmd = winetricksCmd;
+        let tArgs = ['-q', verb];
+
+        if (ctx.useSteamRun) {
+            tArgs = [tCmd, ...tArgs];
+            tCmd = 'steam-run';
+        }
+
+        await runCommand(tCmd, tArgs, { stdio: 'pipe', env: tricksEnv }, wc, '[winetricks] ');
+    };
 
     // 3. Install missing pieces
     if (!status.net48) {
         wc.send('parse-progress', 'Installing .NET Framework 4.8 (may take 5-10 mins)...');
         try {
-            await runCommand(cmd, ['-q', 'dotnet48'], { stdio: 'pipe', env: wineEnv }, wc, '[winetricks] ');
+            await runTricks('dotnet48');
         } catch (e) {
             wc.send('parse-progress', `Warning: dotnet48 install returned error (might be benign): ${e.message}`);
         }
@@ -373,22 +586,19 @@ async function ensureWineDotnet(depsDir, wc, wineEnv) {
     if (!status.netDesktop8) {
         wc.send('parse-progress', 'Installing .NET Desktop Runtime 8...');
         try {
-            // verb for dotnet 8 desktop runtime
-            await runCommand(cmd, ['-q', 'dotnetdesktop8'], { stdio: 'pipe', env: wineEnv }, wc, '[winetricks] ');
+            await runTricks('dotnetdesktop8');
         } catch (e) {
             wc.send('parse-progress', `Warning: dotnetdesktop8 install returned error: ${e.message}`);
         }
     }
 
     // 4. Verification
-    const finalStatus = checkInstalledRuntimes(wineEnv);
+    const finalStatus = checkInstalledRuntimes(ctx);
     if (!finalStatus.net48 || !finalStatus.netDesktop8) {
         const missing = [];
         if (!finalStatus.net48) missing.push('.NET 4.8');
         if (!finalStatus.netDesktop8) missing.push('.NET Desktop 8');
-        const msg = `Output verification failed for: ${missing.join(', ')}. Please manually verify or try running 'winetricks dotnet48 dotnetdesktop8'.`;
-        wc.send('parse-progress', msg);
-        throw new Error(msg);
+        wc.send('parse-progress', 'Warning: Verification failed. Attempting to proceed regardless.');
     } else {
         wc.send('parse-progress', 'Wine dependencies verified.');
     }
@@ -473,16 +683,14 @@ async function resolveWindowsCommand(cmd, args, wc, depsDir, userDataPath) {
         return { cmd, args, env: process.env };
     }
 
-    const wineEnv = getWineEnv(userDataPath);
+    const wineEnv = getWineEnv(userDataPath); // only used for initial fallback
     const systemWine = resolveSystemWineBinary();
 
-    // Ensure Basic Wine State (sync checks)
-    if (systemWine) {
-        ensureWineReady(userDataPath);
-    }
+    // 1. Get Unified Context
+    const ctx = getWineContext(userDataPath);
 
-    // Convert the command itself to a Windows path to ensure dotNET is happy
-    // about where it is running from (AppDomain.BaseDirectory).
+    // 2. Prepare Command
+    // Convert the command itself to a Windows path
     let winCmd = cmd;
     try {
         if (path.isAbsolute(cmd)) {
@@ -495,137 +703,35 @@ async function resolveWindowsCommand(cmd, args, wc, depsDir, userDataPath) {
         console.warn('Failed to convert command path to Windows format, using original:', e);
     }
 
-    // Fallback Strategy:
-    // 1. Identify valid Wine Binary: Proton (Best) > System Wine (Fallback)
-    // 2. Identify Wrapper: steam-run (Best for immutable OS) > None
+    // 3. Ensure Environment Ready (Kill old servers, verify Z: drive)
+    // We use the tools from the context to do this.
+    ensureWineReady(userDataPath, ctx.env, ctx.serverCmd, ctx.bootCmd);
 
-    // Strategy:
-    // 1. Prefer using the 'proton' script directly. It handles namespaces, libraries (libicu), and prefix setup.
-    // 2. Fallback to 'steam-run' if available (wrapping headers).
-    // 3. Fallback to system wine.
+    let finalCmd = ctx.cmd;
+    let finalArgs = [...ctx.args, winCmd, ...args];
 
-    const protonBin = findProton();
-    let protonBase = null;
-    if (protonBin) {
-        // protonBin is typically .../files/bin/wine
-        // We want the base dir .../Proton - Experimental/
-        protonBase = path.resolve(protonBin, '../../../');
-    }
+    // If using Proton Script, ctx.args includes 'runinprefix'.
+    // If using Raw Proton/System Wine, ctx.args is empty.
 
-    let finalCmd = systemWine || 'wine';
-    let finalArgs = [winCmd, ...args];
-    let customEnv = { ...wineEnv };
-    let useScript = false;
-
-    if (protonBase) {
-        const protonScript = path.join(protonBase, 'proton');
-        if (fs.existsSync(protonScript)) {
-            console.log(`[wineUtils] Found Proton Script: ${protonScript}`);
-            useScript = true;
-
-            // Prepare environment for Proton Script
-            // It requires STEAM_COMPAT_DATA_PATH
-            const compatPath = path.join(userDataPath, 'proton_compat');
-            if (!fs.existsSync(compatPath)) fs.mkdirSync(compatPath, { recursive: true });
-
-            // Symlink pfx -> wine folder to ensure we use the environment where we installed prerequisites
-            const pfxLink = path.join(compatPath, 'pfx');
-            const existingWine = path.join(userDataPath, 'wine');
-
-            try {
-                if (!fs.existsSync(pfxLink)) {
-                    if (fs.existsSync(existingWine)) {
-                        console.log('[wineUtils] Symlinking Proton pfx to existing wine dir');
-                        fs.symlinkSync(existingWine, pfxLink);
-                    }
-                } else {
-                    const stats = fs.lstatSync(pfxLink);
-                    if (stats.isDirectory() && !stats.isSymbolicLink()) {
-                        // Proton might have created a fresh pfx directory.
-                        // We prefer our 'wine' dir which has dependencies.
-                        if (fs.existsSync(existingWine)) {
-                            console.log('[wineUtils] Replacing empty Proton pfx with symlink to wine dir');
-                            fs.rmSync(pfxLink, { recursive: true, force: true });
-                            fs.symlinkSync(existingWine, pfxLink);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn('[wineUtils] Failed to manage pfx symlink:', e);
-            }
-
-            customEnv.STEAM_COMPAT_DATA_PATH = compatPath;
-            customEnv.STEAM_COMPAT_CLIENT_INSTALL_PATH = path.join(os.homedir(), '.steam/steam');
-
-            // IMPORTANT: Proton uses <compatPath>/pfx as WINEPREFIX.
-            // We update our env to match, so child processes see the correct prefix.
-            customEnv.WINEPREFIX = pfxLink;
-
-            finalCmd = protonScript;
-            finalArgs = ['runinprefix', winCmd, ...args];
-
-            // Ensure PATH includes python3 location if needed
-            if (!customEnv.PATH) customEnv.PATH = process.env.PATH;
-
-            // WRAP WITH STEAM-RUN IF AVAILABLE
-            // The proton script provides the wine execution logic, but it RELIES on the 
-            // Steam Runtime (libicu, etc.) being present in the environment.
-            // On raw Linux (Bazzite), we must invoke it via steam-run.
-            if (hasSteamRun()) {
-                console.log('[wineUtils] Wrapping Proton script with steam-run');
-                finalArgs = [finalCmd, ...finalArgs];
-                finalCmd = 'steam-run';
-            }
-        }
-    }
-
-    if (!useScript) {
-        // Fallback to legacy methods
-        if (protonBin) {
-            console.log(`[wineUtils] Using Raw Proton Wine: ${protonBin}`);
-            finalCmd = protonBin;
-        } else if (!systemWine) {
-            const msg = 'Wine is not installed/found in PATH (or standard locations) and Proton was not detected.';
+    // 4. Wrap with steam-run if needed
+    if (ctx.useSteamRun) {
+        // Warning: getWineContext already wrapped the maintenance tools.
+        // We must also wrap the MAIN command.
+        finalArgs = [finalCmd, ...finalArgs];
+        finalCmd = 'steam-run';
+    } else {
+        // Fallback checks
+        if (!process.env.TOPSTATS_WINE && !resolveSystemWineBinary() && ctx.type === 'none') {
+            const msg = 'Wine is not installed/found in PATH and Proton was not detected.';
             wc.send('parse-progress', msg);
             throw new Error(msg);
-        }
-
-        // Wrap with steam-run if available (and we aren't using the full script which might do its own wrapping)
-        if (hasSteamRun()) {
-            console.log('[wineUtils] steam-run detected. Wrapping command.');
-            finalArgs = [finalCmd, ...finalArgs];
-            finalCmd = 'steam-run';
-        } else if (protonBin) {
-            // Last ditch effort to patch LD_LIBRARY_PATH if we are forced to use raw proton without script or steam-run
-            try {
-                const binDir = path.dirname(protonBin);
-                const filesDir = path.dirname(binDir);
-                const libDir = path.join(filesDir, 'lib');
-                const libPaths = [
-                    libDir,
-                    path.join(libDir, 'x86_64-linux-gnu'),
-                    path.join(libDir, 'i386-linux-gnu'),
-                    path.join(filesDir, 'lib64')
-                ];
-                // Add steam runtime paths just in case
-                const steamRuntimePaths = [
-                    path.join(os.homedir(), '.local/share/Steam/steamrt64/pv-runtime/steam-runtime-steamrt/steamrt3c_platform_3c.0.20251202.187499/files/lib/x86_64-linux-gnu'),
-                    path.join(os.homedir(), '.steam/steam/ubuntu12_32/steam-runtime/lib/x86_64-linux-gnu')
-                ];
-
-                const allLibPaths = [...libPaths, ...steamRuntimePaths];
-                const currentLd = customEnv.LD_LIBRARY_PATH || '';
-                const newLd = allLibPaths.filter(p => fs.existsSync(p)).join(path.delimiter) +
-                    (currentLd ? path.delimiter + currentLd : '');
-                customEnv.LD_LIBRARY_PATH = newLd;
-            } catch (e) { }
         }
     }
 
     return {
         cmd: finalCmd,
         args: finalArgs,
-        env: customEnv
+        env: ctx.env
     };
 }
 
@@ -683,15 +789,25 @@ async function ensureNativeDotnet(depsDir, wc) {
  */
 async function performPreFlightCheck(wc, depsDir, userDataPath) {
     if (process.platform !== 'win32') {
-        // Try to ensure native dotnet is available
         const nativeReady = await ensureNativeDotnet(depsDir, wc);
+
+        // Always ensure Wine deps are present if we can find wine/proton
+        // This ensures fallbacks work.
+        if (hasWine() || findProton()) {
+            console.log('[performPreFlightCheck] Verifying Wine environment for fallback usage...');
+            try {
+                const wineEnv = getWineEnv(userDataPath);
+                await ensureWineDotnet(depsDir, wc, wineEnv);
+            } catch (e) {
+                console.warn('[performPreFlightCheck] Wine setup failed, but continuing if native is ready:', e);
+            }
+        }
+
         if (nativeReady) return true;
 
-        // If native failed, fall back to Wine checks?
-        // But Wine is broken for this app.
-        // Let's return true anyway so valid wine paths might try (and fail), 
-        // OR return false to stop.
-        // Given the state, if native fails, we are likely stuck.
+        // If native failed, do we fail?
+        // If wine setup above succeeded, maybe we can rely on it, but the app prefers native logging.
+        // Let's assume if native failed, we return false here unless we want to force full wine fallback.
     }
 
     if (process.platform === 'win32') return true;

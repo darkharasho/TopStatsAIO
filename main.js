@@ -1098,13 +1098,14 @@ ipcMain.handle('start-parse', async (event, data) => {
 
             if (useNative) {
               // Native Mode: Use Linux paths + Native Runtime
-              send('Using Native Linux .NET Runtime for Combiner');
               const dllPath = combExe.replace(/\.exe$/i, '.dll');
               if (fs.existsSync(dllPath)) {
+                send('Using Native Linux .NET Runtime for Combiner');
                 cmdToRun = nativeDotnet;
                 argsToRun = [dllPath, '-i', currentProcessedDir, '-c', currentCombConf];
               } else {
                 // Fallback if DLL missing? Should not happen.
+                send('Native Combiner DLL not found. Falling back to Wine/Proton.');
                 argsToRun = ['-i', currentProcessedDir, '-c', currentCombConf];
               }
             } else {
