@@ -7,10 +7,14 @@ Your one stop shop for generating top stats. This program uses both Elite Insigh
 
 ---
 
-<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/56a0e4b7-29d7-4cac-aae0-e68e8dcd0205" />
+<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/33c2c146-1d14-4190-8663-3863f3dc193b" />
 
+<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/19d9d12d-ff78-4c1a-8df8-89cc1b332537" />
 
-<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/d7fee11b-8937-418b-b19b-7447a914b178" />
+<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/ba4e37e6-6b29-4915-a40e-0ef53c9cfd9f" />
+
+<img width="1100" height="800" alt="image" src="https://github.com/user-attachments/assets/74d2f83b-7475-470e-9169-401f0862018a" />
+
 
 ---
 
