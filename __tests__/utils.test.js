@@ -1,7 +1,13 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig } = require('../utils');
+const { ensureDeps, readVersions, writeVersions, editEIConfig, editTopStatsConfig, loadUiState, saveUiState, loadApiCache, saveApiCache } = require('../utils');
+
+jest.mock('electron', () => ({
+  app: {
+    getPath: jest.fn(() => require('os').tmpdir())
+  }
+}));
 
 describe('utils', () => {
   test('ensureDeps creates directory', () => {
@@ -92,5 +98,58 @@ describe('utils', () => {
     });
     const content3 = fs.readFileSync(dest3, 'utf8');
     expect(content3).toMatch('webhook_url = https://discord.com/api/webhooks/123');
+  });
+
+  test('editTopStatsConfig adds support professions', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsaio-'));
+    const dest = path.join(tempDir, 'out-profs.ini');
+    const dummyTemplate = path.join(tempDir, 'template.ini');
+    fs.writeFileSync(dummyTemplate, `
+[General]
+# ...
+[Support_Profs]
+# -- TopStatsAIO Support Professions Start --
+# -- TopStatsAIO Support Professions End --
+`);
+
+    await editTopStatsConfig(dummyTemplate, dest, {
+      supportProfs: [
+        { name: 'Firebrand', boons: ['b1122', 'b717'] },
+        { name: 'Chronomancer', boons: ['b725'] }
+      ]
+    });
+    const content = fs.readFileSync(dest, 'utf8');
+    expect(content).toMatch('# -- TopStatsAIO Support Professions Start --');
+    expect(content).toMatch('Firebrand = b1122, b717');
+    expect(content).toMatch('Chronomancer = b725');
+    expect(content).toMatch('# -- TopStatsAIO Support Professions End --');
+  });
+});
+
+describe('Settings Storage', () => {
+  test('loadUiState returns empty object if file missing', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const uiPath = path.join(os.tmpdir(), 'ui-state.json');
+    if (fs.existsSync(uiPath)) fs.unlinkSync(uiPath);
+
+    const state = loadUiState();
+    expect(state).toEqual({});
+  });
+
+  test('saveUiState and loadUiState persist data', () => {
+    const newState = saveUiState({ lastFolder: 'test-folder' });
+    expect(newState.lastFolder).toBe('test-folder');
+
+    const loaded = loadUiState();
+    expect(loaded.lastFolder).toBe('test-folder');
+  });
+
+  test('saveApiCache and loadApiCache persist data', () => {
+    const cache = { 'http://example.com': { data: 'test' } };
+    saveApiCache(cache);
+    const loaded = loadApiCache();
+    expect(loaded).toEqual(cache);
   });
 });

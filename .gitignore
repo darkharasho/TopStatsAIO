@@ -2,3 +2,5 @@ node_modules
 dependencies
 parsed_files
 dist/
+*.log
+*.txt

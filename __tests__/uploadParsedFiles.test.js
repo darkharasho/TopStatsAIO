@@ -12,6 +12,7 @@ jest.mock('electron', () => {
       on: jest.fn(),
       isPackaged: false,
       getVersion: jest.fn(() => '1.0.0'),
+      setName: jest.fn(),
     },
     ipcMain: {
       handle: jest.fn((channel, handler) => {
@@ -22,6 +23,7 @@ jest.mock('electron', () => {
     shell: { openPath: jest.fn(), openExternal: jest.fn() },
     BrowserWindow: jest.fn(() => ({
       loadFile: jest.fn(),
+      loadURL: jest.fn(),
       webContents: { once: jest.fn(), send: jest.fn() },
       show: jest.fn(),
       once: jest.fn(),
@@ -29,6 +31,7 @@ jest.mock('electron', () => {
     Menu: { setApplicationMenu: jest.fn() },
     nativeTheme: { themeSource: 'dark' },
     dialog: { showOpenDialog: jest.fn(), showErrorBox: jest.fn() },
+    protocol: { registerSchemesAsPrivileged: jest.fn(), registerFileProtocol: jest.fn() },
   };
   electronMock.BrowserWindow.getAllWindows = jest.fn(() => []);
   return electronMock;

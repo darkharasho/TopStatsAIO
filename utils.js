@@ -1,5 +1,7 @@
 const fs = require('fs');
 const { URL } = require('url');
+const path = require('path');
+const electron = require('electron');
 
 const SUPPORTED_BOON_IDS = new Set([
   'b740',
@@ -198,10 +200,70 @@ async function editTopStatsConfig(template, dest, opts) {
   await fs.promises.writeFile(dest, replaced, 'utf8');
 }
 
+
+function getUserDataPath() {
+  // Graceful fallback if electron app isn't ready or mocked
+  try {
+    return electron.app.getPath('userData');
+  } catch {
+    return process.cwd();
+  }
+}
+
+function getApiCachePath() {
+  return path.join(getUserDataPath(), 'api-cache.json');
+}
+
+function getUiStatePath() {
+  return path.join(getUserDataPath(), 'ui-state.json');
+}
+
+function loadApiCache() {
+  try {
+    const data = fs.readFileSync(getApiCachePath(), 'utf8');
+    return JSON.parse(data);
+  } catch {
+    return {};
+  }
+}
+
+function loadUiState() {
+  try {
+    const data = fs.readFileSync(getUiStatePath(), 'utf8');
+    const parsed = JSON.parse(data);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveApiCache(cache) {
+  try {
+    fs.writeFileSync(getApiCachePath(), JSON.stringify(cache, null, 2), 'utf8');
+  } catch { }
+}
+
+function saveUiState(patch = {}) {
+  const next = { ...loadUiState() };
+  if (typeof patch.lastFolder === 'string') {
+    next.lastFolder = patch.lastFolder;
+  }
+  try {
+    fs.writeFileSync(getUiStatePath(), JSON.stringify(next, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to save UI state', e);
+  }
+  return next;
+}
+
 module.exports = {
   ensureDeps,
   readVersions,
   writeVersions,
   editEIConfig,
   editTopStatsConfig,
+  loadApiCache,
+  saveApiCache,
+  loadUiState,
+  saveUiState
 };

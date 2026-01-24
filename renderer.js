@@ -9,6 +9,25 @@ const dateSelectBtn = document.getElementById('date-select');
 const unselectAllBtn = document.getElementById('unselect-all');
 const settingsBtn = document.getElementById('settings');
 
+const {
+  SUPPORTED_BOONS,
+  SUPPORTED_BOON_IDS,
+  DEFAULT_SUPPORT_PROFS,
+  SUPPORT_PROFS_STORAGE_KEY,
+  LEGACY_SUPPORT_PROFS_STORAGE_KEY,
+  normalizeUrl,
+  isTiddlyhostSignIn,
+  makeTiddlyhostLoginScript,
+  cloneSupportProfEntry,
+  loadRendererSettings,
+  saveRendererSetting,
+  loadSupportProfs,
+  saveSupportProfs,
+  loadWeights,
+  saveWeights,
+  getLoginTargetUrl
+} = window.rendererUtils;
+
 const selectAllBtn = document.getElementById('select-all');
 const refreshBtn = document.getElementById('refresh-files');
 const contextMenu = document.getElementById('context-menu');
@@ -134,21 +153,7 @@ const webviewProgress = document.getElementById('webview-progress');
 const uploadLoadingText = document.getElementById('upload-loading-text');
 let uploadStuckTimer = null;
 
-const SUPPORTED_BOONS = [
-  { id: 'b740', label: 'Might' },
-  { id: 'b725', label: 'Fury' },
-  { id: 'b1187', label: 'Quickness' },
-  { id: 'b30328', label: 'Alacrity' },
-  { id: 'b717', label: 'Protection' },
-  { id: 'b718', label: 'Regeneration' },
-  { id: 'b726', label: 'Vigor' },
-  { id: 'b743', label: 'Aegis' },
-  { id: 'b1122', label: 'Stability' },
-  { id: 'b719', label: 'Swiftness' },
-  { id: 'b26980', label: 'Resistance' },
-  { id: 'b873', label: 'Resolution' }
-];
-const SUPPORTED_BOON_IDS = new Set(SUPPORTED_BOONS.map(boon => boon.id));
+
 
 const BOON_WEIGHT_KEYS = [
   'Aegis',
@@ -197,142 +202,12 @@ const GW2_PROFESSION_GROUPS = [
 const GW2_PROFESSION_SET = new Set(
   GW2_PROFESSION_GROUPS.flatMap(group => group.options)
 );
-const SUPPORT_PROFS_STORAGE_KEY = 'combinerSupportProfs';
-const LEGACY_SUPPORT_PROFS_STORAGE_KEY = 'combinerSupportedProfs';
 const BOON_WEIGHTS_STORAGE_KEY = 'combinerBoonWeights';
 const CONDITION_WEIGHTS_STORAGE_KEY = 'combinerConditionWeights';
 
-const DEFAULT_SUPPORT_PROFS = [
-  { name: 'Firebrand', boons: ['b1122', 'b717', 'b26980', 'b740', 'b1187'] },
-  { name: 'Chronomancer', boons: ['b1122', 'b717', 'b740', 'b725'] },
-  { name: 'Specter', boons: ['b1122', 'b717', 'b740', 'b725'] }
-];
-
 let supportProfs = [];
 
-function normalizeUrl(url) {
-  const trimmed = (url || '').trim();
-  try {
-    return new URL(trimmed).toString();
-  } catch {
-    try {
-      return new URL(`https://${trimmed}`).toString();
-    } catch {
-      return null;
-    }
-  }
-}
 
-function isTiddlyhostSignIn(url) {
-  if (!url) return false;
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname.endsWith('tiddlyhost.com') && parsed.pathname.replace(/\/+$/, '') === '/users/sign_in';
-  } catch {
-    return false;
-  }
-}
-
-function makeTiddlyhostLoginScript({ username, password }) {
-  return `(() => {
-    const username = ${JSON.stringify(username || '')};
-    const password = ${JSON.stringify(password || '')};
-    if (!username || !password) return;
-    const userField = document.querySelector(
-      'input[name="user[email]"], input[name="user[login]"], input#user_email, input#user_login, input[type="email"]'
-    );
-    const passField = document.querySelector(
-      'input[name="user[password]"], input#user_password, input[type="password"]'
-    );
-    if (!userField || !passField) return;
-    userField.focus();
-    userField.value = username;
-    userField.dispatchEvent(new Event('input', { bubbles: true }));
-    userField.dispatchEvent(new Event('change', { bubbles: true }));
-    passField.value = password;
-    passField.dispatchEvent(new Event('input', { bubbles: true }));
-    passField.dispatchEvent(new Event('change', { bubbles: true }));
-    const remember = document.querySelector(
-      'input[name="user[remember_me]"], input#user_remember_me, input[type="checkbox"][name*="remember"]'
-    );
-    if (remember) {
-      remember.checked = true;
-      remember.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  })();`;
-}
-
-function cloneSupportProfEntry(entry = {}) {
-  const boons = [];
-  const seen = new Set();
-  if (Array.isArray(entry.boons)) {
-    entry.boons.forEach(id => {
-      if (!SUPPORTED_BOON_IDS.has(id) || seen.has(id) || boons.length >= 5) return;
-      seen.add(id);
-      boons.push(id);
-    });
-  }
-  const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-  return {
-    name,
-    boons
-  };
-}
-
-function loadSupportProfs() {
-  try {
-    let stored = localStorage.getItem(SUPPORT_PROFS_STORAGE_KEY);
-    if (!stored) {
-      stored = localStorage.getItem(LEGACY_SUPPORT_PROFS_STORAGE_KEY);
-    }
-    if (!stored) return DEFAULT_SUPPORT_PROFS.map(cloneSupportProfEntry);
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) {
-      return DEFAULT_SUPPORT_PROFS.map(cloneSupportProfEntry);
-    }
-    return parsed.map(cloneSupportProfEntry);
-  } catch {
-    return DEFAULT_SUPPORT_PROFS.map(cloneSupportProfEntry);
-  }
-}
-
-function saveSupportProfs() {
-  try {
-    const payload = supportProfs.map(entry => cloneSupportProfEntry(entry));
-    localStorage.setItem(SUPPORT_PROFS_STORAGE_KEY, JSON.stringify(payload));
-    localStorage.removeItem(LEGACY_SUPPORT_PROFS_STORAGE_KEY);
-  } catch { }
-}
-
-function loadWeights(storageKey, keys) {
-  try {
-    const stored = localStorage.getItem(storageKey);
-    if (!stored) {
-      return keys.reduce((acc, key) => {
-        acc[key] = 1;
-        return acc;
-      }, {});
-    }
-    const parsed = JSON.parse(stored);
-    return keys.reduce((acc, key) => {
-      const raw = parsed && typeof parsed[key] !== 'undefined' ? parsed[key] : 1;
-      const num = Number(raw);
-      acc[key] = Number.isFinite(num) ? num : 1;
-      return acc;
-    }, {});
-  } catch {
-    return keys.reduce((acc, key) => {
-      acc[key] = 1;
-      return acc;
-    }, {});
-  }
-}
-
-function saveWeights(storageKey, weights) {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(weights));
-  } catch { }
-}
 
 function renderWeightInputs(container, weights, storageKey) {
   if (!container) return;
@@ -350,7 +225,7 @@ function renderWeightInputs(container, weights, storageKey) {
     input.addEventListener('input', () => {
       const num = Number(input.value);
       weights[key] = Number.isFinite(num) ? num : 1;
-      saveWeights(storageKey, weights);
+      saveWeights(localStorage, storageKey, weights);
     });
     row.appendChild(label);
     row.appendChild(input);
@@ -411,7 +286,7 @@ function getSupportProfsForOptions() {
 
 function removeSupportProf(index) {
   supportProfs.splice(index, 1);
-  saveSupportProfs();
+  saveSupportProfs(localStorage, supportProfs);
   renderSupportProfs();
 }
 
@@ -432,7 +307,7 @@ function toggleSupportProfBoon(index, boonId, checked, checkbox) {
   } else {
     prof.boons = prof.boons.filter(id => id !== boonId);
   }
-  saveSupportProfs();
+  saveSupportProfs(localStorage, supportProfs);
 }
 
 function renderSupportProfs() {
@@ -478,7 +353,7 @@ function renderSupportProfs() {
     nameSelect.value = prof.name || '';
     nameSelect.addEventListener('change', () => {
       supportProfs[index].name = nameSelect.value;
-      saveSupportProfs();
+      saveSupportProfs(localStorage, supportProfs);
     });
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
@@ -513,23 +388,7 @@ function renderSupportProfs() {
   supportProfsContainer.appendChild(fragment);
 }
 
-function getLoginTargetUrl(url) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-    if (host.endsWith('.tiddlyhost.com')) {
-      parsed.hostname = 'tiddlyhost.com';
-    } else if (host.endsWith('.github.io')) {
-      parsed.hostname = 'github.io';
-    }
-    parsed.pathname = '/';
-    parsed.search = '';
-    parsed.hash = '';
-    return parsed.toString();
-  } catch {
-    return null;
-  }
-}
+
 
 function applyTiddlyhostScrollFix() {
   try {
@@ -539,8 +398,8 @@ function applyTiddlyhostScrollFix() {
     if (!host.endsWith('tiddlyhost.com')) return;
     if (typeof uploadFrame.insertCSS !== 'function') return;
     uploadFrame.insertCSS(`
-      html, body { overflow: hidden !important; }
-      ::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+       /* html, body { overflow: hidden !important; } */
+       /* ::-webkit-scrollbar { width: 0 !important; height: 0 !important; } */
     `).catch(() => { });
   } catch { }
 }
@@ -576,49 +435,50 @@ function navigateUploadFrame(url) {
 }
 
 
-dpsUserTokenInput.value = localStorage.getItem('dpsReportUserToken') || '';
-uploadUrlInput.value = localStorage.getItem('uploadUrl') || '';
-combinerGuildNameInput.value = localStorage.getItem('combinerGuildName') || '';
-combinerGuildIdInput.value = localStorage.getItem('combinerGuildId') || '';
+
+const initialSettings = loadRendererSettings(localStorage);
+
+dpsUserTokenInput.value = initialSettings.dpsReportUserToken;
+uploadUrlInput.value = initialSettings.uploadUrl;
+combinerGuildNameInput.value = initialSettings.combinerGuildName;
+combinerGuildIdInput.value = initialSettings.combinerGuildId;
 function updateGuildLookupState() {
   combinerGuildLookupBtn.disabled = !combinerGuildNameInput.value.trim();
 }
 updateGuildLookupState();
-combinerApiKeyInput.value = localStorage.getItem('combinerApiKey') || '';
-combinerWebhookInput.value = localStorage.getItem('combinerWebhookUrl') || '';
-combinerGlickoCheckbox.checked = localStorage.getItem('combinerGlickoUpdate') === 'true';
-combinerFightChartsCheckbox.checked = localStorage.getItem('combinerFightCharts') === 'true';
-combinerHideColumnsCheckbox.checked = localStorage.getItem('combinerHideColumns') === 'true';
-combinerBoonsDetailedCheckbox.checked = localStorage.getItem('combinerBoonsDetailed') === 'true';
-combinerOffensiveDetailedCheckbox.checked = localStorage.getItem('combinerOffensiveDetailed') === 'true';
-combinerDefensesDetailedCheckbox.checked = localStorage.getItem('combinerDefensesDetailed') === 'true';
-combinerSupportDetailedCheckbox.checked = localStorage.getItem('combinerSupportDetailed') === 'true';
-combinerBlacklistInput.value = localStorage.getItem('combinerBlacklistAccounts') || '';
-combinerInputDirectoryInput.value = localStorage.getItem('combinerInputDirectory') || 'd:/gw2logs/output';
-combinerOutputFilenameInput.value = localStorage.getItem('combinerOutputFilename') || '';
-combinerJsonOutputFilenameInput.value = localStorage.getItem('combinerJsonOutputFilename') || '';
-combinerDbFilenameInput.value = localStorage.getItem('combinerDbFilename') || 'Top_Stats.db';
-combinerDbPathInput.value = localStorage.getItem('combinerDbPath') || '.';
-const writeAllJsonStored = localStorage.getItem('combinerWriteAllJson');
-combinerWriteAllJsonCheckbox.checked = writeAllJsonStored ? writeAllJsonStored === 'true' : true;
-const writeExcelStored = localStorage.getItem('combinerWriteExcel');
-combinerWriteExcelCheckbox.checked = writeExcelStored ? writeExcelStored === 'true' : false;
-combinerExcelFilenameInput.value = localStorage.getItem('combinerExcelFilename') || 'Top_Stats.xlsx';
-combinerExcelPathInput.value = localStorage.getItem('combinerExcelPath') || '.';
-combinerSkillCastLimitInput.value = localStorage.getItem('combinerSkillCastLimit') || '40';
-combinerSortModeSelect.value = localStorage.getItem('combinerSortMode') || 'Total';
-combinerDiscordNotesInput.value = localStorage.getItem('combinerDiscordNotes') || '';
-eiAnonymizeCheckbox.checked = localStorage.getItem('eiAnonymizePlayers') === 'true';
-supportProfs = loadSupportProfs();
+combinerApiKeyInput.value = initialSettings.combinerApiKey;
+combinerWebhookInput.value = initialSettings.combinerWebhookUrl;
+combinerGlickoCheckbox.checked = initialSettings.combinerGlickoUpdate;
+combinerFightChartsCheckbox.checked = initialSettings.combinerFightCharts;
+combinerHideColumnsCheckbox.checked = initialSettings.combinerHideColumns;
+combinerBoonsDetailedCheckbox.checked = initialSettings.combinerBoonsDetailed;
+combinerOffensiveDetailedCheckbox.checked = initialSettings.combinerOffensiveDetailed;
+combinerDefensesDetailedCheckbox.checked = initialSettings.combinerDefensesDetailed;
+combinerSupportDetailedCheckbox.checked = initialSettings.combinerSupportDetailed;
+combinerBlacklistInput.value = initialSettings.combinerBlacklistAccounts;
+combinerInputDirectoryInput.value = initialSettings.combinerInputDirectory;
+combinerOutputFilenameInput.value = initialSettings.combinerOutputFilename;
+combinerJsonOutputFilenameInput.value = initialSettings.combinerJsonOutputFilename;
+combinerDbFilenameInput.value = initialSettings.combinerDbFilename;
+combinerDbPathInput.value = initialSettings.combinerDbPath;
+combinerWriteAllJsonCheckbox.checked = initialSettings.combinerWriteAllJson;
+combinerWriteExcelCheckbox.checked = initialSettings.combinerWriteExcel;
+combinerExcelFilenameInput.value = initialSettings.combinerExcelFilename;
+combinerExcelPathInput.value = initialSettings.combinerExcelPath;
+combinerSkillCastLimitInput.value = initialSettings.combinerSkillCastLimit;
+combinerSortModeSelect.value = initialSettings.combinerSortMode;
+combinerDiscordNotesInput.value = initialSettings.combinerDiscordNotes;
+eiAnonymizeCheckbox.checked = initialSettings.eiAnonymizePlayers;
+supportProfs = loadSupportProfs(localStorage);
 renderSupportProfs();
-boonWeightsState = loadWeights(BOON_WEIGHTS_STORAGE_KEY, BOON_WEIGHT_KEYS);
-conditionWeightsState = loadWeights(CONDITION_WEIGHTS_STORAGE_KEY, CONDITION_WEIGHT_KEYS);
+boonWeightsState = loadWeights(localStorage, BOON_WEIGHTS_STORAGE_KEY, BOON_WEIGHT_KEYS);
+conditionWeightsState = loadWeights(localStorage, CONDITION_WEIGHTS_STORAGE_KEY, CONDITION_WEIGHT_KEYS);
 renderWeightInputs(boonWeightsContainer, boonWeightsState, BOON_WEIGHTS_STORAGE_KEY);
 renderWeightInputs(conditionWeightsContainer, conditionWeightsState, CONDITION_WEIGHTS_STORAGE_KEY);
 if (addSupportProfBtn) {
   addSupportProfBtn.addEventListener('click', () => {
     supportProfs.push({ name: '', boons: [] });
-    saveSupportProfs();
+    saveSupportProfs(localStorage, supportProfs);
     renderSupportProfs();
   });
 }
@@ -769,13 +629,13 @@ downloadParserBtn.addEventListener('click', async () => {
 });
 parserTopStatsRadio.addEventListener('change', () => {
   if (parserTopStatsRadio.checked) {
-    localStorage.setItem('parserSelection', 'topstats');
+    saveRendererSetting(localStorage, 'parserSelection', 'topstats');
     updateDescriptionVisibility();
   }
 });
 parserCombinerRadio.addEventListener('change', () => {
   if (parserCombinerRadio.checked) {
-    localStorage.setItem('parserSelection', 'combiner');
+    saveRendererSetting(localStorage, 'parserSelection', 'combiner');
     updateDescriptionVisibility();
   }
 });
@@ -1479,16 +1339,25 @@ dateFilterInput.addEventListener('change', () => {
   }
 });
 
+
+
+
+
 dateSelectBtn.addEventListener('click', () => {
   const val = dateFilterInput.value;
   if (!val) return;
-  const ts = new Date(val).getTime();
-  if (isNaN(ts)) return;
+  const dateObj = new Date(val);
+  if (isNaN(dateObj.getTime())) return;
+  const since = dateObj.getTime();
+
   fileTreeContainer.querySelectorAll('li.file-item').forEach(li => {
-    const m = parseInt(li.dataset.mtime, 10);
-    if (m >= ts && !selected.has(li.dataset.path)) {
-      selected.set(li.dataset.path, { rel: li.dataset.rel, mtime: m });
-      li.classList.add('selected');
+    const p = li.dataset.path;
+    const mtime = parseInt(li.dataset.mtime, 10);
+    if (mtime >= since) {
+      if (!selected.has(p)) {
+        selected.set(p, { rel: li.dataset.rel, mtime: mtime });
+        li.classList.add('selected');
+      }
     }
   });
   renderSelected();
