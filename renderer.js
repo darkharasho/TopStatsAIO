@@ -2336,3 +2336,55 @@ if (restartBtn) {
     }
   });
 }
+
+// ============ Secret Terminal Logic ============
+let versionClickCount = 0;
+let versionClickTimeout;
+const secretTerminal = document.getElementById('secret-terminal');
+const terminalContent = document.getElementById('terminal-content');
+const closeTerminalBtn = document.getElementById('close-terminal');
+
+// Keyboard Trigger: Ctrl + T
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && (e.key === 't' || e.key === 'T')) {
+    const isOpen = secretTerminal.classList.contains('open');
+    toggleSecretTerminal(!isOpen);
+  }
+});
+
+if (closeTerminalBtn && secretTerminal) {
+  closeTerminalBtn.addEventListener('click', () => {
+    toggleSecretTerminal(false);
+  });
+}
+
+function toggleSecretTerminal(show) {
+  if (show) {
+    secretTerminal.classList.add('open');
+  } else {
+    secretTerminal.classList.remove('open');
+  }
+}
+
+function addLogEntry(message) {
+  if (!terminalContent) return;
+
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+
+  // Auto-detect log level/color
+  if (message && message.includes('[INFO]')) entry.classList.add('log-info');
+  else if (message && message.includes('[WARN]')) entry.classList.add('log-warn');
+  else if (message && message.includes('[ERROR]')) entry.classList.add('log-error');
+
+  entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+  terminalContent.appendChild(entry);
+  terminalContent.scrollTop = terminalContent.scrollHeight;
+}
+
+// Hook up to exposed IPC
+if (window.electronAPI.onLogMessage) {
+  window.electronAPI.onLogMessage((msg) => {
+    addLogEntry(msg);
+  });
+}

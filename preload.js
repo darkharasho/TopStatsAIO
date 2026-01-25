@@ -49,4 +49,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSkinContent: (customIcon) => ipcRenderer.invoke('get-skin-content', customIcon),
 
   getPlatform: () => process.platform,
+
+  // Debug Log
+  onLogMessage: (cb) => ipcRenderer.on('log-message', (e, msg) => cb(msg)),
 });

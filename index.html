@@ -163,7 +163,7 @@
   <!-- Settings Window -->
   <div id="settings-window">
     <button id="close-settings" aria-label="Close">&#x2715;</button>
-    <h2 class="settings-header">Settings</h2>
+    <h2 id="settings-title" class="settings-header">Settings</h2>
     <p class="config-hint" style="margin-bottom: 24px;">Customize your experience and manage integrations</p>
 
     <div id="settings-grid">
@@ -346,26 +346,35 @@
 
           <!-- Import/Update Button -->
           <div style="margin: 12px 0; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-            <button id="upload-import-skin" class="small-btn" style="width: 100%; background: var(--brand-gradient); color: white; border: none; padding: 8px 16px;">
+            <button id="upload-import-skin" class="small-btn"
+              style="width: 100%; background: var(--brand-gradient); color: white; border: none; padding: 8px 16px;">
               <span style="margin-right: 6px;">✨</span> Import / Update Skin
             </button>
-            <span id="skin-update-badge" class="hidden" style="display: block; margin-top: 8px; text-align: center; background: #f43f5e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 500;">Update Available!</span>
+            <span id="skin-update-badge" class="hidden"
+              style="display: block; margin-top: 8px; text-align: center; background: #f43f5e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em; font-weight: 500;">Update
+              Available!</span>
           </div>
 
           <!-- Custom Icon Section -->
-          <label style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-bottom: 8px; display: block;">Custom Backdrop Icon</label>
+          <label style="font-size: 0.85em; color: rgba(255,255,255,0.7); margin-bottom: 8px; display: block;">Custom
+            Backdrop Icon</label>
           <div id="backdrop-icon-preview-container" style="margin: 8px 0; text-align: center;">
-            <div id="backdrop-icon-preview" style="width: 64px; height: 64px; margin: 0 auto; border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
+            <div id="backdrop-icon-preview"
+              style="width: 64px; height: 64px; margin: 0 auto; border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2);">
               <span id="backdrop-icon-placeholder" style="color: rgba(255,255,255,0.4); font-size: 12px;">No icon</span>
-              <img id="backdrop-icon-img" style="max-width: 100%; max-height: 100%; display: none; object-fit: contain;" />
+              <img id="backdrop-icon-img"
+                style="max-width: 100%; max-height: 100%; display: none; object-fit: contain;" />
             </div>
           </div>
           <div style="display: flex; gap: 8px;">
             <button id="backdrop-icon-select" class="small-btn" style="flex: 1;">Select Image</button>
-            <button id="backdrop-icon-clear" class="small-btn" style="flex: 1; background: rgba(255,100,100,0.2);">Clear</button>
+            <button id="backdrop-icon-clear" class="small-btn"
+              style="flex: 1; background: rgba(255,100,100,0.2);">Clear</button>
           </div>
-          <input type="file" id="backdrop-icon-input" accept="image/png,image/jpeg,image/gif,image/webp" style="display: none;" />
-          <p class="config-hint" style="margin-top: 8px; font-size: 0.75em;">Replaces the commander tag icon in tables. Re-import skin after changing.</p>
+          <input type="file" id="backdrop-icon-input" accept="image/png,image/jpeg,image/gif,image/webp"
+            style="display: none;" />
+          <p class="config-hint" style="margin-top: 8px; font-size: 0.75em;">Replaces the commander tag icon in tables.
+            Re-import skin after changing.</p>
         </div>
 
         <!-- Tiddlyhost Card -->
@@ -589,6 +598,15 @@
     <li id="context-select-all">Select All</li>
     <li id="context-unselect-all">Unselect All</li>
   </ul>
+
+  <!-- Secret Terminal -->
+  <div id="secret-terminal">
+    <div id="terminal-header">
+      <span>Top Stats AIO Debug Console</span>
+      <button id="close-terminal">_</button>
+    </div>
+    <div id="terminal-content"></div>
+  </div>
 
   <script src="rendererUtils.js"></script>
   <script src="renderer.js"></script>

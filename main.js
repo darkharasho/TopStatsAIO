@@ -104,10 +104,18 @@ function saveTiddlyhostCredentials({ username = '', password = '' } = {}) {
   return true;
 }
 
+// Log redirection to Renderer
+function sendLogToRenderer(message) {
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('log-message', message);
+  }
+}
+
 function logError(...args) {
   console.error(...args);
-  if (!logFile) return;
   const msg = args.map(a => (a instanceof Error ? a.stack : String(a))).join(' ');
+  sendLogToRenderer(`[ERROR] ${msg}`);
+  if (!logFile) return;
   try {
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
   } catch { }
@@ -115,12 +123,15 @@ function logError(...args) {
 
 function log(...args) {
   console.log(...args);
-  if (!logFile) return;
   const msg = args.map(a => String(a)).join(' ');
+  sendLogToRenderer(`[INFO] ${msg}`);
+  if (!logFile) return;
   try {
     fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
   } catch { }
 }
+
+
 
 setLogger(logError);
 
@@ -427,10 +438,20 @@ async function autoStartDownload(wc) {
       return;
     }
 
-    if (!asset) throw new Error('Update asset not found');
+    if (!asset) {
+      log('Update asset resolution failed. No matching asset found for current mode.');
+      throw new Error('Update asset not found');
+    }
+
+    log(`Starting auto-download for version ${pendingUpdate.version}`);
+    log(`Download mode: ${pendingUpdate.mode}`);
+    log(`Download URL: ${asset.browser_download_url}`);
+    log(`Destination: ${destPath}`);
 
     pendingUpdate.localPath = destPath;
     await downloadUpdateAsset(asset, destPath, p => send('download', p));
+
+    log('Download completed successfully.');
 
     // Download complete
     wc.send('update-downloaded', { version: pendingUpdate.version });
@@ -452,25 +473,35 @@ async function performRestartAndInstall() {
 
   try {
     if (pendingUpdate.mode === 'portable') {
+      log('Applying update in PORTABLE mode.');
       // Basic portable apply logic
       const tmpDir = pendingUpdate.tmpDir;
       const extractDir = path.join(tmpDir, 'payload');
       await fs.promises.mkdir(extractDir, { recursive: true });
+
+      log(`Extracting update zip to ${extractDir}`);
       const zip = new AdmZip(pendingUpdate.localPath);
       zip.extractAllTo(extractDir, true);
+
       const payloadRoot = await findPayloadRoot(extractDir);
       const scriptPath = await createPortableUpdateScript(payloadRoot, path.dirname(process.execPath), tmpDir);
+
+      log(`Launching update script: ${scriptPath}`);
       spawn('cmd.exe', ['/c', 'start', '', scriptPath], { detached: true, windowsHide: true });
       app.quit();
     } else if (pendingUpdate.mode === 'installer') {
+      log(`Launching installer: ${pendingUpdate.localPath}`);
       const err = await shell.openPath(pendingUpdate.localPath);
       if (err) throw new Error(err);
       app.quit();
     } else if (pendingUpdate.mode === 'appimage') {
+      log('Applying update in APPIMAGE mode.');
       const originalPath = process.env.APPIMAGE;
       if (originalPath && fs.existsSync(originalPath)) {
         // Persistence Mode: Overwrite the running AppImage
         const backupPath = `${originalPath}.old`;
+        log(`Original AppImage: ${originalPath}`);
+        log(`Backup Path: ${backupPath}`);
 
         // 1. Move running AppImage to backup (Same dir, so rename is safe)
         try {
@@ -486,6 +517,7 @@ async function performRestartAndInstall() {
         // Use copyFile + unlink to handle EXDEV (cross-device) issues (Temp -> Home)
         await fs.promises.chmod(pendingUpdate.localPath, 0o755);
         try {
+          log('Moving new AppImage to original location...');
           await fs.promises.copyFile(pendingUpdate.localPath, originalPath);
           await fs.promises.unlink(pendingUpdate.localPath);
         } catch (e) {
@@ -496,14 +528,17 @@ async function performRestartAndInstall() {
         }
 
         // 3. Spawn the *new file* at the *original path*
+        log('Relaunching updated AppImage...');
         spawn(originalPath, [], { detached: true, stdio: 'ignore', env: process.env }).unref();
       } else {
+        log('Running in non-integrated AppImage mode. Simply launching new file.');
         // Fallback: Just restart temp file (standard behavior if environment is weird)
         await fs.promises.chmod(pendingUpdate.localPath, 0o755);
         spawn(pendingUpdate.localPath, [], { detached: true, stdio: 'ignore' }).unref();
       }
       app.quit();
     } else if (pendingUpdate.mode === 'deb') {
+      log(`Opening DEB file: ${pendingUpdate.localPath}`);
       const err = await shell.openPath(pendingUpdate.localPath);
       if (err) throw new Error(err);
       app.quit(); // Optional? Usually system installer handles it
@@ -562,11 +597,17 @@ async function checkForAppUpdates(parent) {
       parent.webContents.send('checking-for-update');
     }
 
+    log('Checking for updates...');
+
     const rel = await getLatest('darkharasho/TopStatsAIO');
     const latest = semver.clean(rel.tag_name || rel.name);
     const current = app.getVersion();
 
+    log(`Current version: ${current}`);
+    log(`Latest version: ${latest}`);
+
     if (latest && semver.gt(latest, current)) {
+      log('Update available. Preparing assets...');
       const assets = rel.assets || [];
       const portable = collectAssetInfo(assets, /standalone.*\.zip$/i);
       const installer = collectAssetInfo(assets, /setup.*\.exe$/i);
@@ -574,6 +615,12 @@ async function checkForAppUpdates(parent) {
       const appimage = collectAssetInfo(assets, /.*\.AppImage$/i);
       const isAppImage = !!process.env.APPIMAGE;
       const mode = resolveUpdateMode(isInstalled(), { portable, installer, deb, appimage }, isAppImage);
+
+      log(`Update mode resolved: ${mode}`);
+      if (mode === 'unknown') {
+        logError('Could not resolve a valid update asset/mode.');
+      }
+
       pendingUpdate = {
         version: latest,
         releaseUrl: rel.html_url,
@@ -586,6 +633,7 @@ async function checkForAppUpdates(parent) {
         autoStartDownload(parent.webContents);
       }
     } else {
+      log('No updates available.');
       if (parent && parent.webContents) {
         parent.webContents.send('update-not-available');
       }
