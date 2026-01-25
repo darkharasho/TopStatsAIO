@@ -910,7 +910,13 @@ ipcMain.handle('get-skin-content', async (event, customIcon) => {
           '$:/TopStats/media/tag_purple.png',
           '$:/TopStats/media/tag_red.png',
           '$:/TopStats/media/tag_silver.png',
-          '$:/TopStats/media/tag_yellow.png'
+          '$:/TopStats/media/tag_yellow.png',
+          '$:/TopStats/media/tag_orange.png',
+          '$:/TopStats/media/tag_blue.png',
+          '$:/TopStats/media/tag_teal.png',
+          '$:/TopStats/media/tag_coral.png',
+          '$:/TopStats/media/tag_indigo.png',
+          '$:/TopStats/media/tag_bronze.png'
         ];
 
         for (const tiddler of json) {
