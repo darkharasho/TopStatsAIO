@@ -836,7 +836,7 @@ ipcMain.handle('set-tiddlyhost-credentials', async (event, creds) => {
   return saveTiddlyhostCredentials(creds);
 });
 
-ipcMain.handle('get-skin-content', async () => {
+ipcMain.handle('get-skin-content', async (event, customIcon) => {
   try {
     const skinPath = path.join(__dirname, 'TopStats_Full_Skin.json');
     if (!fs.existsSync(skinPath)) return null;
@@ -845,9 +845,54 @@ ipcMain.handle('get-skin-content', async () => {
     const versionTiddler = json.find(t => t.title === '$:/TopStats/Skin/Version');
     const version = versionTiddler ? versionTiddler.text.trim() : '1.0.0';
 
+    // Inject custom backdrop icon if provided
+    if (customIcon && customIcon.startsWith('data:image/')) {
+      // Extract base64 data from data URL
+      const base64Match = customIcon.match(/^data:image\/[^;]+;base64,(.+)$/);
+      if (base64Match) {
+        const iconBase64 = base64Match[1];
+        const dataUri = `url("${customIcon}")`;
+
+        // Update all tag_$COLOR.png image tiddlers with custom icon
+        const colorTiddlers = [
+          '$:/TopStats/media/tag_cyan.png',
+          '$:/TopStats/media/tag_gold.png',
+          '$:/TopStats/media/tag_green.png',
+          '$:/TopStats/media/tag_pink.png',
+          '$:/TopStats/media/tag_purple.png',
+          '$:/TopStats/media/tag_red.png',
+          '$:/TopStats/media/tag_silver.png',
+          '$:/TopStats/media/tag_yellow.png'
+        ];
+
+        for (const tiddler of json) {
+          if (colorTiddlers.includes(tiddler.title)) {
+            tiddler.text = iconBase64;
+          }
+        }
+
+        // Update ThemeBackdropIcons with custom data URI for all themes
+        const backdropIconsTiddler = json.find(t => t.title === '$:/TopStats/ThemeBackdropIcons');
+        if (backdropIconsTiddler) {
+          try {
+            const icons = JSON.parse(backdropIconsTiddler.text);
+            for (const theme of Object.keys(icons)) {
+              icons[theme] = dataUri;
+            }
+            backdropIconsTiddler.text = JSON.stringify(icons);
+          } catch (e) {
+            logError('Failed to update ThemeBackdropIcons', e);
+          }
+        }
+      }
+    }
+
+    // Re-serialize the modified JSON
+    const modifiedRaw = JSON.stringify(json);
+
     return {
       name: 'TopStats_Full_Skin.json',
-      data: Buffer.from(raw).toString('base64'),
+      data: Buffer.from(modifiedRaw).toString('base64'),
       version: version
     };
   } catch (e) {

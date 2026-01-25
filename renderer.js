@@ -124,6 +124,11 @@ const uploadImportSkinBtn = document.getElementById('upload-import-skin');
 const skinUpdateBadge = document.getElementById('skin-update-badge');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
+const backdropIconSelectBtn = document.getElementById('backdrop-icon-select');
+const backdropIconClearBtn = document.getElementById('backdrop-icon-clear');
+const backdropIconInput = document.getElementById('backdrop-icon-input');
+const backdropIconImg = document.getElementById('backdrop-icon-img');
+const backdropIconPlaceholder = document.getElementById('backdrop-icon-placeholder');
 const PARSE_STEPS_CONFIG = [
   { id: 'copy', title: 'Copying Logs', icon: '1' },
   { id: 'cli', title: 'EI CLI Analysis', icon: '2' },
@@ -483,6 +488,59 @@ if (addSupportProfBtn) {
   });
 }
 
+// Custom Backdrop Icon handling
+function loadBackdropIcon() {
+  const savedIcon = localStorage.getItem('customBackdropIcon');
+  if (savedIcon && backdropIconImg && backdropIconPlaceholder) {
+    backdropIconImg.src = savedIcon;
+    backdropIconImg.style.display = 'block';
+    backdropIconPlaceholder.style.display = 'none';
+  }
+}
+
+function saveBackdropIcon(base64Data) {
+  localStorage.setItem('customBackdropIcon', base64Data);
+  if (backdropIconImg && backdropIconPlaceholder) {
+    backdropIconImg.src = base64Data;
+    backdropIconImg.style.display = 'block';
+    backdropIconPlaceholder.style.display = 'none';
+  }
+}
+
+function clearBackdropIcon() {
+  localStorage.removeItem('customBackdropIcon');
+  if (backdropIconImg && backdropIconPlaceholder) {
+    backdropIconImg.src = '';
+    backdropIconImg.style.display = 'none';
+    backdropIconPlaceholder.style.display = 'block';
+  }
+}
+
+loadBackdropIcon();
+
+if (backdropIconSelectBtn && backdropIconInput) {
+  backdropIconSelectBtn.addEventListener('click', () => {
+    backdropIconInput.click();
+  });
+
+  backdropIconInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target.result;
+      saveBackdropIcon(base64Data);
+    };
+    reader.readAsDataURL(file);
+    backdropIconInput.value = ''; // Reset for re-selection
+  });
+}
+
+if (backdropIconClearBtn) {
+  backdropIconClearBtn.addEventListener('click', clearBackdropIcon);
+}
+
 document.getElementById('minimize').addEventListener('click', () => window.electronAPI.minimize());
 document.getElementById('maximize').addEventListener('click', () => window.electronAPI.maximize());
 document.getElementById('close').addEventListener('click', () => window.electronAPI.close());
@@ -672,7 +730,8 @@ if (tiddlyhostPasswordInput) {
 }
 tiddlySetupBtn.addEventListener('click', async () => {
   const combinerPayload = await window.electronAPI.getExampleOutput('combiner');
-  const skinPayload = await window.electronAPI.getSkinContent();
+  const customIcon = localStorage.getItem('customBackdropIcon');
+  const skinPayload = await window.electronAPI.getSkinContent(customIcon);
   const payload = [...(combinerPayload || [])];
   if (skinPayload) payload.push(skinPayload);
 
@@ -741,7 +800,8 @@ if (uploadImportSkinBtn) {
     uploadImportSkinBtn.childNodes[0].textContent = 'Loading Skin...';
 
     try {
-      const skin = await window.electronAPI.getSkinContent();
+      const customIcon = localStorage.getItem('customBackdropIcon');
+      const skin = await window.electronAPI.getSkinContent(customIcon);
       if (!skin) throw new Error('Could not load skin content.');
 
       // Close skin import window re-enables button
@@ -1225,7 +1285,8 @@ async function checkDeps() {
 
 async function checkSkinVersion() {
   if (!skinUpdateBadge) return;
-  const skin = await window.electronAPI.getSkinContent();
+  const customIcon = localStorage.getItem('customBackdropIcon');
+  const skin = await window.electronAPI.getSkinContent(customIcon);
   if (!skin || !skin.version) return;
   const stored = localStorage.getItem('skinVersion');
 
