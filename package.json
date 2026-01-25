@@ -9,6 +9,7 @@
     "debug": "electron . --keep-temp",
     "test": "jest",
     "dist": "node scripts/build-win.js",
+    "dist:win:standalone": "node scripts/build-win-standalone.js",
     "dist:linux": "node scripts/build-linux.js",
     "dist:all": "node scripts/build-win.js && node scripts/build-linux.js --no-clean",
     "clear-settings": "node scripts/clear-settings.js",

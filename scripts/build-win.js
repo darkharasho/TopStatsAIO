@@ -35,19 +35,6 @@ if (!process.argv.includes('--no-clean')) {
   fs.mkdirSync(distDir);
 }
 
-// build portable using electron-packager
-run(`npx electron-packager . TopStatsAIO --platform=win32 --arch=x64 --icon=media/TopStatsAIO-Logo.png --out=dist --overwrite`);
-
-// zip portable folder
-const portableDir = path.join(distDir, 'TopStatsAIO-win32-x64');
-if (fs.existsSync(portableDir)) {
-  const zip = new AdmZip();
-  zip.addLocalFolder(portableDir);
-  const zipPath = path.join(distDir, `TopStatsAIO-${version}-standalone.zip`);
-  zip.writeZip(zipPath);
-  generateBlockmap(zipPath);
-}
-
 // build installer
 run('npx electron-builder --win', {
   env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
