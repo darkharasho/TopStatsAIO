@@ -2514,3 +2514,320 @@ body.light #tiddly-guide-text {
 .log-error {
     color: #f85149;
 }
+
+/* ============ What's New Modal ============ */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity var(--transition-slow);
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.whats-new-modal {
+    background: rgba(32, 32, 40, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-default);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        var(--window-glow);
+    transform: scale(0.95) translateY(10px);
+    transition: transform var(--transition-slow);
+}
+
+.modal-overlay.visible .whats-new-modal {
+    transform: scale(1) translateY(0);
+}
+
+body.light .whats-new-modal {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.whats-new-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.whats-new-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.whats-new-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    background: var(--brand-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.whats-new-version {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--brand-primary);
+}
+
+.whats-new-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    padding-top: 4px;
+}
+
+.whats-new-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    min-height: 200px;
+    max-height: 400px;
+}
+
+.whats-new-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 150px;
+    color: var(--text-muted);
+}
+
+/* Markdown Rendered Content */
+.whats-new-content h2,
+.whats-new-content h3 {
+    color: var(--brand-primary);
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.whats-new-content h2:first-child,
+.whats-new-content h3:first-child {
+    margin-top: 0;
+}
+
+.whats-new-content h2 {
+    font-size: 1.1rem;
+}
+
+.whats-new-content h3 {
+    font-size: 0.95rem;
+    border-bottom: none;
+}
+
+.whats-new-content p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.whats-new-content ul,
+.whats-new-content ol {
+    margin: 8px 0 16px;
+    padding-left: 20px;
+}
+
+.whats-new-content li {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 6px;
+    position: relative;
+}
+
+.whats-new-content ul li::marker {
+    color: var(--brand-primary);
+}
+
+.whats-new-content strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.whats-new-content code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 0.85em;
+    color: var(--brand-primary);
+}
+
+body.light .whats-new-content code {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.whats-new-content pre {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    margin: 12px 0;
+}
+
+.whats-new-content pre code {
+    background: none;
+    padding: 0;
+}
+
+body.light .whats-new-content pre {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.whats-new-content a {
+    color: var(--brand-primary);
+    text-decoration: none;
+}
+
+.whats-new-content a:hover {
+    text-decoration: underline;
+}
+
+.whats-new-content hr {
+    border: none;
+    border-top: 1px solid var(--border-subtle);
+    margin: 16px 0;
+}
+
+/* Tables in What's New */
+.whats-new-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 0.85rem;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-default);
+}
+
+.whats-new-content thead {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.light .whats-new-content thead {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.whats-new-content th {
+    padding: 10px 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.whats-new-content td {
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.whats-new-content tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.whats-new-content tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+body.light .whats-new-content tbody tr:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.whats-new-footer {
+    padding: 16px 28px 24px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.whats-new-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.whats-new-btn.primary {
+    background: var(--brand-gradient);
+    border: none;
+    color: white;
+    box-shadow: 0 2px 8px var(--glow-primary);
+}
+
+.whats-new-btn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px var(--glow-primary);
+}
+
+.whats-new-btn.secondary {
+    background: transparent;
+    border: 1px solid var(--border-default);
+    color: var(--text-secondary);
+}
+
+.whats-new-btn.secondary:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+/* Scrollbar for modal content */
+.whats-new-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.whats-new-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.whats-new-content::-webkit-scrollbar-thumb {
+    background: var(--border-default);
+    border-radius: 3px;
+}
+
+.whats-new-content::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
+}

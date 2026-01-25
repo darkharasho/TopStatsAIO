@@ -1355,6 +1355,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   const ver = await window.electronAPI.getAppVersion();
   versionText.textContent = `v${ver}`;
+  // Check for What's New on version update
+  checkAndShowWhatsNew(ver).catch(console.error);
   let saved = localStorage.getItem('lastFolder');
   try {
     const uiState = await window.electronAPI.getUiState();
@@ -2388,3 +2390,210 @@ if (window.electronAPI.onLogMessage) {
     addLogEntry(msg);
   });
 }
+
+// ============ What's New Modal ============
+const whatsNewOverlay = document.getElementById('whats-new-overlay');
+const whatsNewModal = document.getElementById('whats-new-modal');
+const whatsNewVersion = document.getElementById('whats-new-version');
+const whatsNewDate = document.getElementById('whats-new-date');
+const whatsNewContent = document.getElementById('whats-new-content');
+const whatsNewCloseBtn = document.getElementById('whats-new-close');
+const whatsNewLearnMore = document.getElementById('whats-new-learn-more');
+
+const GITHUB_REPO = 'darkharasho/TopStatsAIO';
+
+// Markdown to HTML converter with table and link support
+function parseMarkdown(md) {
+  if (!md) return '';
+
+  // Store tables with placeholders to protect from escaping
+  const tables = [];
+  const tablePlaceholder = '___TABLE_PLACEHOLDER_';
+
+  // Process tables first (before escaping)
+  const tableRegex = /\|(.+)\|\r?\n\|([\s\-:|]+)\|\r?\n((?:\|.+\|\r?\n?)+)/g;
+  md = md.replace(tableRegex, (match, headerRow, separator, bodyRows) => {
+    const headers = headerRow.split('|').map(h => h.trim()).filter(h => h);
+    const alignments = separator.split('|').map(s => {
+      s = s.trim();
+      if (s.startsWith(':') && s.endsWith(':')) return 'center';
+      if (s.endsWith(':')) return 'right';
+      return 'left';
+    }).filter((_, i) => i < headers.length);
+
+    let table = '<table><thead><tr>';
+    headers.forEach((h, i) => {
+      table += `<th style="text-align:${alignments[i] || 'left'}">${h}</th>`;
+    });
+    table += '</tr></thead><tbody>';
+
+    const rows = bodyRows.trim().split(/\r?\n/);
+    rows.forEach(row => {
+      const cleanCells = row.replace(/^\||\|$/g, '').split('|').map(c => c.trim());
+      table += '<tr>';
+      cleanCells.forEach((cell, i) => {
+        table += `<td style="text-align:${alignments[i] || 'left'}">${cell}</td>`;
+      });
+      table += '</tr>';
+    });
+    table += '</tbody></table>';
+
+    const idx = tables.length;
+    tables.push(table);
+    return `${tablePlaceholder}${idx}___`;
+  });
+
+  let html = md
+    // Escape HTML
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // Headers
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    // Bold
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Markdown links [text](url)
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    // Auto-link plain URLs (not already linked)
+    .replace(/(^|[^"'>])(https?:\/\/[^\s<>\[\]"']+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>')
+    // Horizontal rules
+    .replace(/^---+$/gm, '<hr>')
+    // Unordered lists
+    .replace(/^[\-\*] (.+)$/gm, '<li>$1</li>')
+    // Line breaks for paragraphs
+    .replace(/\n\n/g, '</p><p>');
+
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
+
+  // Wrap in paragraphs
+  html = `<p>${html}</p>`;
+
+  // Clean up empty paragraphs and fix structure
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  html = html.replace(/<p>\s*<(h[23]|ul|hr)/g, '<$1');
+  html = html.replace(/<\/(h[23]|ul|hr)>\s*<\/p>/g, '</$1>');
+
+  // Restore tables from placeholders
+  tables.forEach((table, idx) => {
+    html = html.replace(`<p>${tablePlaceholder}${idx}___</p>`, table);
+    html = html.replace(`${tablePlaceholder}${idx}___`, table);
+  });
+
+  // Final cleanup
+  html = html.replace(/<p>\s*<\/p>/g, '');
+
+  return html;
+}
+
+async function fetchReleaseNotes(version) {
+  try {
+    // First try to get the specific release by tag
+    const tagName = version.startsWith('v') ? version : `v${version}`;
+    const releaseUrl = `https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${tagName}`;
+
+    let response = await fetch(releaseUrl);
+
+    // If specific version not found, get latest release
+    if (!response.ok) {
+      response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`);
+    }
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch release notes');
+    }
+
+    const release = await response.json();
+    return {
+      version: release.tag_name,
+      name: release.name,
+      body: release.body,
+      date: new Date(release.published_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      url: release.html_url
+    };
+  } catch (error) {
+    console.error('Error fetching release notes:', error);
+    return null;
+  }
+}
+
+function showWhatsNewModal(release) {
+  if (!whatsNewOverlay || !release) return;
+
+  whatsNewVersion.textContent = release.version;
+  whatsNewDate.textContent = `Released ${release.date}`;
+  whatsNewContent.innerHTML = parseMarkdown(release.body);
+  whatsNewLearnMore.href = release.url;
+
+  whatsNewOverlay.classList.remove('hidden');
+  // Trigger reflow for animation
+  void whatsNewOverlay.offsetWidth;
+  whatsNewOverlay.classList.add('visible');
+}
+
+function hideWhatsNewModal() {
+  if (!whatsNewOverlay) return;
+
+  whatsNewOverlay.classList.remove('visible');
+  setTimeout(() => {
+    whatsNewOverlay.classList.add('hidden');
+  }, 300);
+}
+
+async function checkAndShowWhatsNew(currentVersion) {
+  const lastSeenVersion = localStorage.getItem('lastSeenVersion');
+
+  // Don't show on first install (no previous version)
+  if (!lastSeenVersion) {
+    localStorage.setItem('lastSeenVersion', currentVersion);
+    return;
+  }
+
+  // Check if version changed
+  if (lastSeenVersion !== currentVersion) {
+    const release = await fetchReleaseNotes(currentVersion);
+    if (release && release.body) {
+      showWhatsNewModal(release);
+    }
+    localStorage.setItem('lastSeenVersion', currentVersion);
+  }
+}
+
+// Event listeners for modal
+if (whatsNewCloseBtn) {
+  whatsNewCloseBtn.addEventListener('click', hideWhatsNewModal);
+}
+
+if (whatsNewOverlay) {
+  whatsNewOverlay.addEventListener('click', (e) => {
+    if (e.target === whatsNewOverlay) {
+      hideWhatsNewModal();
+    }
+  });
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && whatsNewOverlay && !whatsNewOverlay.classList.contains('hidden')) {
+    hideWhatsNewModal();
+  }
+});
+
+// Export for manual trigger (e.g., from Help menu)
+window.showWhatsNew = async () => {
+  const ver = await window.electronAPI.getAppVersion();
+  const release = await fetchReleaseNotes(ver);
+  if (release) {
+    showWhatsNewModal(release);
+  }
+};

@@ -608,6 +608,29 @@
     <div id="terminal-content"></div>
   </div>
 
+  <!-- What's New Modal -->
+  <div id="whats-new-overlay" class="modal-overlay hidden">
+    <div id="whats-new-modal" class="whats-new-modal">
+      <div class="whats-new-header">
+        <div class="whats-new-title-section">
+          <h2 class="whats-new-title">What's New</h2>
+          <span id="whats-new-version" class="whats-new-version"></span>
+        </div>
+        <span id="whats-new-date" class="whats-new-date"></span>
+      </div>
+      <div id="whats-new-content" class="whats-new-content">
+        <div class="whats-new-loading">
+          <div class="spinner"></div>
+          <span>Loading release notes...</span>
+        </div>
+      </div>
+      <div class="whats-new-footer">
+        <a id="whats-new-learn-more" href="#" class="whats-new-btn secondary" target="_blank">View on GitHub</a>
+        <button id="whats-new-close" class="whats-new-btn primary">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <script src="rendererUtils.js"></script>
   <script src="renderer.js"></script>
 </body>
