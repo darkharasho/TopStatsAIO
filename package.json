@@ -1,6 +1,6 @@
 {
   "name": "topstatsaio",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Your one stop shop for generating top stats for Guild Wars 2 WvW.",
   "main": "main.js",
   "scripts": {
