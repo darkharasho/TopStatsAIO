@@ -2553,13 +2553,8 @@ function hideWhatsNewModal() {
 async function checkAndShowWhatsNew(currentVersion) {
   const lastSeenVersion = localStorage.getItem('lastSeenVersion');
 
-  // Don't show on first install (no previous version)
-  if (!lastSeenVersion) {
-    localStorage.setItem('lastSeenVersion', currentVersion);
-    return;
-  }
-
-  // Check if version changed
+  // Show modal if version changed OR if this is first time with this feature
+  // (user updating from older version that didn't track lastSeenVersion)
   if (lastSeenVersion !== currentVersion) {
     const release = await fetchReleaseNotes(currentVersion);
     if (release && release.body) {
