@@ -2079,6 +2079,19 @@ async function startParse() {
     alert('Please select at least one file to parse.');
     return;
   }
+  const getCheckboxValue = (checkbox, storageKey) => {
+    if (checkbox && typeof checkbox.checked === 'boolean') {
+      const value = checkbox.checked;
+      if (storageKey) {
+        localStorage.setItem(storageKey, value ? 'true' : 'false');
+      }
+      return value;
+    }
+    if (storageKey) {
+      return localStorage.getItem(storageKey) === 'true';
+    }
+    return false;
+  };
   openParseWindow();
   console.log('[parse] startParse clicked', { fileCount: selected.size });
   if (!window.electronAPI || typeof window.electronAPI.startParse !== 'function') {
@@ -2094,13 +2107,13 @@ async function startParse() {
     guildName: localStorage.getItem('combinerGuildName') || '',
     guildId: localStorage.getItem('combinerGuildId') || '',
     apiKey: localStorage.getItem('combinerApiKey') || '',
-    dbUpdate: localStorage.getItem('combinerGlickoUpdate') === 'true',
-    fightCharts: localStorage.getItem('combinerFightCharts') === 'true',
-    hideColumns: localStorage.getItem('combinerHideColumns') === 'true',
-    boonsDetailed: localStorage.getItem('combinerBoonsDetailed') === 'true',
-    offensiveDetailed: localStorage.getItem('combinerOffensiveDetailed') === 'true',
-    defensesDetailed: localStorage.getItem('combinerDefensesDetailed') === 'true',
-    supportDetailed: localStorage.getItem('combinerSupportDetailed') === 'true',
+    dbUpdate: getCheckboxValue(combinerGlickoCheckbox, 'combinerGlickoUpdate'),
+    fightCharts: getCheckboxValue(combinerFightChartsCheckbox, 'combinerFightCharts'),
+    hideColumns: getCheckboxValue(combinerHideColumnsCheckbox, 'combinerHideColumns'),
+    boonsDetailed: getCheckboxValue(combinerBoonsDetailedCheckbox, 'combinerBoonsDetailed'),
+    offensiveDetailed: getCheckboxValue(combinerOffensiveDetailedCheckbox, 'combinerOffensiveDetailed'),
+    defensesDetailed: getCheckboxValue(combinerDefensesDetailedCheckbox, 'combinerDefensesDetailed'),
+    supportDetailed: getCheckboxValue(combinerSupportDetailedCheckbox, 'combinerSupportDetailed'),
     webhookUrl: combinerWebhookInput.value.trim(),
     inputDirectory: combinerInputDirectoryInput.value.trim(),
     outputFilename: combinerOutputFilenameInput.value.trim(),
@@ -2118,7 +2131,7 @@ async function startParse() {
     conditionWeights: conditionWeightsState,
     blacklistAccounts: combinerBlacklistInput.value,
     supportProfs: getSupportProfsForOptions(),
-    anonymizePlayers: localStorage.getItem('eiAnonymizePlayers') === 'true',
+    anonymizePlayers: getCheckboxValue(eiAnonymizeCheckbox, 'eiAnonymizePlayers'),
     description: descriptionInput.value.trim()
   };
   await window.electronAPI.startParse({ files, options });
