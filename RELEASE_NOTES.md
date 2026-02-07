@@ -1,14 +1,17 @@
-# Release Notes - v3.3.1
+# Release Notes
 
-Date: 2026-02-07
-Changes since: v3.3.2
+Version v3.4.0 - February 7, 2026
 
-## Features
+## 🌟 Highlights
+- EI config editor now supports batch parsing with new options to control how logs are processed.
+- Improved file staging when parsing logs: can handle multiple logs and avoid overwriting files with duplicate names.
 
-- feat: add build script for GitHub version bumping and packaging
-- feat: Enhance EI config editing with new options and improve file staging
+## 🛠️ Improvements
+- Added new options for EI config editing to customize parsing behavior and output.
+- Strengthened file staging: files are staged with a safer method to differentiate duplicate names and prevent overwrites.
 
-## Fixes
+## 🧯 Fixes
+- Corrected the version number in package.json (3.3.2 to 3.3.1).
 
-- fix: correct version number in package.json from 3.3.2 to 3.3.1
-
+## ⚠️ Breaking Changes
+- None.

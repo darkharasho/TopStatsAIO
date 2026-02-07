@@ -129,6 +129,7 @@ try {
   run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'always'], {
     env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
   });
+  run(process.execPath, ['scripts/update-github-release-notes.js']);
 } catch (error) {
   const exitCode = error && error.exitCode ? error.exitCode : 1;
   process.exit(exitCode);
