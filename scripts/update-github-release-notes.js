@@ -114,7 +114,20 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Updated GitHub release notes for ${release.tag_name}.`);
+  const refreshed = patchRes.data && patchRes.data.id ? patchRes.data : release;
+  if (refreshed && refreshed.draft) {
+    const publishRes = await request('PATCH', `${baseUrl}/releases/${refreshed.id}`, token, {
+      draft: false
+    });
+    if (!publishRes.ok) {
+      console.error(`Failed to publish draft release (${publishRes.status}): ${publishRes.text}`);
+      process.exit(1);
+    }
+    console.log(`Updated notes and published GitHub release ${refreshed.tag_name}.`);
+    return;
+  }
+
+  console.log(`Updated GitHub release notes for ${refreshed.tag_name}. Release already published.`);
 }
 
 main().catch(error => {
