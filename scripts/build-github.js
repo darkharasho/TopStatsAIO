@@ -17,9 +17,37 @@ function readBumpArg() {
 const bumpType = readBumpArg();
 const skipTests = args.includes('--skip-tests') || args.includes('--no-tests');
 const skipReleaseNotes = args.includes('--skip-release-notes') || args.includes('--no-release-notes');
+const skipPublish = args.includes('--skip-publish') || args.includes('--no-publish');
 const isWin = process.platform === 'win32';
 const npmCmd = isWin ? 'npm.cmd' : 'npm';
 const gitCmd = isWin ? 'git.exe' : 'git';
+const npxCmd = isWin ? 'npx.cmd' : 'npx';
+
+function loadDotEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eqIndex = line.indexOf('=');
+    if (eqIndex <= 0) continue;
+    const key = line.slice(0, eqIndex).trim();
+    if (!key || Object.prototype.hasOwnProperty.call(process.env, key)) continue;
+    let value = line.slice(eqIndex + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+
+function loadDotEnv() {
+  loadDotEnvFile(path.resolve('.env'));
+  loadDotEnvFile(path.resolve('.env.local'));
+}
 
 function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, { stdio: 'inherit', ...options });
@@ -56,6 +84,8 @@ const packageRaw = fs.readFileSync(packagePath, 'utf8');
 const packageJson = JSON.parse(packageRaw);
 
 try {
+  loadDotEnv();
+
   if (!skipTests) {
     run(npmCmd, ['test']);
   }
@@ -86,7 +116,19 @@ try {
     run(npmCmd, ['run', 'generate:release-notes']);
   }
 
-  run(npmCmd, ['run', 'dist:all']);
+  if (skipPublish) {
+    run(npmCmd, ['run', 'dist:all']);
+    process.exit(0);
+  }
+
+  if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+    console.error('GH_TOKEN or GITHUB_TOKEN is required to publish a GitHub release.');
+    process.exit(1);
+  }
+
+  run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'always'], {
+    env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+  });
 } catch (error) {
   const exitCode = error && error.exitCode ? error.exitCode : 1;
   process.exit(exitCode);

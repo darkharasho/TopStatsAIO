@@ -82,6 +82,13 @@
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "darkharasho",
+      "repo": "TopStatsAIO",
+      "releaseType": "draft",
+      "releaseNotesFile": "RELEASE_NOTES.md"
     }
   }
 }
