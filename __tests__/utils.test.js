@@ -41,6 +41,20 @@ describe('utils', () => {
     expect(content).toMatch('Anonymous=True');
   });
 
+  test('editEIConfig applies batch parse toggles', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsaio-'));
+    const dest = path.join(tempDir, 'out-batch.conf');
+    await editEIConfig(path.join(__dirname, '..', 'EliteInsightsConfigTemplate.conf'), dest, 'C:/out', 'token123', {
+      parseMultipleLogs: true,
+      applicationTraces: false,
+      saveOutHtml: false
+    });
+    const content = fs.readFileSync(dest, 'utf8');
+    expect(content).toMatch('ParseMultipleLogs=True');
+    expect(content).toMatch('ApplicationTraces=False');
+    expect(content).toMatch('SaveOutHTML=False');
+  });
+
   test('editTopStatsConfig replaces values', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tsaio-'));
     const dest = path.join(tempDir, 'out.ini');

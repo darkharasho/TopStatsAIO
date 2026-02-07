@@ -983,6 +983,8 @@ ipcMain.handle('start-parse', async (event, data) => {
   let cancelled = false;
   let child = null;
   const outputFiles = [];
+  const stagedLogs = [];
+  const stagedNameCounts = new Map();
   currentParseCancel = () => {
     cancelled = true;
     if (child) child.kill();
@@ -1007,10 +1009,23 @@ ipcMain.handle('start-parse', async (event, data) => {
     step('copy', 'Copying files', 0, null, 0, files.length);
     for (let i = 0; i < files.length; i++) {
       const src = files[i];
-      const dest = path.join(tempDir, path.basename(src));
+      const originalName = path.basename(src);
+      const ext = path.extname(originalName);
+      const base = ext ? originalName.slice(0, -ext.length) : originalName;
+      const seen = stagedNameCounts.get(originalName) || 0;
+      stagedNameCounts.set(originalName, seen + 1);
+      const stagedName = seen > 0 ? `${base}__${seen}${ext}` : originalName;
+      const dest = path.join(tempDir, stagedName);
       try {
-        await fs.promises.copyFile(src, dest);
-        send(`Copied (${i + 1}/${files.length}): ${path.basename(src)}`);
+        await stageInputFile(src, dest);
+        if (stagedName.toLowerCase().endsWith('.zevtc')) {
+          stagedLogs.push(stagedName);
+        }
+        if (stagedName === originalName) {
+          send(`Staged (${i + 1}/${files.length}): ${originalName}`);
+        } else {
+          send(`Staged (${i + 1}/${files.length}): ${originalName} -> ${stagedName}`);
+        }
         step('copy', 'Copying files', (i + 1) / files.length, null, i + 1, files.length);
       } catch (e) {
         step('copy', 'Copying files', (i + 1) / files.length, 'Error copying file', i + 1, files.length);
@@ -1050,7 +1065,12 @@ ipcMain.handle('start-parse', async (event, data) => {
     const eiTemplate = path.join(__dirname, 'EliteInsightsConfigTemplate.conf');
     const eiConf = path.join(tempDir, 'EliteInsightConfig.conf');
     // Use the Windows-friendly path for the config file content
-    await editEIConfig(eiTemplate, eiConf, configOutDir, opts.dpsUserToken, { anonymizePlayers: opts.anonymizePlayers });
+    await editEIConfig(eiTemplate, eiConf, configOutDir, opts.dpsUserToken, {
+      anonymizePlayers: opts.anonymizePlayers,
+      parseMultipleLogs: stagedLogs.length > 1,
+      applicationTraces: false,
+      saveOutHtml: false
+    });
 
 
 
@@ -1071,8 +1091,7 @@ ipcMain.handle('start-parse', async (event, data) => {
       }
     }
 
-    const zevtc = await fs.promises.readdir(tempDir);
-    const logs = zevtc.filter(f => f.toLowerCase().endsWith('.zevtc'));
+    const logs = stagedLogs;
     if (logs.length > 0) {
       step('cli', 'EI CLI', 0, null, 0, logs.length);
       let cliWatcher = null;
@@ -1384,5 +1403,18 @@ async function moveFile(source, target) {
     } else {
       throw error;
     }
+  }
+}
+
+// Prefer hard links to avoid duplicating large log files; fall back to copy when needed.
+async function stageInputFile(source, target) {
+  try {
+    await fs.promises.link(source, target);
+  } catch (error) {
+    if (['EXDEV', 'EPERM', 'ENOSYS', 'EMLINK'].includes(error.code)) {
+      await fs.promises.copyFile(source, target);
+      return;
+    }
+    throw error;
   }
 }

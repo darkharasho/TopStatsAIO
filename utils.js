@@ -37,6 +37,10 @@ function writeVersions(file, v) {
 }
 
 async function editEIConfig(template, dest, outDir, token, opts = {}) {
+  const boolOpt = (value, fallback) => {
+    if (typeof value === 'boolean') return value ? 'True' : 'False';
+    return fallback;
+  };
   const lines = await fs.promises.readFile(template, 'utf8');
   const replaced = lines.split(/\r?\n/).map(l => {
     if (l.startsWith('OutLocation=')) {
@@ -48,6 +52,9 @@ async function editEIConfig(template, dest, outDir, token, opts = {}) {
     }
     if (l.startsWith('DPSReportUserToken=')) return `DPSReportUserToken=${token || ''}`;
     if (l.startsWith('Anonymous=')) return `Anonymous=${opts.anonymizePlayers ? 'True' : 'False'}`;
+    if (l.startsWith('ParseMultipleLogs=')) return `ParseMultipleLogs=${boolOpt(opts.parseMultipleLogs, 'False')}`;
+    if (l.startsWith('ApplicationTraces=')) return `ApplicationTraces=${boolOpt(opts.applicationTraces, 'False')}`;
+    if (l.startsWith('SaveOutHTML=')) return `SaveOutHTML=${boolOpt(opts.saveOutHtml, 'False')}`;
     return l;
   }).join('\n');
   await fs.promises.writeFile(dest, replaced, 'utf8');
