@@ -79,6 +79,34 @@ function bumpVersion(current, type) {
   return `${major}.${minor}.${patch}`;
 }
 
+function hasGitTagLocal(tagName) {
+  const result = spawnSync(gitCmd, ['rev-parse', '-q', '--verify', `refs/tags/${tagName}`], {
+    stdio: 'ignore'
+  });
+  return result.status === 0;
+}
+
+function hasGitTagRemote(tagName) {
+  const result = spawnSync(gitCmd, ['ls-remote', '--tags', 'origin', tagName], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore']
+  });
+  return result.status === 0 && Boolean((result.stdout || '').trim());
+}
+
+function ensureReleaseTag(version) {
+  const tagName = `v${version}`;
+  const localExists = hasGitTagLocal(tagName);
+  const remoteExists = hasGitTagRemote(tagName);
+
+  if (!localExists) {
+    run(gitCmd, ['tag', tagName]);
+  }
+  if (!remoteExists) {
+    run(gitCmd, ['push', 'origin', tagName]);
+  }
+}
+
 const packagePath = path.resolve('package.json');
 const packageRaw = fs.readFileSync(packagePath, 'utf8');
 const packageJson = JSON.parse(packageRaw);
@@ -115,6 +143,13 @@ try {
   if (!skipReleaseNotes) {
     run(npmCmd, ['run', 'generate:release-notes']);
   }
+
+  const currentVersion = JSON.parse(fs.readFileSync(packagePath, 'utf8')).version;
+  if (!currentVersion) {
+    console.error('package.json is missing a version.');
+    process.exit(1);
+  }
+  ensureReleaseTag(String(currentVersion).trim());
 
   if (skipPublish) {
     run(npmCmd, ['run', 'dist:all']);
