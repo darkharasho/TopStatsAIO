@@ -163,7 +163,7 @@ try {
     process.exit(1);
   }
 
-  run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'always'], {
+  run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'never'], {
     env: {
       ...process.env,
       CSC_IDENTITY_AUTO_DISCOVERY: 'false',

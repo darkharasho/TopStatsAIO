@@ -43,6 +43,28 @@ async function request(method, url, token, body) {
   return { ok: response.ok, status: response.status, data, text };
 }
 
+async function requestUpload(url, token, fileName, filePath) {
+  const data = fs.readFileSync(filePath);
+  const response = await fetch(`${url}?name=${encodeURIComponent(fileName)}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/octet-stream'
+    },
+    body: data
+  });
+  const text = await response.text();
+  let json = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  return { ok: response.ok, status: response.status, data: json, text };
+}
+
 async function main() {
   const rootDir = process.cwd();
   loadEnvFile(path.join(rootDir, '.env'));
@@ -57,6 +79,15 @@ async function main() {
   const repo = process.env.GITHUB_RELEASE_REPO || (publish && publish.repo);
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   const version = packageJson && packageJson.version ? String(packageJson.version) : '';
+  const outputDir = path.join(
+    rootDir,
+    packageJson &&
+      packageJson.build &&
+      packageJson.build.directories &&
+      packageJson.build.directories.output
+      ? packageJson.build.directories.output
+      : 'dist'
+  );
 
   if (!owner || !repo) {
     console.error('Missing GitHub owner/repo (configure build.publish.owner/repo or env overrides).');
@@ -68,6 +99,10 @@ async function main() {
   }
   if (!version) {
     console.error('Missing package version.');
+    process.exit(1);
+  }
+  if (!fs.existsSync(outputDir)) {
+    console.error(`Build output directory not found: ${outputDir}`);
     process.exit(1);
   }
   if (!fs.existsSync(releaseNotesPath)) {
@@ -82,36 +117,45 @@ async function main() {
   }
 
   const baseUrl = `https://api.github.com/repos/${owner}/${repo}`;
-  const candidateTags = [`v${version}`, version];
   const preferredTag = `v${version}`;
+  const releaseType =
+    packageJson &&
+    packageJson.build &&
+    packageJson.build.publish &&
+    packageJson.build.publish.releaseType
+      ? String(packageJson.build.publish.releaseType).toLowerCase()
+      : 'draft';
+  const createAsDraft = releaseType === 'draft';
   let release = null;
 
-  for (const tag of candidateTags) {
-    const res = await request('GET', `${baseUrl}/releases/tags/${encodeURIComponent(tag)}`, token);
-    if (res.ok && res.data && res.data.id) {
-      release = res.data;
-      break;
-    }
-  }
-
-  if (!release) {
-    const listRes = await request('GET', `${baseUrl}/releases?per_page=100`, token);
-    if (listRes.ok && Array.isArray(listRes.data)) {
-      const byVersion = listRes.data.find(r => r && candidateTags.includes(r.tag_name));
-      if (byVersion) release = byVersion;
-    }
+  const byTagRes = await request('GET', `${baseUrl}/releases/tags/${encodeURIComponent(preferredTag)}`, token);
+  if (byTagRes.ok && byTagRes.data && byTagRes.data.id) {
+    release = byTagRes.data;
   }
 
   if (!release || !release.id) {
-    console.error(`Could not find release for ${candidateTags.join(' or ')}.`);
-    process.exit(1);
+    const createRes = await request('POST', `${baseUrl}/releases`, token, {
+      tag_name: preferredTag,
+      name: preferredTag,
+      body: notes,
+      draft: createAsDraft,
+      prerelease: false
+    });
+    if (!createRes.ok || !createRes.data || !createRes.data.id) {
+      console.error(`Failed to create release for ${preferredTag}: ${createRes.text}`);
+      process.exit(1);
+    }
+    release = createRes.data;
   }
-  if (!candidateTags.includes(release.tag_name)) {
-    console.error(`Resolved release has unexpected tag "${release.tag_name}". Expected ${candidateTags.join(' or ')}.`);
+
+  if (release.tag_name !== preferredTag) {
+    console.error(`Resolved release has unexpected tag "${release.tag_name}". Expected ${preferredTag}.`);
     process.exit(1);
   }
 
   const patchRes = await request('PATCH', `${baseUrl}/releases/${release.id}`, token, {
+    tag_name: preferredTag,
+    name: preferredTag,
     body: notes
   });
   if (!patchRes.ok) {
@@ -119,25 +163,64 @@ async function main() {
     process.exit(1);
   }
 
-  const refreshed = patchRes.data && patchRes.data.id ? patchRes.data : release;
-  if (!candidateTags.includes(refreshed.tag_name)) {
-    console.error(`Updated release tag became "${refreshed.tag_name}". Expected ${candidateTags.join(' or ')}.`);
+  let refreshed = patchRes.data && patchRes.data.id ? patchRes.data : release;
+  if (!refreshed || refreshed.tag_name !== preferredTag) {
+    console.error(`Updated release tag became "${refreshed && refreshed.tag_name ? refreshed.tag_name : 'unknown'}". Expected ${preferredTag}.`);
     process.exit(1);
   }
-  if (refreshed && refreshed.draft) {
-    const publishRes = await request('PATCH', `${baseUrl}/releases/${refreshed.id}`, token, {
-      draft: false,
-      tag_name: preferredTag
-    });
-    if (!publishRes.ok) {
-      console.error(`Failed to publish draft release (${publishRes.status}): ${publishRes.text}`);
-      process.exit(1);
-    }
-    console.log(`Updated notes and published GitHub release ${refreshed.tag_name}.`);
-    return;
+
+  const uploadUrl = refreshed.upload_url ? refreshed.upload_url.replace('{?name,label}', '') : '';
+  if (!uploadUrl) {
+    console.error('Release upload URL missing.');
+    process.exit(1);
   }
 
-  console.log(`Updated GitHub release notes for ${refreshed.tag_name}. Release already published.`);
+  const files = fs
+    .readdirSync(outputDir, { withFileTypes: true })
+    .filter(entry => entry.isFile())
+    .map(entry => entry.name);
+
+  if (files.length === 0) {
+    console.error(`No build artifacts found in ${outputDir}.`);
+    process.exit(1);
+  }
+
+  const detailsRes = await request('GET', `${baseUrl}/releases/${refreshed.id}`, token);
+  if (detailsRes.ok && detailsRes.data) {
+    refreshed = detailsRes.data;
+  }
+  const existingAssets = Array.isArray(refreshed.assets) ? refreshed.assets : [];
+
+  for (const fileName of files) {
+    const existing = existingAssets.find(asset => asset && asset.name === fileName);
+    if (existing && existing.id) {
+      const delRes = await request('DELETE', `${baseUrl}/releases/assets/${existing.id}`, token);
+      if (!delRes.ok) {
+        console.error(`Failed to delete existing asset ${fileName}: ${delRes.text}`);
+        process.exit(1);
+      }
+    }
+
+    const filePath = path.join(outputDir, fileName);
+    const uploadRes = await requestUpload(uploadUrl, token, fileName, filePath);
+    if (!uploadRes.ok) {
+      console.error(`Failed to upload asset ${fileName} (${uploadRes.status}): ${uploadRes.text}`);
+      process.exit(1);
+    }
+  }
+
+  const publishRes = await request('PATCH', `${baseUrl}/releases/${refreshed.id}`, token, {
+    draft: false,
+    tag_name: preferredTag,
+    name: preferredTag,
+    body: notes
+  });
+  if (!publishRes.ok) {
+    console.error(`Failed to publish release (${publishRes.status}): ${publishRes.text}`);
+    process.exit(1);
+  }
+
+  console.log(`Published GitHub release ${preferredTag} with ${files.length} assets.`);
 }
 
 main().catch(error => {
