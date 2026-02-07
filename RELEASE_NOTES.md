@@ -1,19 +1,21 @@
 # Release Notes
 
-Version v3.4.0 - February 7, 2026
+Version v3.4.1 - February 7, 2026
 
 ## 🌟 Highlights
-- New tooling to help with GitHub version bumps and packaging.
-- Enhanced Elite Insights (EI) config editing to support batch setups for multiple logs.
-- Smarter log file staging with efficient file handling to avoid unnecessary copies.
+- Batch editing options for Elite Insights config to tune parsing and output behavior.
+- Smarter file staging that keeps original names and uses hard links when possible to save time and space.
+- New release tooling to streamline version bumps and packaging for GitHub.
+- Automatic tagging support for releases, handling both local and remote tags.
 
 ## 🛠️ Improvements
-- Staging now tracks each input file and handles duplicate names by renaming with a suffix (e.g., base__1.ext), plus clearer progress messages showing original and staged names.
-- When multiple logs are staged, EI config is updated to handle batch parsing (ParseMultipleLogs) and applies related settings.
-- Log staging prefers hard linking to avoid duplicating large log files; falls back to copying only if hard links aren’t possible.
+- EI config editing now supports batch options like parseMultipleLogs, applicationTraces, and saveOutHtml.
+- Staging logic now tracks staged files and assigns unique staged names when duplicates exist.
+- Hard-link-based staging is preferred to avoid duplicating large log files; falls back to copy if needed.
+- Release-related scripts now assist with generating release notes and preparing GitHub releases.
 
 ## 🧯 Fixes
-- Corrected the version number in package.json (from 3.3.2 to 3.3.1).
+- Fixed incorrect version number in package.json (from 3.3.2 to 3.3.1).
 
 ## ⚠️ Breaking Changes
 - None.

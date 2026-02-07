@@ -149,7 +149,9 @@ try {
     console.error('package.json is missing a version.');
     process.exit(1);
   }
-  ensureReleaseTag(String(currentVersion).trim());
+  const releaseVersion = String(currentVersion).trim();
+  const releaseTag = `v${releaseVersion}`;
+  ensureReleaseTag(releaseVersion);
 
   if (skipPublish) {
     run(npmCmd, ['run', 'dist:all']);
@@ -162,7 +164,12 @@ try {
   }
 
   run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'always'], {
-    env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
+    env: {
+      ...process.env,
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false',
+      GITHUB_REF: process.env.GITHUB_REF || `refs/tags/${releaseTag}`,
+      GITHUB_REF_NAME: process.env.GITHUB_REF_NAME || releaseTag
+    }
   });
   run(process.execPath, ['scripts/update-github-release-notes.js']);
 } catch (error) {

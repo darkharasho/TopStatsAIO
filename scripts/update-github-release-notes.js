@@ -83,6 +83,7 @@ async function main() {
 
   const baseUrl = `https://api.github.com/repos/${owner}/${repo}`;
   const candidateTags = [`v${version}`, version];
+  const preferredTag = `v${version}`;
   let release = null;
 
   for (const tag of candidateTags) {
@@ -105,6 +106,10 @@ async function main() {
     console.error(`Could not find release for ${candidateTags.join(' or ')}.`);
     process.exit(1);
   }
+  if (!candidateTags.includes(release.tag_name)) {
+    console.error(`Resolved release has unexpected tag "${release.tag_name}". Expected ${candidateTags.join(' or ')}.`);
+    process.exit(1);
+  }
 
   const patchRes = await request('PATCH', `${baseUrl}/releases/${release.id}`, token, {
     body: notes
@@ -115,9 +120,14 @@ async function main() {
   }
 
   const refreshed = patchRes.data && patchRes.data.id ? patchRes.data : release;
+  if (!candidateTags.includes(refreshed.tag_name)) {
+    console.error(`Updated release tag became "${refreshed.tag_name}". Expected ${candidateTags.join(' or ')}.`);
+    process.exit(1);
+  }
   if (refreshed && refreshed.draft) {
     const publishRes = await request('PATCH', `${baseUrl}/releases/${refreshed.id}`, token, {
-      draft: false
+      draft: false,
+      tag_name: preferredTag
     });
     if (!publishRes.ok) {
       console.error(`Failed to publish draft release (${publishRes.status}): ${publishRes.text}`);
