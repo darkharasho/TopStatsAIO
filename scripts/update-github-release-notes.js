@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -65,6 +66,40 @@ async function requestUpload(url, token, fileName, filePath) {
   return { ok: response.ok, status: response.status, data: json, text };
 }
 
+function runGit(args) {
+  const gitCmd = process.platform === 'win32' ? 'git.exe' : 'git';
+  const result = spawnSync(gitCmd, args, { encoding: 'utf8' });
+  if (result.status !== 0) {
+    const err = (result.stderr || result.stdout || '').trim();
+    throw new Error(err || `git ${args.join(' ')} failed`);
+  }
+  return (result.stdout || '').trim();
+}
+
+function hasLocalTag(tagName) {
+  const gitCmd = process.platform === 'win32' ? 'git.exe' : 'git';
+  const result = spawnSync(gitCmd, ['rev-parse', '-q', '--verify', `refs/tags/${tagName}`], { stdio: 'ignore' });
+  return result.status === 0;
+}
+
+function hasRemoteTag(tagName) {
+  const gitCmd = process.platform === 'win32' ? 'git.exe' : 'git';
+  const result = spawnSync(gitCmd, ['ls-remote', '--tags', 'origin', tagName], {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore']
+  });
+  return result.status === 0 && Boolean((result.stdout || '').trim());
+}
+
+function ensureRemoteTag(tagName) {
+  if (!hasLocalTag(tagName)) {
+    runGit(['tag', tagName]);
+  }
+  if (!hasRemoteTag(tagName)) {
+    runGit(['push', 'origin', tagName]);
+  }
+}
+
 async function main() {
   const rootDir = process.cwd();
   loadEnvFile(path.join(rootDir, '.env'));
@@ -118,6 +153,12 @@ async function main() {
 
   const baseUrl = `https://api.github.com/repos/${owner}/${repo}`;
   const preferredTag = `v${version}`;
+  try {
+    ensureRemoteTag(preferredTag);
+  } catch (error) {
+    console.error(`Failed to ensure git tag ${preferredTag}: ${error && error.message ? error.message : error}`);
+    process.exit(1);
+  }
   const releaseType =
     packageJson &&
     packageJson.build &&
