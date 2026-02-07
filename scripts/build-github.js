@@ -16,6 +16,7 @@ function readBumpArg() {
 
 const bumpType = readBumpArg();
 const skipTests = args.includes('--skip-tests') || args.includes('--no-tests');
+const skipReleaseNotes = args.includes('--skip-release-notes') || args.includes('--no-release-notes');
 const isWin = process.platform === 'win32';
 const npmCmd = isWin ? 'npm.cmd' : 'npm';
 const gitCmd = isWin ? 'git.exe' : 'git';
@@ -79,6 +80,10 @@ try {
     run(gitCmd, ['add', 'package.json', 'package-lock.json']);
     run(gitCmd, ['commit', '-m', `chore: bump version to ${nextVersion}`]);
     run(gitCmd, ['push']);
+  }
+
+  if (!skipReleaseNotes) {
+    run(npmCmd, ['run', 'generate:release-notes']);
   }
 
   run(npmCmd, ['run', 'dist:all']);

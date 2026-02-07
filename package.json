@@ -13,6 +13,7 @@
     "dist:linux": "node scripts/build-linux.js",
     "dist:all": "node scripts/build-win.js && node scripts/build-linux.js --no-clean",
     "build:github": "node scripts/build-github.js",
+    "generate:release-notes": "node scripts/generate-release-notes.js",
     "clear-settings": "node scripts/clear-settings.js",
     "fake-update": "electron . --fake-update"
   },
