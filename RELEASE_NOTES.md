@@ -1,21 +1,16 @@
 # Release Notes
 
-Version v3.4.3 - February 7, 2026
+Version v3.4.4 - February 7, 2026
 
 ## 🌟 Highlights
-- Release automation now attaches and uploads the app installers to GitHub Releases automatically.
-- You can choose whether a release is published right away or saved as a draft via configuration.
-- The release workflow validates the build output and reports clearly if artifacts are missing.
+- Release automation now ensures the v3.4.4 tag is created locally and pushed to GitHub if missing.
 
 ## 🛠️ Improvements
-- Release flow detects and uses the configured output directory for artifacts.
-- If an asset already exists for a file, it will be replaced automatically to ensure the latest installer is available.
-- The release notes body is populated with the notes and the version tag is consistently applied.
+- The release script can create and push the v3.4.4 tag to the remote repository when needed.
+- Error handling now provides clearer messages if tag creation or pushing fails during release.
 
 ## 🧯 Fixes
-- Clear errors are shown when no build artifacts are found in the output directory.
-- Assets are cleaned up before uploading new ones to avoid duplicates.
-- The script keeps the release in sync with the preferred tag and reports mismatches clearly.
+- Prevents release failures when the v3.4.4 tag isn’t available remotely by ensuring it’s present before continuing.
 
 ## ⚠️ Breaking Changes
 - None.

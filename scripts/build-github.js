@@ -107,6 +107,12 @@ function ensureReleaseTag(version) {
   }
 }
 
+function cleanDistDir() {
+  const distDir = path.resolve('dist');
+  fs.rmSync(distDir, { recursive: true, force: true });
+  fs.mkdirSync(distDir, { recursive: true });
+}
+
 const packagePath = path.resolve('package.json');
 const packageRaw = fs.readFileSync(packagePath, 'utf8');
 const packageJson = JSON.parse(packageRaw);
@@ -162,6 +168,8 @@ try {
     console.error('GH_TOKEN or GITHUB_TOKEN is required to publish a GitHub release.');
     process.exit(1);
   }
+
+  cleanDistDir();
 
   run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'never'], {
     env: {

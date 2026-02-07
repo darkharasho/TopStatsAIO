@@ -100,6 +100,25 @@ function ensureRemoteTag(tagName) {
   }
 }
 
+function collectReleaseFiles(outputDir, version) {
+  const allowedStaticNames = new Set(['latest.yml', 'latest-linux.yml']);
+  const allowedExts = new Set(['.appimage', '.deb', '.exe', '.blockmap']);
+  const versionDot = String(version);
+  const versionUnderscore = versionDot.replace(/\./g, '_');
+
+  const entries = fs.readdirSync(outputDir, { withFileTypes: true });
+  return entries
+    .filter(entry => entry.isFile())
+    .map(entry => entry.name)
+    .filter(name => {
+      const lower = name.toLowerCase();
+      if (allowedStaticNames.has(lower)) return true;
+      const ext = path.extname(lower);
+      if (!allowedExts.has(ext)) return false;
+      return lower.includes(versionDot.toLowerCase()) || lower.includes(versionUnderscore.toLowerCase());
+    });
+}
+
 async function main() {
   const rootDir = process.cwd();
   loadEnvFile(path.join(rootDir, '.env'));
@@ -216,13 +235,10 @@ async function main() {
     process.exit(1);
   }
 
-  const files = fs
-    .readdirSync(outputDir, { withFileTypes: true })
-    .filter(entry => entry.isFile())
-    .map(entry => entry.name);
+  const files = collectReleaseFiles(outputDir, version);
 
   if (files.length === 0) {
-    console.error(`No build artifacts found in ${outputDir}.`);
+    console.error(`No current-version release artifacts found in ${outputDir} for ${version}.`);
     process.exit(1);
   }
 
