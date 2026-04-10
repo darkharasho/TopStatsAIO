@@ -660,6 +660,22 @@ app.whenReady().then(() => {
   versionsFile = path.join(depsDir, 'versions.json');
   logFile = path.join(userData, 'debug.log');
 
+  // Prune log entries older than 7 days
+  try {
+    if (fs.existsSync(logFile)) {
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const lines = fs.readFileSync(logFile, 'utf-8').split('\n');
+      const kept = [];
+      let keep = true;
+      for (const line of lines) {
+        const m = line.match(/^\[(\d{4}-\d{2}-\d{2}T[\d:.]+Z?)\]/);
+        if (m) keep = new Date(m[1]).getTime() >= cutoff;
+        if (keep) kept.push(line);
+      }
+      fs.writeFileSync(logFile, kept.join('\n'));
+    }
+  } catch { }
+
   protocol.registerFileProtocol('app', (request, callback) => {
     try {
       const url = new URL(request.url);
