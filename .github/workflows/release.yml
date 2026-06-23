@@ -1,0 +1,159 @@
+name: Build Release Artifacts
+
+# Golden release pattern: a tag push builds artifacts and writes notes into a
+# DRAFT release, then atomically flips it to published. GitHub's releases.atom
+# feed (which the AxiTools bot polls) never sees the release until it is
+# complete, so announcements are never empty or premature.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+  prepare-release:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          # If a non-draft release already exists, delete it so electron-builder
+          # can create and upload to a fresh draft.
+          existing=$(gh release view "$tag" --repo ${{ github.repository }} --json isDraft --jq '.isDraft' 2>/dev/null || echo "none")
+          if [ "$existing" = "false" ]; then
+            gh release delete "$tag" --repo ${{ github.repository }} --yes
+          fi
+          gh release create "$tag" --draft --title "$tag" --notes "" --repo ${{ github.repository }} 2>/dev/null || true
+
+  build:
+    needs: [prepare-release]
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            args: --linux AppImage
+          - os: windows-latest
+            args: --win nsis portable
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Native electron-builder publish uploads installers, latest.yml and
+      # blockmaps straight into the draft created above (package.json sets
+      # publish.releaseType=draft). flatpak is intentionally omitted in CI to
+      # match scripts/build-linux.js's AppImage-only fallback.
+      - name: Build and publish Electron distributables
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder ${{ matrix.args }} --publish always
+
+  publish:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+
+          # Extract just this tag's section from RELEASE_NOTES.md.
+          # Sections start with a line like: "Version v3.4.4 - February 7, 2026".
+          notes=$(awk -v ver="$tag" '
+            /^Version v[0-9]/ { capture = ($2 == ver) ? 1 : 0; next }
+            capture { print }
+          ' RELEASE_NOTES.md)
+
+          # Fail loudly if there is no section for this tag, so a release is
+          # never published with empty or stale notes.
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            echo "::error::No RELEASE_NOTES.md section found for $tag. Add a 'Version $tag - <date>' entry and re-run." >&2
+            exit 1
+          fi
+
+          gh release edit "$tag" --repo ${{ github.repository }} --notes "$notes"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          gh release edit "$tag" --repo ${{ github.repository }} --draft=false
+
+      # Optional immediate webhook ping. Leave the DISCORD_WEBHOOK_URL repo
+      # variable unset to rely solely on the AxiTools bot's RSS announcement.
+      - name: Post to Discord
+        if: ${{ vars.DISCORD_WEBHOOK_URL != '' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ vars.DISCORD_WEBHOOK_URL }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          release_url="https://github.com/${{ github.repository }}/releases/tag/${tag}"
+          notes=$(gh release view "$tag" --repo ${{ github.repository }} --json body --jq '.body' 2>/dev/null || echo "")
+
+          export TAG="$tag"
+          export RELEASE_URL="$release_url"
+          export NOTES="$notes"
+
+          payload=$(python3 -c "
+          import json, os
+
+          tag = os.environ['TAG']
+          release_url = os.environ['RELEASE_URL']
+          notes = os.environ.get('NOTES', '')
+
+          if len(notes) > 3800:
+              notes = notes[:3800] + '\n\n*... see full notes on GitHub*'
+
+          embed = {
+              'title': f'TopStatsAIO {tag}',
+              'url': release_url,
+              'description': notes or 'A new version of TopStatsAIO is available!',
+              'color': 0xF59E0B,
+              'thumbnail': {'url': 'https://raw.githubusercontent.com/darkharasho/TopStatsAIO/main/media/TopStatsAIO-Logo.png'},
+              'footer': {'text': 'TopStatsAIO Release'},
+          }
+
+          print(json.dumps({'embeds': [embed]}))
+          ")
+
+          curl -s -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK_URL"
