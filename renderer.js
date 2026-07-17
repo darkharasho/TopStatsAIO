@@ -123,6 +123,7 @@ const tiddlyRefreshBtn = document.getElementById('tiddly-refresh');
 const tiddlyUseUrlBtn = document.getElementById('tiddly-use-url');
 const uploadImportSkinBtn = document.getElementById('upload-import-skin');
 const skinUpdateBadge = document.getElementById('skin-update-badge');
+const restoreDefaultSkinBtn = document.getElementById('restore-default-skin');
 const gradientRadios = document.querySelectorAll('input[name="gradient-theme"]');
 const gradientSummary = document.getElementById('gradient-summary');
 const backdropIconSelectBtn = document.getElementById('backdrop-icon-select');
@@ -823,6 +824,47 @@ if (uploadImportSkinBtn) {
       alert('Failed to import skin: ' + e.message);
       uploadImportSkinBtn.disabled = false;
       uploadImportSkinBtn.childNodes[0].textContent = originalText;
+    }
+  });
+}
+if (restoreDefaultSkinBtn) {
+  restoreDefaultSkinBtn.addEventListener('click', async () => {
+    let url = localStorage.getItem('uploadUrl') || uploadUrlInput.value;
+    if (!url || !url.includes('tiddlyhost.com')) {
+      alert('Please configure a valid Tiddlyhost Upload URL first.');
+      return;
+    }
+    url = normalizeUrl(url);
+    if (!url) {
+      alert('Invalid Upload URL format.');
+      return;
+    }
+
+    restoreDefaultSkinBtn.disabled = true;
+    const originalText = restoreDefaultSkinBtn.childNodes[0].textContent;
+    restoreDefaultSkinBtn.childNodes[0].textContent = 'Loading Skin...';
+
+    const finalize = () => {
+      restoreDefaultSkinBtn.disabled = false;
+      restoreDefaultSkinBtn.childNodes[0].textContent = originalText;
+    };
+
+    try {
+      const customIcon = localStorage.getItem('customBackdropIcon');
+      const skin = await window.electronAPI.getSkinContent(customIcon);
+      if (!skin) throw new Error('Could not load skin content.');
+
+      openUploadWindow(url, [skin], false, {
+        callback: () => {
+          if (persistSkinVersion(localStorage, skin) && skinUpdateBadge) {
+            skinUpdateBadge.classList.add('hidden');
+          }
+          finalize();
+        }
+      });
+    } catch (e) {
+      alert('Failed to restore skin: ' + e.message);
+      finalize();
     }
   });
 }
