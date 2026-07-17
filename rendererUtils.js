@@ -229,6 +229,12 @@
         };
     }
 
+    function persistSkinVersion(storage, skin) {
+        if (!skin || !skin.version) return false;
+        storage.setItem('skinVersion', skin.version);
+        return true;
+    }
+
     exports.SUPPORTED_BOONS = SUPPORTED_BOONS;
     exports.SUPPORTED_BOON_IDS = SUPPORTED_BOON_IDS;
     exports.DEFAULT_SUPPORT_PROFS = DEFAULT_SUPPORT_PROFS;
@@ -245,5 +251,6 @@
     exports.getLoginTargetUrl = getLoginTargetUrl;
     exports.saveRendererSetting = saveRendererSetting;
     exports.loadRendererSettings = loadRendererSettings;
+    exports.persistSkinVersion = persistSkinVersion;
 
 })(typeof module !== 'undefined' && module.exports ? module.exports : (window.rendererUtils = {}));

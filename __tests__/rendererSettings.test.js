@@ -1,7 +1,8 @@
 
 const {
     saveRendererSetting,
-    loadRendererSettings
+    loadRendererSettings,
+    persistSkinVersion
 } = require('../rendererUtils');
 
 describe('rendererUtils Settings', () => {
@@ -47,5 +48,36 @@ describe('rendererUtils Settings', () => {
         expect(settings.dpsReportUserToken).toBe('token123');
         expect(settings.combinerGlickoUpdate).toBe(true);
         expect(settings.combinerWriteAllJson).toBe(false);
+    });
+});
+
+describe('persistSkinVersion', () => {
+    let store;
+    let storage;
+
+    beforeEach(() => {
+        store = {};
+        storage = {
+            setItem: jest.fn((k, v) => { store[k] = v; })
+        };
+    });
+
+    test('stores skinVersion and returns true when skin has a version', () => {
+        const result = persistSkinVersion(storage, { version: '1.6.0' });
+        expect(result).toBe(true);
+        expect(storage.setItem).toHaveBeenCalledWith('skinVersion', '1.6.0');
+        expect(store.skinVersion).toBe('1.6.0');
+    });
+
+    test('returns false and does not write when skin has no version', () => {
+        const result = persistSkinVersion(storage, { version: '' });
+        expect(result).toBe(false);
+        expect(storage.setItem).not.toHaveBeenCalled();
+    });
+
+    test('returns false when skin is null', () => {
+        const result = persistSkinVersion(storage, null);
+        expect(result).toBe(false);
+        expect(storage.setItem).not.toHaveBeenCalled();
     });
 });
