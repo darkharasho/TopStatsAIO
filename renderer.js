@@ -25,7 +25,8 @@ const {
   saveSupportProfs,
   loadWeights,
   saveWeights,
-  getLoginTargetUrl
+  getLoginTargetUrl,
+  persistSkinVersion
 } = window.rendererUtils;
 
 const selectAllBtn = document.getElementById('select-all');
@@ -812,9 +813,8 @@ if (uploadImportSkinBtn) {
 
       openUploadWindow(url, [skin], false, {
         callback: () => {
-          if (skin.version) {
-            localStorage.setItem('skinVersion', skin.version);
-            if (skinUpdateBadge) skinUpdateBadge.classList.add('hidden');
+          if (persistSkinVersion(localStorage, skin) && skinUpdateBadge) {
+            skinUpdateBadge.classList.add('hidden');
           }
           finalize();
         }
