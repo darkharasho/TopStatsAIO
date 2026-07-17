@@ -1,16 +1,18 @@
 # Release Notes
 
-Version v3.4.4 - February 7, 2026
+Version v3.4.5 - July 17, 2026
 
 ## 🌟 Highlights
-- Release automation now ensures the v3.4.4 tag is created locally and pushed to GitHub if missing.
+- Restore Default Skin button added to the Glass Skin card.
+- Documentation updated with the Restore Default Skin implementation plan and button design spec.
+- Logs prune: old log entries older than 7 days are removed to keep things tidy.
 
 ## 🛠️ Improvements
-- The release script can create and push the v3.4.4 tag to the remote repository when needed.
-- Error handling now provides clearer messages if tag creation or pushing fails during release.
+- Added persistSkinVersion helper for skin uploads (back-end helper).
+- Refactored import skin flow to use persistSkinVersion when saving the applied skin version.
 
 ## 🧯 Fixes
-- Prevents release failures when the v3.4.4 tag isn’t available remotely by ensuring it’s present before continuing.
+- None.
 
 ## ⚠️ Breaking Changes
 - None.
