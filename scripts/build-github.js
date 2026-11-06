@@ -171,7 +171,14 @@ try {
 
   cleanDistDir();
 
-  run(npxCmd, ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'never'], {
+  // Windows signing (win.azureSignOptions) needs the Azure Artifact Signing credentials,
+  // which only the CI release has. Without them, build unsigned instead of failing.
+  const builderArgs = ['electron-builder', '--win', '--linux', 'AppImage', '--publish', 'never'];
+  if (!process.env.AZURE_CLIENT_SECRET) {
+    console.warn('AZURE_CLIENT_SECRET is not set; building an UNSIGNED Windows installer.');
+    builderArgs.push('-c.win.azureSignOptions=');
+  }
+  run(npxCmd, builderArgs, {
     env: {
       ...process.env,
       CSC_IDENTITY_AUTO_DISCOVERY: 'false',

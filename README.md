@@ -120,6 +120,13 @@ versioned files like:
 - Matching `.blockmap` files for both artifacts so the auto-updater can stream
   block-aware downloads and resume partial transfers
 
+Release builds are signed with Azure Artifact Signing (`win.azureSignOptions`
+in `package.json`: account `darkharasho-signing`, profile `public-trust`,
+publisher `Michael Stephens`). Only the tag-triggered release workflow signs:
+it needs the `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`
+repo secrets and fails if the installer or portable exe isn't validly signed.
+Local builds without `AZURE_CLIENT_SECRET` set come out unsigned.
+
 ## Linux Package (Flatpak + AppImage)
 
 Run `npm run dist:linux` on a Linux host to produce AppImage artifacts. If

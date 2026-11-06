@@ -35,8 +35,13 @@ if (!process.argv.includes('--no-clean')) {
   fs.mkdirSync(distDir);
 }
 
+// Windows signing (win.azureSignOptions) needs the Azure Artifact Signing credentials,
+// which only the CI release has. Without them, build unsigned instead of failing.
+const unsigned = !process.env.AZURE_CLIENT_SECRET;
+if (unsigned) console.warn('AZURE_CLIENT_SECRET is not set; building an UNSIGNED Windows installer.');
+
 // build installer
-run('npx electron-builder --win', {
+run(`npx electron-builder --win${unsigned ? ' -c.win.azureSignOptions=' : ''}`, {
   env: { ...process.env, CSC_IDENTITY_AUTO_DISCOVERY: 'false' }
 });
 

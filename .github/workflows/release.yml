@@ -72,6 +72,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Windows is signed with Azure Artifact Signing (win.azureSignOptions in
+      # package.json); electron-builder reads the AZURE_* credentials from the
+      # environment. Without them it can't authenticate, so fail before the slow
+      # build instead of after it.
+      - name: Check the Windows signing secrets are set
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          for v in AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
+            [ -n "${!v}" ] || { echo "::error::Secret $v is not set (run ~/.claude/templates/windows-signing/set-azure-signing-secrets.sh TopStatsAIO)."; exit 1; }
+          done
+
       # Native electron-builder publish uploads installers, latest.yml and
       # blockmaps straight into the draft created above (package.json sets
       # publish.releaseType=draft). flatpak is intentionally omitted in CI to
@@ -80,7 +96,25 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         run: npx electron-builder ${{ matrix.args }} --publish always
+
+      # Checks both the NSIS installer ("topstatsaio Setup <v>.exe") and the
+      # portable exe ("topstatsaio <v>.exe"). The release stays a draft if this
+      # fails, since publish needs every build.
+      - name: Verify the Windows executables are signed
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem dist -Filter *.exe | Where-Object { $_.Name -like 'topstatsaio*.exe' })
+          if ($files.Count -lt 2) { Write-Error "Expected the installer and portable exe in dist/, found $($files.Count)"; exit 1 }
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            Write-Host "$($f.Name): $($sig.Status) — $($sig.SignerCertificate.Subject)"
+            if ($sig.Status -ne 'Valid') { Write-Error "$($f.Name) is not validly signed"; exit 1 }
+          }
 
   publish:
     needs: [build]
