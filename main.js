@@ -18,6 +18,7 @@ const {
   getNativeDotnetPath,
   hasNativeDotnet
 } = require('./wineUtils');
+const { getRequiredFrameworks, parseMissingFramework, runtimeDownloadUrl } = require('./dotnetRuntime');
 const isLinux = process.platform === 'linux';
 const useMica = !isLinux && process.platform === 'win32' && parseInt(os.release().split('.')[2], 10) >= 22000;
 const keepTempDirs = process.argv.includes('--keep-temp');
@@ -1375,10 +1376,12 @@ async function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, i
         } catch { }
       });
     }
+    let stderrText = '';
     child.stdout.on('data', d => wc.send('parse-progress', d.toString().trim()));
     child.stderr.on('data', d => {
       const text = d.toString().trim();
       if (!text) return;
+      stderrText += text + '\n';
       if (resolved.cmd === 'wine') {
         const lower = text.toLowerCase();
         if (!getWineDotnetAlerted() && (lower.includes('you must install .net') || lower.includes('hostfxr.dll'))) {
@@ -1399,8 +1402,17 @@ async function runProcess(cmd, args, cwd, wc, useShell = false, registerChild, i
         return;
       }
       if (code === 2147516566) {
-        const url = 'https://aka.ms/dotnet-core-applaunch?framework=Microsoft.NETCore.App&framework_version=8.0.0&arch=x64&rid=win-x64&os=win10';
-        wc.send('parse-progress', `Missing .NET runtime. Please download it from: ${url}`);
+        // 0x80008096: the .NET host could not find the framework this tool targets.
+        // Link the version it asked for, not a fixed one: EI moved to .NET 10 in v3.32.
+        let framework = parseMissingFramework(stderrText);
+        if (!framework) {
+          const required = getRequiredFrameworks(depsDir);
+          const name = required['Microsoft.WindowsDesktop.App'] ? 'Microsoft.WindowsDesktop.App' : 'Microsoft.NETCore.App';
+          if (required[name]) framework = { name, version: required[name] };
+        }
+        const url = runtimeDownloadUrl(framework);
+        const label = framework ? `.NET ${framework.version.split('.')[0]} runtime (${framework.name} ${framework.version})` : '.NET runtime';
+        wc.send('parse-progress', `Missing ${label}. Please download it from: ${url}`);
         shell.openExternal(url);
       }
       reject(new Error(`${cmd} exited with code ${code}`));

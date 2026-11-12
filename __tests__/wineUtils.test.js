@@ -8,6 +8,11 @@ const { dialog, shell } = require('electron');
 jest.mock('../update', () => ({
     downloadFile: jest.fn()
 }));
+jest.mock('../dotnetRuntime', () => {
+    const actual = jest.requireActual('../dotnetRuntime');
+    return { ...actual, getRequiredRuntimeMajor: jest.fn(() => 8) };
+});
+const dotnetRuntime = require('../dotnetRuntime');
 jest.mock('electron', () => ({
     dialog: { showErrorBox: jest.fn() },
     shell: { openExternal: jest.fn() },
@@ -114,6 +119,51 @@ describe('wineUtils', () => {
             expect(res).toBe(true);
 
             expect(wc.send).toHaveBeenCalledWith('parse-progress', expect.stringMatching(/Installing/));
+        });
+    });
+
+    describe('required runtime version', () => {
+        afterEach(() => {
+            dotnetRuntime.getRequiredRuntimeMajor.mockImplementation(() => 8);
+        });
+
+        test('installs the native runtime channel the tools target', async () => {
+            dotnetRuntime.getRequiredRuntimeMajor.mockImplementation(() => 10);
+            execFileSyncSpy.mockImplementation(() => { throw new Error('no wine'); });
+            await performPreFlightCheck({ send: jest.fn() }, depsDir, userDataPath);
+            const install = spawnSpy.mock.calls.find(([cmd, args]) => cmd === 'bash' && args.includes('--channel'));
+            expect(install).toBeDefined();
+            expect(install[1][install[1].indexOf('--channel') + 1]).toBe('10.0');
+        });
+
+        test('reinstalls native runtime when only an older major is present', async () => {
+            dotnetRuntime.getRequiredRuntimeMajor.mockImplementation(() => 10);
+            const nativeRoot = path.join(depsDir, 'dotnet_native');
+            existsSyncSpy.mockImplementation(p => p === path.join(nativeRoot, 'dotnet'));
+            jest.spyOn(fs, 'readdirSync').mockImplementation(p => {
+                if (p === path.join(nativeRoot, 'shared', 'Microsoft.NETCore.App')) return ['8.0.34'];
+                throw new Error('ENOENT');
+            });
+            execFileSyncSpy.mockImplementation(() => { throw new Error('no wine'); });
+            const wc = { send: jest.fn() };
+            await performPreFlightCheck(wc, depsDir, userDataPath);
+            expect(wc.send).toHaveBeenCalledWith('parse-progress', expect.stringMatching(/Native \.NET 10 Runtime not found/));
+        });
+
+        test('uses the matching winetricks desktop runtime verb under wine', async () => {
+            dotnetRuntime.getRequiredRuntimeMajor.mockImplementation(() => 10);
+            execFileSyncSpy.mockImplementation((cmd, args) => {
+                if (cmd === 'wine' && args[0] === '--version') return;
+                if (cmd === 'wine' && args[0] === 'reg') return '4.8';
+                if (cmd === 'wine' && args[0] === 'cmd' && args[2] === 'dotnet --list-runtimes') {
+                    return 'Microsoft.WindowsDesktop.App 8.0.8 [C:\\Program Files\\dotnet]';
+                }
+            });
+            const wc = { send: jest.fn() };
+            await performPreFlightCheck(wc, depsDir, userDataPath);
+            expect(wc.send).toHaveBeenCalledWith('parse-progress', 'Installing .NET Desktop Runtime 10...');
+            const tricks = spawnSpy.mock.calls.find(([cmd, args]) => (args || []).includes('dotnetdesktop10'));
+            expect(tricks).toBeDefined();
         });
     });
 

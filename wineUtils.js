@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const { dialog, app } = require('electron');
 const { downloadFile } = require('./update');
+const { getRequiredRuntimeMajor, hasCompatibleRuntime } = require('./dotnetRuntime');
 
 // -------------------------------------------------------------------------
 // Global State & Constants
@@ -455,10 +456,10 @@ async function ensureWinetricks(depsDir, wc) {
 /**
  * Robustly check for installed .NET runtimes.
  */
-function checkInstalledRuntimes(ctx) {
+function checkInstalledRuntimes(ctx, major) {
     const status = {
         net48: false,
-        netDesktop8: false
+        netDesktop: false
     };
 
     // Use the command from context (System Wine or Proton)
@@ -492,11 +493,11 @@ function checkInstalledRuntimes(ctx) {
     } catch (e) { /* ignore */ }
 
     try {
-        // Check .NET 8 Desktop Runtime via dotnet --list-runtimes
-        // We look for "Microsoft.WindowsDesktop.App 8."
+        // Check the .NET Desktop Runtime the tools target via dotnet --list-runtimes
+        // e.g. "Microsoft.WindowsDesktop.App 10.0.0 [...]"
         const output = execCheck(['cmd', '/c', 'dotnet --list-runtimes']);
-        if (output.includes('Microsoft.WindowsDesktop.App 8.')) {
-            status.netDesktop8 = true;
+        if (output && output.includes(`Microsoft.WindowsDesktop.App ${major}.`)) {
+            status.netDesktop = true;
         }
     } catch (e) { /* ignore */ }
 
@@ -514,7 +515,8 @@ async function ensureWineDotnet(depsDir, wc, _unusedWineEnv) {
     const wineEnv = ctx.env;
 
     // 1. Check what we already have
-    const status = checkInstalledRuntimes(ctx);
+    const major = getRequiredRuntimeMajor(depsDir);
+    const status = checkInstalledRuntimes(ctx, major);
 
     // Diagnostic
     try {
@@ -532,7 +534,7 @@ async function ensureWineDotnet(depsDir, wc, _unusedWineEnv) {
         // wc.send('parse-progress', `[Diagnostic] Failed to run dotnet --info: ${e.message}`);
     }
 
-    if (status.net48 && status.netDesktop8) {
+    if (status.net48 && status.netDesktop) {
         return; // All good
     }
 
@@ -583,21 +585,22 @@ async function ensureWineDotnet(depsDir, wc, _unusedWineEnv) {
         }
     }
 
-    if (!status.netDesktop8) {
-        wc.send('parse-progress', 'Installing .NET Desktop Runtime 8...');
+    if (!status.netDesktop) {
+        const verb = `dotnetdesktop${major}`;
+        wc.send('parse-progress', `Installing .NET Desktop Runtime ${major}...`);
         try {
-            await runTricks('dotnetdesktop8');
+            await runTricks(verb);
         } catch (e) {
-            wc.send('parse-progress', `Warning: dotnetdesktop8 install returned error: ${e.message}`);
+            wc.send('parse-progress', `Warning: ${verb} install returned error: ${e.message}`);
         }
     }
 
     // 4. Verification
-    const finalStatus = checkInstalledRuntimes(ctx);
-    if (!finalStatus.net48 || !finalStatus.netDesktop8) {
+    const finalStatus = checkInstalledRuntimes(ctx, major);
+    if (!finalStatus.net48 || !finalStatus.netDesktop) {
         const missing = [];
         if (!finalStatus.net48) missing.push('.NET 4.8');
-        if (!finalStatus.netDesktop8) missing.push('.NET Desktop 8');
+        if (!finalStatus.netDesktop) missing.push(`.NET Desktop ${major}`);
         wc.send('parse-progress', 'Warning: Verification failed. Attempting to proceed regardless.');
     } else {
         wc.send('parse-progress', 'Wine dependencies verified.');
@@ -746,12 +749,13 @@ function hasNativeDotnet(depsDir) {
 }
 
 async function ensureNativeDotnet(depsDir, wc) {
-    if (hasNativeDotnet(depsDir)) return true;
+    const major = getRequiredRuntimeMajor(depsDir);
+    const installDir = path.join(depsDir, 'dotnet_native');
+    if (hasNativeDotnet(depsDir) && hasCompatibleRuntime(installDir, major)) return true;
 
-    wc.send('parse-progress', 'Native .NET Runtime not found. Attempting to install...');
+    wc.send('parse-progress', `Native .NET ${major} Runtime not found. Attempting to install...`);
     const installScriptUrl = 'https://dot.net/v1/dotnet-install.sh';
     const scriptPath = path.join(depsDir, 'dotnet-install.sh');
-    const installDir = path.join(depsDir, 'dotnet_native');
 
     try {
         await downloadFile(installScriptUrl, scriptPath);
@@ -760,7 +764,7 @@ async function ensureNativeDotnet(depsDir, wc) {
 
         wc.send('parse-progress', 'Running .NET install script (this may take a minute)...');
         await new Promise((resolve, reject) => {
-            const child = cp.spawn('bash', [scriptPath, '--channel', '8.0', '--runtime', 'dotnet', '--install-dir', installDir, '--no-path'], {
+            const child = cp.spawn('bash', [scriptPath, '--channel', `${major}.0`, '--runtime', 'dotnet', '--install-dir', installDir, '--no-path'], {
                 stdio: 'ignore'
             });
             child.on('close', (code) => {
@@ -770,8 +774,8 @@ async function ensureNativeDotnet(depsDir, wc) {
             child.on('error', reject);
         });
 
-        if (hasNativeDotnet(depsDir)) {
-            wc.send('parse-progress', 'Native .NET Runtime installed successfully.');
+        if (hasNativeDotnet(depsDir) && hasCompatibleRuntime(installDir, major)) {
+            wc.send('parse-progress', `Native .NET ${major} Runtime installed successfully.`);
             return true;
         } else {
             throw new Error('Install script ran but dotnet binary is missing.');
