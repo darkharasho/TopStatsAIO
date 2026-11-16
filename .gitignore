@@ -4,4 +4,5 @@ parsed_files
 dist/
 *.log
 *.txt
-.envgraphify-out/
+.env
+graphify-out/
